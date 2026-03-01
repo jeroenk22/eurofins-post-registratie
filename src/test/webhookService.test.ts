@@ -46,7 +46,19 @@ describe("submitToWebhook", () => {
   it("calls fetch with correct payload shape", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entries: PostEntry[] = [
-      makeEntry({ shelf: 2, name: "Jan de Vries", colli: 1, spoed: true }),
+      makeEntry({
+        shelf: 2,
+        name: "Jan de Vries",
+        colli: 1,
+        spoed: true,
+        photos: [
+          {
+            id: "p1",
+            name: "foto_1.jpg",
+            data: "data:image/jpeg;base64,abc123",
+          },
+        ],
+      }),
       makeEntry({
         id: "test-2",
         shelf: 5,
@@ -67,6 +79,13 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].spoed).toBe(true);
     expect(body.sender_email).toBe("sophie@example.com");
     expect(body.sender_phone).toBeNull();
+
+    // Foto's krijgen recipient en spoed mee zodat Make's foto-iterator
+    // deze waarden beschikbaar heeft in geneste sub-routes (zie webhookService.ts)
+    const foto = body.entries[0].photos[0];
+    expect(foto.recipient).toBe("Jan de Vries");
+    expect(foto.spoed).toBe(true);
+    expect(foto.filename).toBe("foto_1.jpg");
   });
 
   it("maps empty phone/email to null", async () => {

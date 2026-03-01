@@ -35,7 +35,17 @@ export async function submitToWebhook(
       colli: e.colli,
       spoed: e.spoed,
       photo_count: e.photos.length,
-      photos: e.photos.map((p) => ({ filename: p.name, base64: p.data })),
+      // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
+      // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
+      // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,
+      // waardoor de bestandsnaam anders niet correct kan worden opgebouwd.
+      // De duplicatie is bewust en alleen zichtbaar in de interne webhook payload.
+      photos: e.photos.map((p) => ({
+        filename: p.name,
+        base64: p.data,
+        recipient: e.name.trim(),
+        spoed: e.spoed,
+      })),
     })),
   };
 
