@@ -24,7 +24,7 @@ export default function Header() {
       {/* Title band */}
       <div className="bg-ef-blue px-4 py-3">
         <h1 className="text-white font-semibold text-base leading-tight">
-          Post registratie
+          Post aanmelden
         </h1>
         <p className="text-ef-blue-light/70 text-xs mt-0.5">
           Vul in wat er klaarstaat.
