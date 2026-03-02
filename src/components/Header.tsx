@@ -27,7 +27,7 @@ export default function Header() {
           Post registratie
         </h1>
         <p className="text-ef-blue-light/70 text-xs mt-0.5">
-          Vul in wat er klaarstaat — de chauffeur wordt op de hoogte gesteld
+          Vul in wat er klaarstaat.
         </p>
       </div>
     </header>
