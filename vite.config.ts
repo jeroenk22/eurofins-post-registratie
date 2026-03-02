@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["eurofins_agro.svg", "miedema_logo.svg"],
       manifest: {
-        name: "Post Registratie",
+        name: "Post aanmelden app",
         short_name: "Post",
-        description: "Registreer post voor de chauffeur",
+        description: "Post aanmelden",
         theme_color: "#003883",
         background_color: "#ffffff",
         display: "standalone",
