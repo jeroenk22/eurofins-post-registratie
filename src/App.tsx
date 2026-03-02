@@ -7,6 +7,7 @@ import PostCard from "./components/PostCard";
 import SuccessScreen from "./components/SuccessScreen";
 import SectionDivider from "./components/SectionDivider";
 import FormField from "./components/FormField";
+import PwaInstallBanner from "./components/PwaInstallBanner";
 
 export default function App() {
   const store = useStore();
@@ -76,107 +77,114 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-lg mx-auto min-h-screen bg-white shadow-sm flex flex-col">
-        <Header />
+    <>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-lg mx-auto min-h-screen bg-white shadow-sm flex flex-col">
+          <Header />
 
-        {submitState === "success" ? (
-          <SuccessScreen
-            entryCount={store.entries.length}
-            senderEmail={store.senderEmail}
-            onReset={handleReset}
-          />
-        ) : (
-          <div className="flex-1 px-4 pt-4 pb-8">
-            <SectionDivider
-              label={`${store.entries.length} ${store.entries.length === 1 ? "zending" : "zendingen"}`}
+          {submitState === "success" ? (
+            <SuccessScreen
+              entryCount={store.entries.length}
+              senderEmail={store.senderEmail}
+              onReset={handleReset}
             />
-
-            {store.entries.map((entry, i) => (
-              <PostCard
-                key={entry.id}
-                entry={entry}
-                index={i}
-                onUpdate={store.updateEntry}
-                onRemove={store.removeEntry}
-                showRemove={store.entries.length > 1}
+          ) : (
+            <div className="flex-1 px-4 pt-4 pb-8">
+              <SectionDivider
+                label={`${store.entries.length} ${store.entries.length === 1 ? "zending" : "zendingen"}`}
               />
-            ))}
 
-            <button
-              type="button"
-              onClick={store.addEntry}
-              className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm font-semibold text-ef-blue hover:border-ef-blue hover:bg-ef-blue-light transition-all mb-5 flex items-center justify-center gap-1.5"
-            >
-              <span className="text-lg leading-none">+</span>
-              Nog een zending toevoegen
-            </button>
-
-            <SectionDivider label="Ingevuld door" />
-
-            <div className="card p-4 mb-4">
-              <div className="h-1 -mx-4 -mt-4 mb-4 rounded-t-xl bg-mi-yellow" />
-              <div className="space-y-3">
-                <FormField
-                  id="sender-name"
-                  label="Jouw naam *"
-                  type="text"
-                  placeholder="bijv. Sophie Jansen"
-                  value={store.senderName}
-                  onChange={(e) => store.setSenderName(e.currentTarget.value)}
-                  autoComplete="name"
+              {store.entries.map((entry, i) => (
+                <PostCard
+                  key={entry.id}
+                  entry={entry}
+                  index={i}
+                  onUpdate={store.updateEntry}
+                  onRemove={store.removeEntry}
+                  showRemove={store.entries.length > 1}
                 />
-                <FormField
-                  id="sender-phone"
-                  label="Telefoonnummer"
-                  hint="(optioneel)"
-                  type="tel"
-                  placeholder="06 12345678"
-                  value={store.senderPhone}
-                  onChange={(e) => store.setSenderPhone(e.currentTarget.value)}
-                  inputMode="tel"
-                  autoComplete="tel"
-                />
-                <FormField
-                  id="sender-email"
-                  label="E-mailadres"
-                  hint="(optioneel — voor bevestiging)"
-                  type="email"
-                  placeholder="jouw@emailadres.nl"
-                  value={store.senderEmail}
-                  onChange={(e) => store.setSenderEmail(e.currentTarget.value)}
-                  inputMode="email"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
+              ))}
 
-            {errorMsg && (
-              <div
-                role="alert"
-                className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
+              <button
+                type="button"
+                onClick={store.addEntry}
+                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm font-semibold text-ef-blue hover:border-ef-blue hover:bg-ef-blue-light transition-all mb-5 flex items-center justify-center gap-1.5"
               >
-                {errorMsg}
-              </div>
-            )}
+                <span className="text-lg leading-none">+</span>
+                Nog een zending toevoegen
+              </button>
 
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitState === "sending"}
-              className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
-                submitState === "sending"
-                  ? "bg-ef-blue/60 cursor-not-allowed"
-                  : "bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]"
-              }`}
-            >
-              {submitState === "sending"
-                ? "⏳ Bezig met verzenden…"
-                : "📤 Versturen"}
-            </button>
-          </div>
-        )}
+              <SectionDivider label="Ingevuld door" />
+
+              <div className="card p-4 mb-4">
+                <div className="h-1 -mx-4 -mt-4 mb-4 rounded-t-xl bg-mi-yellow" />
+                <div className="space-y-3">
+                  <FormField
+                    id="sender-name"
+                    label="Jouw naam *"
+                    type="text"
+                    placeholder="bijv. Sophie Jansen"
+                    value={store.senderName}
+                    onChange={(e) => store.setSenderName(e.currentTarget.value)}
+                    autoComplete="name"
+                  />
+                  <FormField
+                    id="sender-phone"
+                    label="Telefoonnummer"
+                    hint="(optioneel)"
+                    type="tel"
+                    placeholder="06 12345678"
+                    value={store.senderPhone}
+                    onChange={(e) =>
+                      store.setSenderPhone(e.currentTarget.value)
+                    }
+                    inputMode="tel"
+                    autoComplete="tel"
+                  />
+                  <FormField
+                    id="sender-email"
+                    label="E-mailadres"
+                    hint="(optioneel — voor bevestiging)"
+                    type="email"
+                    placeholder="jouw@emailadres.nl"
+                    value={store.senderEmail}
+                    onChange={(e) =>
+                      store.setSenderEmail(e.currentTarget.value)
+                    }
+                    inputMode="email"
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              {errorMsg && (
+                <div
+                  role="alert"
+                  className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
+                >
+                  {errorMsg}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitState === "sending"}
+                className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
+                  submitState === "sending"
+                    ? "bg-ef-blue/60 cursor-not-allowed"
+                    : "bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]"
+                }`}
+              >
+                {submitState === "sending"
+                  ? "⏳ Bezig met verzenden…"
+                  : "📤 Versturen"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      <PwaInstallBanner />
+    </>
   );
 }

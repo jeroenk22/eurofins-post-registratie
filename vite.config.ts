@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ["eurofins_agro.svg", "miedema_logo.svg"],
       manifest: {
         name: "Post aanmelden app",
-        short_name: "Post",
+        short_name: "Post aanmelden",
         description: "Post aanmelden",
         theme_color: "#003883",
         background_color: "#ffffff",
