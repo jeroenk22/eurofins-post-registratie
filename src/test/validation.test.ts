@@ -1,56 +1,92 @@
 import { describe, it, expect } from 'vitest'
 import type { PostEntry } from '../types'
-
-// Extracted validate logic — mirrors App.tsx
-function validate(
-  entries: PostEntry[],
-  senderName: string,
-): string | null {
-  if (entries.some(e => !e.shelf))       return 'Selecteer bij elke zending een schap nummer.'
-  if (entries.some(e => !e.name.trim())) return 'Vul bij elke zending een naam of bedrijf in.'
-  if (!senderName.trim())                return 'Vul je naam in (onderaan het formulier).'
-  return null
-}
+import { validateForm, isValidEmail } from '../validation'
 
 const validEntry = (): PostEntry => ({
   id: '1', shelf: 3, name: 'Acme', colli: 1, spoed: false, photos: [],
 })
 
-describe('form validation', () => {
-  it('passes when all fields are filled', () => {
-    expect(validate([validEntry()], 'Sophie')).toBeNull()
+describe('validateForm', () => {
+  it('passes when all required fields are filled', () => {
+    expect(validateForm([validEntry()], 'Sophie', '')).toBeNull()
   })
 
   it('fails when an entry has no shelf selected', () => {
     const entry = { ...validEntry(), shelf: null }
-    expect(validate([entry], 'Sophie')).toMatch(/schap nummer/)
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/schap nummer/)
   })
 
   it('fails when an entry has an empty name', () => {
     const entry = { ...validEntry(), name: '' }
-    expect(validate([entry], 'Sophie')).toMatch(/naam of bedrijf/)
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/naam of bedrijf/)
   })
 
   it('fails when entry name is only whitespace', () => {
     const entry = { ...validEntry(), name: '   ' }
-    expect(validate([entry], 'Sophie')).toMatch(/naam of bedrijf/)
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/naam of bedrijf/)
   })
 
   it('fails when sender name is empty', () => {
-    expect(validate([validEntry()], '')).toMatch(/Vul je naam in/)
+    expect(validateForm([validEntry()], '', '')).toMatch(/Vul je naam in/)
   })
 
   it('fails when sender name is only whitespace', () => {
-    expect(validate([validEntry()], '   ')).toMatch(/Vul je naam in/)
+    expect(validateForm([validEntry()], '   ', '')).toMatch(/Vul je naam in/)
   })
 
   it('checks all entries — fails on second entry missing shelf', () => {
     const entries = [validEntry(), { ...validEntry(), id: '2', shelf: null }]
-    expect(validate(entries, 'Sophie')).toMatch(/schap nummer/)
+    expect(validateForm(entries, 'Sophie', '')).toMatch(/schap nummer/)
   })
 
   it('shelf validation takes priority over name validation', () => {
     const entry = { ...validEntry(), shelf: null, name: '' }
-    expect(validate([entry], 'Sophie')).toMatch(/schap nummer/)
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/schap nummer/)
+  })
+
+  it('passes when email is empty (optional)', () => {
+    expect(validateForm([validEntry()], 'Sophie', '')).toBeNull()
+  })
+
+  it('passes when email is valid', () => {
+    expect(validateForm([validEntry()], 'Sophie', 'sophie@example.com')).toBeNull()
+  })
+
+  it('fails when email is filled but invalid', () => {
+    expect(validateForm([validEntry()], 'Sophie', 'geen-email')).toMatch(/geldig e-mailadres/)
+  })
+
+  it('fails when email has no domain', () => {
+    expect(validateForm([validEntry()], 'Sophie', 'sophie@')).toMatch(/geldig e-mailadres/)
+  })
+
+  it('trims email before validating', () => {
+    expect(validateForm([validEntry()], 'Sophie', '  sophie@example.com  ')).toBeNull()
+  })
+})
+
+describe('isValidEmail', () => {
+  it('accepts a standard email address', () => {
+    expect(isValidEmail('test@example.com')).toBe(true)
+  })
+
+  it('accepts email with subdomain', () => {
+    expect(isValidEmail('test@mail.example.com')).toBe(true)
+  })
+
+  it('rejects email without @', () => {
+    expect(isValidEmail('geenemail')).toBe(false)
+  })
+
+  it('rejects email without domain', () => {
+    expect(isValidEmail('test@')).toBe(false)
+  })
+
+  it('rejects email without extension', () => {
+    expect(isValidEmail('test@example')).toBe(false)
+  })
+
+  it('rejects email with spaces', () => {
+    expect(isValidEmail('test @example.com')).toBe(false)
   })
 })
