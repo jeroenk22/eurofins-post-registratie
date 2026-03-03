@@ -28,6 +28,15 @@ export function resizeAndEncode(file: File): Promise<Photo> {
   })
 }
 
+export function validateImageFiles(files: File[]): void {
+  const invalid = files.filter((f) => !f.type.startsWith('image/'))
+  if (invalid.length === 0) return
+  const names = invalid.map((f) => f.name).join(', ')
+  throw new Error(`Alleen afbeeldingen zijn toegestaan. Niet toegestaan: ${names}`)
+}
+
 export async function processFiles(files: FileList): Promise<Photo[]> {
-  return Promise.all(Array.from(files).filter(f => f.type.startsWith('image/')).map(resizeAndEncode))
+  const fileArray = Array.from(files)
+  validateImageFiles(fileArray)
+  return Promise.all(fileArray.map(resizeAndEncode))
 }
