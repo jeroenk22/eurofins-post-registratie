@@ -1,4 +1,4 @@
-import { FILTER_ENABLED, ALLOWED_IPS } from './allowed-ips.ts'
+import { FILTER_ENABLED, ALLOWED_IPS } from '../allowed-ips.ts'
 
 export default async function handler(
   _request: Request,

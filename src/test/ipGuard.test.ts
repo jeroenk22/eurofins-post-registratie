@@ -5,7 +5,7 @@ const mockConfig = vi.hoisted(() => ({
   ALLOWED_IPS: ['1.1.1.1'] as string[],
 }))
 
-vi.mock('../../netlify/edge-functions/allowed-ips.ts', () => mockConfig)
+vi.mock('../../netlify/allowed-ips.ts', () => mockConfig)
 
 import handler from '../../netlify/edge-functions/ip-guard'
 
