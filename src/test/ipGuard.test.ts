@@ -42,11 +42,21 @@ describe('ip-guard', () => {
     expect(context.next).not.toHaveBeenCalled()
   })
 
-  it('403-response bevat de Nederlandse foutmelding', async () => {
+  it('403-response bevat de Nederlandse foutmelding en het gedetecteerde IP', async () => {
     const context = makeContext('9.9.9.9')
     const response = await handler(new Request('https://example.com'), context)
     const text = await response!.text()
     expect(text).toContain('Toegang geweigerd')
     expect(text).toContain('goedgekeurd netwerk')
+    expect(text).toContain('9.9.9.9')
+  })
+
+  it('/debug-ip retourneert het gedetecteerde IP als JSON', async () => {
+    const context = makeContext('9.9.9.9')
+    const response = await handler(new Request('https://example.com/debug-ip'), context)
+    const json = await response!.json()
+    expect(json.ip).toBe('9.9.9.9')
+    expect(json.filterEnabled).toBe(true)
+    expect(json.allowed).toBe(false)
   })
 })
