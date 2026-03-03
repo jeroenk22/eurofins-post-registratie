@@ -55,6 +55,9 @@ export default defineConfig({
         // edge function gaat (IP-filter). JS/CSS/assets blijven wel gecached.
         // NetworkFirst voor navigatie: bij online → edge function beslist;
         // bij offline → valt terug op gecachede HTML (werkt als filter uitstaat).
+        // Geen networkTimeoutSeconds: de SW wacht altijd op het netwerk.
+        // Dit voorkomt dat een 403 wordt omzeild door een cache-fallback
+        // wanneer de edge function trager reageert dan de vorige timeout (3s).
         globPatterns: ["**/*.{js,css,ico,png,svg}"],
         navigateFallback: null,
         runtimeCaching: [
@@ -64,7 +67,6 @@ export default defineConfig({
             handler: "NetworkFirst" as const,
             options: {
               cacheName: "navigation-cache",
-              networkTimeoutSeconds: 3,
             },
           },
         ],
