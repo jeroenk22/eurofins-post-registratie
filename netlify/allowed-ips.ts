@@ -5,7 +5,7 @@
  * (toegang voor alle IP-adressen). Commit en push naar main — Netlify
  * herdeployt automatisch binnen ~1-2 minuten.
  */
-export const FILTER_ENABLED = true;
+export const FILTER_ENABLED = false;
 
 /**
  * Publieke IP-adressen die toegang hebben tot de app.
