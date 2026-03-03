@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
 
@@ -9,10 +9,16 @@ interface PhotoUploadProps {
 
 export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [uploadError, setUploadError] = useState('')
 
   const handleFiles = async (files: FileList) => {
-    const newPhotos = await processFiles(files)
-    onChange(prev => [...prev, ...newPhotos])
+    setUploadError('')
+    try {
+      const newPhotos = await processFiles(files)
+      onChange(prev => [...prev, ...newPhotos])
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : 'Ongeldig bestandstype.')
+    }
   }
 
   const remove = (id: string) => onChange(prev => prev.filter(p => p.id !== id))
@@ -37,6 +43,10 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
           className="hidden"
         />
       </button>
+
+      {uploadError && (
+        <p role="alert" className="mt-1.5 text-xs text-red-500">{uploadError}</p>
+      )}
 
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 mt-2">

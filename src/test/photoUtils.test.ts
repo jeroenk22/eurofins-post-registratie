@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { validateImageFiles } from '../photoUtils'
 
 // Mock browser APIs not available in jsdom
 const mockCanvas = {
@@ -59,5 +60,37 @@ describe('photo resize logic', () => {
     const ratio = result.w / result.h
     const originalRatio = original.w / original.h
     expect(Math.abs(ratio - originalRatio)).toBeLessThan(0.01)
+  })
+})
+
+describe('validateImageFiles', () => {
+  it('does not throw for image files', () => {
+    const files = [
+      new File([''], 'foto.jpg', { type: 'image/jpeg' }),
+      new File([''], 'foto.png', { type: 'image/png' }),
+    ]
+    expect(() => validateImageFiles(files)).not.toThrow()
+  })
+
+  it('throws for a non-image file', () => {
+    const files = [new File([''], 'document.pdf', { type: 'application/pdf' })]
+    expect(() => validateImageFiles(files)).toThrowError('Alleen afbeeldingen zijn toegestaan')
+  })
+
+  it('includes the filename in the error message', () => {
+    const files = [new File([''], 'malware.exe', { type: 'application/octet-stream' })]
+    expect(() => validateImageFiles(files)).toThrowError('malware.exe')
+  })
+
+  it('throws when mixed valid and invalid files are provided', () => {
+    const files = [
+      new File([''], 'foto.jpg', { type: 'image/jpeg' }),
+      new File([''], 'document.pdf', { type: 'application/pdf' }),
+    ]
+    expect(() => validateImageFiles(files)).toThrowError('document.pdf')
+  })
+
+  it('does not throw for an empty array', () => {
+    expect(() => validateImageFiles([])).not.toThrow()
   })
 })
