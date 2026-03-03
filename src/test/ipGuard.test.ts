@@ -58,5 +58,6 @@ describe('ip-guard', () => {
     expect(json.ip).toBe('9.9.9.9')
     expect(json.filterEnabled).toBe(true)
     expect(json.allowed).toBe(false)
+    expect(json.allowedIps).toBeUndefined()
   })
 })

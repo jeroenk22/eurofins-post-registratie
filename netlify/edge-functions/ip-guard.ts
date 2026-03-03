@@ -14,7 +14,6 @@ export default async function handler(
         ip: clientIp,
         filterEnabled: FILTER_ENABLED,
         allowed: ALLOWED_IPS.includes(clientIp),
-        allowedIps: ALLOWED_IPS,
       }),
       { headers: { 'content-type': 'application/json' } },
     )
