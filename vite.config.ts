@@ -51,7 +51,23 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        // HTML wordt niet geprecached zodat elke navigatie langs de Netlify
+        // edge function gaat (IP-filter). JS/CSS/assets blijven wel gecached.
+        // NetworkFirst voor navigatie: bij online → edge function beslist;
+        // bij offline → valt terug op gecachede HTML (werkt als filter uitstaat).
+        globPatterns: ["**/*.{js,css,ico,png,svg}"],
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }: { request: Request }) =>
+              request.mode === "navigate",
+            handler: "NetworkFirst" as const,
+            options: {
+              cacheName: "navigation-cache",
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
     }),
   ],
