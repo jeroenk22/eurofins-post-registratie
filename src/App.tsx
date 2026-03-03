@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { SubmitState } from "./types";
 import { useStore } from "./useStore";
 import { submitToWebhook, isWebhookConfigured } from "./webhookService";
+import { validateForm } from "./validation";
 import Header from "./components/Header";
 import PostCard from "./components/PostCard";
 import SuccessScreen from "./components/SuccessScreen";
@@ -14,18 +15,8 @@ export default function App() {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const validate = (): string | null => {
-    if (store.entries.some((e) => !e.shelf))
-      return "Selecteer bij elke zending een schap nummer.";
-    if (store.entries.some((e) => !e.name.trim()))
-      return "Vul bij elke zending een naam of bedrijf in.";
-    if (!store.senderName.trim())
-      return "Vul je naam in (onderaan het formulier).";
-    return null;
-  };
-
   const handleSubmit = async () => {
-    const err = validate();
+    const err = validateForm(store.entries, store.senderName, store.senderEmail);
     if (err) {
       setErrorMsg(err);
       return;
