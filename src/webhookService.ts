@@ -30,7 +30,7 @@ export async function submitToWebhook(
     total_entries: entries.length,
     entries: entries.map((e, i) => ({
       entry_number: i + 1,
-      shelf: `Schap ${e.shelf}`,
+      shelf: e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`,
       recipient: e.name.trim(),
       colli: e.colli,
       spoed: e.spoed,

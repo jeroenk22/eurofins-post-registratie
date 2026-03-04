@@ -9,6 +9,7 @@ export function newEntry(): PostEntry {
   return {
     id: genId(),
     shelf: null,
+    shelfDescription: '',
     name: "",
     colli: 1,
     spoed: false,

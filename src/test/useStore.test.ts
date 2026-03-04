@@ -6,6 +6,7 @@ describe("newEntry", () => {
   it("creates an entry with default values", () => {
     const entry = newEntry();
     expect(entry.shelf).toBeNull();
+    expect(entry.shelfDescription).toBe('');
     expect(entry.name).toBe("");
     expect(entry.colli).toBe(1);
     expect(entry.spoed).toBe(false);
@@ -57,6 +58,23 @@ describe("useStore", () => {
     act(() => result.current.updateEntry(second.id, { shelf: 7 }));
     expect(result.current.entries[0].shelf).toBe(3);
     expect(result.current.entries[1].shelf).toBe(7);
+  });
+
+  it("updateEntry supports 'overig' shelf with description", () => {
+    const { result } = renderHook(() => useStore());
+    const [entry] = result.current.entries;
+    act(() => result.current.updateEntry(entry.id, { shelf: 'overig', shelfDescription: 'Ligt op kar naast de stelling' }));
+    expect(result.current.entries[0].shelf).toBe('overig');
+    expect(result.current.entries[0].shelfDescription).toBe('Ligt op kar naast de stelling');
+  });
+
+  it("shelfDescription blijft bewaard wanneer terug naar ander schap", () => {
+    const { result } = renderHook(() => useStore());
+    const [entry] = result.current.entries;
+    act(() => result.current.updateEntry(entry.id, { shelf: 'overig', shelfDescription: 'Ligt op kar naast de stelling' }));
+    act(() => result.current.updateEntry(entry.id, { shelf: 1 }));
+    expect(result.current.entries[0].shelf).toBe(1);
+    expect(result.current.entries[0].shelfDescription).toBe('Ligt op kar naast de stelling');
   });
 
   it("reset clears all state", () => {

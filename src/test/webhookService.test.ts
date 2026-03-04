@@ -5,6 +5,7 @@ import type { PostEntry } from "../types";
 const makeEntry = (overrides: Partial<PostEntry> = {}): PostEntry => ({
   id: "test-1",
   shelf: 3,
+  shelfDescription: '',
   name: "Acme B.V.",
   colli: 2,
   spoed: false,
@@ -86,6 +87,16 @@ describe("submitToWebhook", () => {
     expect(foto.recipient).toBe("Jan de Vries");
     expect(foto.spoed).toBe(true);
     expect(foto.filename).toBe("foto_1.jpg");
+  });
+
+  it("formats overig shelf with description prefix", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({ shelf: 'overig', shelfDescription: 'Ligt op kar naast de stelling' });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].shelf).toBe("Overig: Ligt op kar naast de stelling");
   });
 
   it("maps empty phone/email to null", async () => {
