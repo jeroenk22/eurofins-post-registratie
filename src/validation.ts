@@ -17,6 +17,8 @@ export function validateForm(
     return 'Beschrijf waar de zending klaar ligt bij "Overig".'
   if (entries.some((e) => !e.name.trim()))
     return 'Vul bij elke zending een naam of bedrijf in.'
+  if (entries.some((e) => e.photos.length === 0))
+    return 'Voeg bij elke zending minimaal 1 foto toe.'
   if (!senderName.trim())
     return 'Vul je naam in (onderaan het formulier).'
   if (senderEmail.trim() && !isValidEmail(senderEmail.trim()))

@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import type { PostEntry } from '../types'
 import { validateForm, isValidEmail } from '../validation'
 
+const mockPhoto = { id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }
+
 const validEntry = (): PostEntry => ({
-  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', colli: 1, spoed: false, photos: [],
+  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', colli: 1, spoed: false, photos: [mockPhoto],
 })
 
 describe('validateForm', () => {
@@ -24,6 +26,11 @@ describe('validateForm', () => {
   it('fails when entry name is only whitespace', () => {
     const entry = { ...validEntry(), name: '   ' }
     expect(validateForm([entry], 'Sophie', '')).toMatch(/naam of bedrijf/)
+  })
+
+  it('fails when an entry has no photos', () => {
+    const entry = { ...validEntry(), photos: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/minimaal 1 foto/)
   })
 
   it('fails when sender name is empty', () => {
