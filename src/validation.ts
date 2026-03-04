@@ -13,6 +13,8 @@ export function validateForm(
 ): string | null {
   if (entries.some((e) => !e.shelf))
     return 'Selecteer bij elke zending een schap nummer.'
+  if (entries.some((e) => e.shelf === 'overig' && !e.shelfDescription.trim()))
+    return 'Beschrijf waar de zending klaar ligt bij "Overig".'
   if (entries.some((e) => !e.name.trim()))
     return 'Vul bij elke zending een naam of bedrijf in.'
   if (!senderName.trim())

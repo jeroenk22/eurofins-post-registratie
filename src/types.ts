@@ -6,7 +6,8 @@ export interface Photo {
 
 export interface PostEntry {
   id: string;
-  shelf: number | null; // per entry
+  shelf: number | 'overig' | null; // per entry
+  shelfDescription: string; // beschrijving wanneer shelf === 'overig'
   name: string;
   colli: number;
   spoed: boolean;

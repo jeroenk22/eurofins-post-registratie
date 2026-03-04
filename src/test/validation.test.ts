@@ -3,7 +3,7 @@ import type { PostEntry } from '../types'
 import { validateForm, isValidEmail } from '../validation'
 
 const validEntry = (): PostEntry => ({
-  id: '1', shelf: 3, name: 'Acme', colli: 1, spoed: false, photos: [],
+  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', colli: 1, spoed: false, photos: [],
 })
 
 describe('validateForm', () => {
@@ -42,6 +42,21 @@ describe('validateForm', () => {
   it('shelf validation takes priority over name validation', () => {
     const entry = { ...validEntry(), shelf: null, name: '' }
     expect(validateForm([entry], 'Sophie', '')).toMatch(/schap nummer/)
+  })
+
+  it('fails when shelf is overig but description is empty', () => {
+    const entry = { ...validEntry(), shelf: 'overig' as const, shelfDescription: '' }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/Beschrijf waar/)
+  })
+
+  it('fails when shelf is overig but description is only whitespace', () => {
+    const entry = { ...validEntry(), shelf: 'overig' as const, shelfDescription: '   ' }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/Beschrijf waar/)
+  })
+
+  it('passes when shelf is overig with a valid description', () => {
+    const entry = { ...validEntry(), shelf: 'overig' as const, shelfDescription: 'Ligt op kar naast de stelling' }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
   })
 
   it('passes when email is empty (optional)', () => {

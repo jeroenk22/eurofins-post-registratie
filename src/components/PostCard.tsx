@@ -29,7 +29,11 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove 
         </span>
         <div className="flex-1 flex items-center gap-2 min-w-0">
           {entry.name && <span className="text-xs text-gray-500 truncate">{entry.name}</span>}
-          {entry.shelf && <span className="text-xs text-ef-blue font-semibold flex-shrink-0">Schap {entry.shelf}</span>}
+          {entry.shelf && (
+            <span className="text-xs text-ef-blue font-semibold flex-shrink-0">
+              {entry.shelf === 'overig' ? 'Overig' : `Schap ${entry.shelf}`}
+            </span>
+          )}
           {entry.spoed && (
             <span className="flex-shrink-0 text-[10px] font-bold text-ef-orange border border-ef-orange/40 bg-ef-orange-light rounded px-1.5 py-0.5">
               SPOED
@@ -51,7 +55,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove 
       {/* Schap selector */}
       <div className="mb-3">
         <p className="label-base">Schap nummer *</p>
-        <div className="grid grid-cols-8 gap-1.5">
+        <div className="grid grid-cols-9 gap-1.5">
           {SHELVES.map(n => (
             <button
               key={n}
@@ -66,7 +70,27 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove 
               {n}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => set('shelf', 'overig')}
+            title="Overig"
+            className={`py-2 rounded-lg text-xs font-semibold border transition-all ${
+              entry.shelf === 'overig'
+                ? 'bg-ef-blue text-white border-ef-blue'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-ef-blue hover:text-ef-blue'
+            }`}
+          >
+            ★
+          </button>
         </div>
+        <input
+          type="text"
+          className={`input-base mt-1.5${entry.shelf !== 'overig' ? ' hidden' : ''}`}
+          placeholder="Beschrijf waar de zending klaar ligt..."
+          value={entry.shelfDescription}
+          onChange={e => set('shelfDescription', e.currentTarget.value)}
+          aria-label="Locatiebeschrijving overige plek"
+        />
       </div>
 
       {/* Naam */}
