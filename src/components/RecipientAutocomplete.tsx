@@ -168,7 +168,7 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
                 id={`${listId}-opt-${index}`}
                 role="option"
                 aria-selected={isActive}
-                className={`flex items-start gap-2.5 px-3 py-2.5 cursor-pointer border-b border-gray-100 last:border-0 transition-colors ${
+                className={`flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2.5 px-3 py-2.5 cursor-pointer border-b border-gray-100 last:border-0 transition-colors ${
                   isActive ? 'bg-ef-blue-light' : 'hover:bg-gray-50'
                 }`}
                 onMouseDown={e => {
@@ -177,17 +177,24 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
               >
-                {/* Categoriebadge */}
-                <span className={`w-24 flex-shrink-0 mt-0.5 text-[10px] font-bold rounded px-1.5 py-0.5 leading-tight text-center ${TAB_COLOR[option.type]}`}>
-                  {TAB_LABEL[option.type]}
-                </span>
+                {/* Categoriebadge + vlag (op mobile naast elkaar) */}
+                <div className="flex items-center justify-between sm:block">
+                  <span className={`sm:w-24 flex-shrink-0 sm:mt-0.5 text-[10px] font-bold rounded px-1.5 py-0.5 leading-tight text-center ${TAB_COLOR[option.type]}`}>
+                    {TAB_LABEL[option.type]}
+                  </span>
+                  {option.land && (
+                    <span className="sm:hidden flex-shrink-0 flex items-center self-stretch">
+                      <CountryFlag name={option.land} />
+                    </span>
+                  )}
+                </div>
 
                 {/* Naam + adres */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-gray-800 truncate flex-1">{option.label}</p>
+                    <p className="text-sm font-semibold text-gray-800 sm:truncate flex-1">{option.label}</p>
                     {option.land && (
-                      <span className="flex-shrink-0">
+                      <span className="hidden sm:inline flex-shrink-0">
                         <CountryFlag name={option.land} />
                       </span>
                     )}
