@@ -77,7 +77,7 @@ export default function App() {
 
           {submitState === "success" ? (
             <SuccessScreen
-              entryCount={store.entries.length}
+              entries={store.entries}
               senderEmail={store.senderEmail}
               onReset={handleReset}
             />

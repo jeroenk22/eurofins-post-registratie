@@ -1,22 +1,60 @@
+import { useState } from "react";
+import type { PostEntry } from "../types";
+import {
+  LABEL_FORMATS,
+  getSelectedFormat,
+  setSelectedFormat,
+  printLabels,
+  type PrintEntry,
+} from "../services/printService";
+
 interface SuccessScreenProps {
-  entryCount: number;
+  entries: PostEntry[];
   senderEmail: string;
   onReset: () => void;
 }
 
+function formatShelf(entry: PostEntry): string {
+  if (entry.shelf === "overig") return `Overig: ${entry.shelfDescription}`;
+  if (entry.shelf) return `Schap ${entry.shelf}`;
+  return "";
+}
+
+function toPrintEntry(e: PostEntry): PrintEntry {
+  return { name: e.name, schapnummer: formatShelf(e), colli: e.colli };
+}
+
 export default function SuccessScreen({
-  entryCount,
+  entries,
   senderEmail,
   onReset,
 }: SuccessScreenProps) {
+  const [formatId, setFormatId] = useState(() => getSelectedFormat().id);
+
+  const handleFormatChange = (id: string) => {
+    setSelectedFormat(id);
+    setFormatId(id);
+  };
+
+  const totalColli = entries.reduce((sum, e) => sum + e.colli, 0);
+
+  const handlePrintAll = () => {
+    printLabels(entries.map(toPrintEntry), getSelectedFormat());
+  };
+
+  const handlePrintEntry = (e: PostEntry) => {
+    printLabels([toPrintEntry(e)], getSelectedFormat());
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6 py-10">
+    <div className="flex flex-col items-center text-center px-6 py-10">
       <div className="w-16 h-16 rounded-full bg-mi-green-light border-2 border-mi-green flex items-center justify-center text-3xl mb-5 text-mi-green">
         ✓
       </div>
       <h2 className="text-xl font-bold text-gray-800 mb-2">Verstuurd!</h2>
       <p className="text-sm text-gray-500 mb-1 leading-relaxed">
-        {entryCount} {entryCount === 1 ? "zending" : "zendingen"} aangemeld.
+        {entries.length} {entries.length === 1 ? "zending" : "zendingen"}{" "}
+        aangemeld.
       </p>
       {senderEmail && (
         <p className="text-xs text-gray-400 mb-6">
@@ -24,6 +62,69 @@ export default function SuccessScreen({
         </p>
       )}
       {!senderEmail && <div className="mb-6" />}
+
+      {/* Print sectie */}
+      <div className="w-full max-w-sm border border-gray-200 rounded-xl overflow-hidden mb-6">
+        {/* Formaat selector */}
+        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <label
+            htmlFor="label-format"
+            className="text-xs font-medium text-gray-600 whitespace-nowrap"
+          >
+            Formaat:
+          </label>
+          <select
+            id="label-format"
+            value={formatId}
+            onChange={(e) => handleFormatChange(e.currentTarget.value)}
+            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-ef-blue/40"
+          >
+            {LABEL_FORMATS.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Print alle labels */}
+        <div className="px-4 py-3 border-b border-gray-200">
+          <button
+            type="button"
+            onClick={handlePrintAll}
+            className="w-full py-2.5 rounded-lg bg-ef-blue text-white text-sm font-semibold hover:bg-ef-blue/90 active:scale-[0.98] transition-all"
+          >
+            Print alle labels ({totalColli} colli)
+          </button>
+        </div>
+
+        {/* Print per entry */}
+        <div className="divide-y divide-gray-100">
+          {entries.map((entry, i) => (
+            <div
+              key={entry.id}
+              className="px-4 py-3 flex items-center justify-between gap-3"
+            >
+              <div className="text-left min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">
+                  {i + 1}. {entry.name || <span className="text-gray-400 italic">Naam onbekend</span>}
+                </p>
+                {formatShelf(entry) && (
+                  <p className="text-xs text-gray-500">{formatShelf(entry)}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handlePrintEntry(entry)}
+                className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.97] transition-all"
+              >
+                Print {entry.colli} {entry.colli === 1 ? "label" : "labels"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={onReset}

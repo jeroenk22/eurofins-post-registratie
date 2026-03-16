@@ -32,7 +32,7 @@ describe('formatPersonName', () => {
 // --- parsePersonRows ---
 
 describe('parsePersonRows', () => {
-  const headers = ['Code', 'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Route', 'Adres', 'Postcode', 'Plaats', 'Land']
+  const headers = ['Code', 'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Routenummer', 'Adres', 'Postcode', 'Plaats', 'Land']
   const rows: string[][] = [
     headers,
     ['M001', 'Jan', 'de', 'Vries', 'R1', 'Kerkstraat 1', '1234AB', 'Amsterdam', 'Nederland'],
@@ -50,6 +50,8 @@ describe('parsePersonRows', () => {
     expect(result[0].postcode).toBe('1234AB')
     expect(result[0].plaats).toBe('Amsterdam')
     expect(result[0].land).toBe('Nederland')
+    expect(result[0].routenummer).toBe('R1')
+    expect(result[1].routenummer).toBe('R2')
   })
 
   it('slaat lege rijen over', () => {
@@ -118,6 +120,7 @@ describe('filterRecipients', () => {
       postcode: '1234AB',
       plaats: 'Amsterdam',
       land: 'Nederland',
+      routenummer: '',
     },
     {
       id: 'b',
@@ -129,6 +132,7 @@ describe('filterRecipients', () => {
       postcode: '9999ZZ',
       plaats: 'Groningen',
       land: 'Nederland',
+      routenummer: '',
     },
   ]
 
@@ -175,6 +179,7 @@ describe('filterRecipients', () => {
       postcode: '',
       plaats: '',
       land: '',
+      routenummer: '',
     }))
     expect(filterRecipients(many, 'persoon')).toHaveLength(10)
   })
@@ -198,6 +203,7 @@ describe('LocalStorage caching', () => {
       postcode: '',
       plaats: '',
       land: '',
+      routenummer: '',
     },
   ]
 
