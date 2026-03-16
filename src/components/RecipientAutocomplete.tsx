@@ -5,6 +5,7 @@ interface RecipientAutocompleteProps {
   id: string
   value: string
   onChange: (value: string) => void
+  onSelect?: (option: RecipientOption) => void
   recipients: RecipientOption[]
 }
 
@@ -58,7 +59,7 @@ function buildAddressLine(option: RecipientOption): string {
   return [option.adres, city].filter(Boolean).join(', ')
 }
 
-export default function RecipientAutocomplete({ id, value, onChange, recipients }: RecipientAutocompleteProps) {
+export default function RecipientAutocomplete({ id, value, onChange, onSelect, recipients }: RecipientAutocompleteProps) {
   const [query, setQuery] = useState(value)
   const [suggestions, setSuggestions] = useState<RecipientOption[]>([])
   const [isOpen, setIsOpen] = useState(false)
@@ -100,10 +101,11 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
   const selectOption = useCallback((option: RecipientOption) => {
     justSelectedRef.current = true
     onChange(option.value)
+    onSelect?.(option)
     setQuery(option.value)
     setIsOpen(false)
     setSuggestions([])
-  }, [onChange])
+  }, [onChange, onSelect])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value
@@ -193,6 +195,11 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold text-gray-800 sm:truncate flex-1">{option.label}</p>
+                    {option.routenummer && (
+                      <span className="flex-shrink-0 text-[10px] font-bold text-ef-blue border border-ef-blue/30 bg-ef-blue-light rounded px-1.5 py-0.5 leading-tight">
+                        Schap {option.routenummer}
+                      </span>
+                    )}
                     {option.land && (
                       <span className="hidden sm:inline flex-shrink-0">
                         <CountryFlag name={option.land} />

@@ -101,6 +101,12 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           id={`name-${entry.id}`}
           value={entry.name}
           onChange={v => set('name', v)}
+          onSelect={option => {
+            const n = Number(option.routenummer)
+            if (Number.isInteger(n) && n >= 1 && n <= 8) {
+              set('shelf', n)
+            }
+          }}
           recipients={recipients}
         />
       </div>
