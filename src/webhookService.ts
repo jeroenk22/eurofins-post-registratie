@@ -22,27 +22,34 @@ export async function submitToWebhook(
 
   const now = new Date();
 
-  const submitEntries = entries.map((e, i) => ({
-    entry_number: i + 1,
-    shelf: e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`,
-    recipient: e.name.trim(),
-    colli: e.colli,
-    spoed: e.spoed,
-    photo_count: e.photos.length,
-    photos: e.photos.map((p) => ({
-      filename: p.name,
-      base64: p.data,
-      recipient: e.name.trim(),
-      spoed: e.spoed,
-    })),
-  }));
+  const base = `${window.location.origin}${window.location.pathname}`;
 
-  const printEntries: PrintEntry[] = submitEntries.map((e) => ({
+  const submitEntries = entries.map((e, i) => {
+    const shelf = e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`;
+    const printEntry: PrintEntry = { name: e.name.trim(), schapnummer: shelf, colli: e.colli };
+    return {
+      entry_number: i + 1,
+      shelf,
+      recipient: e.name.trim(),
+      colli: e.colli,
+      spoed: e.spoed,
+      photo_count: e.photos.length,
+      photos: e.photos.map((p) => ({
+        filename: p.name,
+        base64: p.data,
+        recipient: e.name.trim(),
+        spoed: e.spoed,
+      })),
+      print_url: `${base}?printData=${encodePrintData([printEntry])}`,
+    };
+  });
+
+  const allPrintEntries: PrintEntry[] = submitEntries.map((e) => ({
     name: e.recipient,
     schapnummer: e.shelf,
     colli: e.colli,
   }));
-  const printUrl = `${window.location.origin}${window.location.pathname}?printData=${encodePrintData(printEntries)}`;
+  const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
 
   const payload: SubmitPayload = {
     submitted_at: now.toISOString(),
