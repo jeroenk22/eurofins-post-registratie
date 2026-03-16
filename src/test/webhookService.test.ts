@@ -80,6 +80,8 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].spoed).toBe(true);
     expect(body.sender_email).toBe("sophie@example.com");
     expect(body.sender_phone).toBeNull();
+    expect(typeof body.print_url).toBe("string");
+    expect(body.print_url).toContain("printData=");
 
     // Foto's krijgen recipient en spoed mee zodat Make's foto-iterator
     // deze waarden beschikbaar heeft in geneste sub-routes (zie webhookService.ts)

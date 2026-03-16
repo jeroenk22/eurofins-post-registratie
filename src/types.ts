@@ -22,6 +22,7 @@ export interface SubmitPayload {
   sender_email: string | null;
   total_entries: number;
   entries: SubmitEntry[];
+  print_url: string;
 }
 
 export interface SubmitEntry {

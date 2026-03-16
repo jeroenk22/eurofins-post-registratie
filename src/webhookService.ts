@@ -1,4 +1,5 @@
 import type { PostEntry, SubmitPayload } from "./types";
+import { encodePrintData, type PrintEntry } from "./services/printService";
 
 // Functie i.p.v. constante — zodat tests de env kunnen overschrijven
 function getWebhookUrl(): string | undefined {
@@ -21,6 +22,28 @@ export async function submitToWebhook(
 
   const now = new Date();
 
+  const submitEntries = entries.map((e, i) => ({
+    entry_number: i + 1,
+    shelf: e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`,
+    recipient: e.name.trim(),
+    colli: e.colli,
+    spoed: e.spoed,
+    photo_count: e.photos.length,
+    photos: e.photos.map((p) => ({
+      filename: p.name,
+      base64: p.data,
+      recipient: e.name.trim(),
+      spoed: e.spoed,
+    })),
+  }));
+
+  const printEntries: PrintEntry[] = submitEntries.map((e) => ({
+    name: e.recipient,
+    schapnummer: e.shelf,
+    colli: e.colli,
+  }));
+  const printUrl = `${window.location.origin}${window.location.pathname}?printData=${encodePrintData(printEntries)}`;
+
   const payload: SubmitPayload = {
     submitted_at: now.toISOString(),
     datetime_nl: now.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }),
@@ -28,25 +51,13 @@ export async function submitToWebhook(
     sender_phone: senderPhone.trim() || null,
     sender_email: senderEmail.trim() || null,
     total_entries: entries.length,
-    entries: entries.map((e, i) => ({
-      entry_number: i + 1,
-      shelf: e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`,
-      recipient: e.name.trim(),
-      colli: e.colli,
-      spoed: e.spoed,
-      photo_count: e.photos.length,
-      // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
-      // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
-      // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,
-      // waardoor de bestandsnaam anders niet correct kan worden opgebouwd.
-      // De duplicatie is bewust en alleen zichtbaar in de interne webhook payload.
-      photos: e.photos.map((p) => ({
-        filename: p.name,
-        base64: p.data,
-        recipient: e.name.trim(),
-        spoed: e.spoed,
-      })),
-    })),
+    print_url: printUrl,
+    // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
+    // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
+    // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,
+    // waardoor de bestandsnaam anders niet correct kan worden opgebouwd.
+    // De duplicatie is bewust en alleen zichtbaar in de interne webhook payload.
+    entries: submitEntries,
   };
 
   const res = await fetch(url, {

@@ -7,11 +7,20 @@ import { useRecipientData } from "./hooks/useRecipientData";
 import Header from "./components/Header";
 import PostCard from "./components/PostCard";
 import SuccessScreen from "./components/SuccessScreen";
+import PrintLinkScreen from "./components/PrintLinkScreen";
 import SectionDivider from "./components/SectionDivider";
 import FormField from "./components/FormField";
 import PwaInstallBanner from "./components/PwaInstallBanner";
+import { decodePrintData } from "./services/printService";
 
 export default function App() {
+  // Print-link detectie: ?printData=... opent direct het printscherm
+  const printDataParam = new URLSearchParams(window.location.search).get("printData");
+  if (printDataParam) {
+    const printEntries = decodePrintData(printDataParam);
+    if (printEntries) return <PrintLinkScreen entries={printEntries} />;
+  }
+
   const store = useStore();
   const { recipients } = useRecipientData();
   const [submitState, setSubmitState] = useState<SubmitState>("idle");

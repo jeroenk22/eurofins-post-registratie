@@ -132,6 +132,22 @@ ${labelHtml}
   win.close()
 }
 
+// --- URL encoding voor print-links ---
+
+export function encodePrintData(entries: PrintEntry[]): string {
+  return encodeURIComponent(JSON.stringify(entries))
+}
+
+export function decodePrintData(encoded: string): PrintEntry[] | null {
+  try {
+    const parsed = JSON.parse(decodeURIComponent(encoded))
+    if (!Array.isArray(parsed)) return null
+    return parsed as PrintEntry[]
+  } catch {
+    return null
+  }
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
