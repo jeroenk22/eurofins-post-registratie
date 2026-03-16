@@ -43,8 +43,8 @@ describe('parsePersonRows', () => {
   it('parst geldige rijen correct', () => {
     const result = parsePersonRows(rows, 'Monsternemers')
     expect(result).toHaveLength(2)
-    expect(result[0].label).toBe('M001 - Jan de Vries')
-    expect(result[0].value).toBe('M001 - Jan de Vries')
+    expect(result[0].label).toBe('M001 - Jan de Vries (Amsterdam)')
+    expect(result[0].value).toBe('M001 - Jan de Vries (Amsterdam)')
     expect(result[0].type).toBe('Monsternemers')
     expect(result[0].adres).toBe('Kerkstraat 1')
     expect(result[0].postcode).toBe('1234AB')
@@ -153,6 +153,15 @@ describe('filterRecipients', () => {
   it('geeft lege lijst terug bij query korter dan 2 tekens', () => {
     expect(filterRecipients(recipients, 'M')).toHaveLength(0)
     expect(filterRecipients(recipients, '')).toHaveLength(0)
+  })
+
+  it('filtert op combinatie van woorden', () => {
+    expect(filterRecipients(recipients, 'jan vries')).toHaveLength(1)
+    expect(filterRecipients(recipients, 'jan vries')[0].id).toBe('a')
+  })
+
+  it('geeft geen resultaat als niet alle woorden matchen', () => {
+    expect(filterRecipients(recipients, 'jan groningen')).toHaveLength(0)
   })
 
   it('beperkt resultaten tot max 10', () => {

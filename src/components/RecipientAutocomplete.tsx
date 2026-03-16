@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { filterRecipients, type RecipientOption, type SheetTab } from '../services/googleSheetsService'
+import 'flag-icons/css/flag-icons.min.css'
 
 interface RecipientAutocompleteProps {
   id: string
@@ -22,26 +23,26 @@ const TAB_COLOR: Record<SheetTab, string> = {
 
 // ISO-3166-1 alpha-2 mapping voor veelvoorkomende landen in NL-context
 const COUNTRY_TO_CODE: Record<string, string> = {
-  'nederland': 'NL', 'netherlands': 'NL', 'the netherlands': 'NL',
-  'belgië': 'BE', 'belgie': 'BE', 'belgique': 'BE', 'belgium': 'BE',
-  'duitsland': 'DE', 'germany': 'DE', 'deutschland': 'DE',
-  'frankrijk': 'FR', 'france': 'FR',
-  'luxemburg': 'LU', 'luxembourg': 'LU',
-  'denemarken': 'DK', 'denmark': 'DK',
-  'zweden': 'SE', 'sweden': 'SE',
-  'noorwegen': 'NO', 'norway': 'NO',
-  'zwitserland': 'CH', 'switzerland': 'CH', 'schweiz': 'CH',
-  'oostenrijk': 'AT', 'austria': 'AT', 'österreich': 'AT',
-  'spanje': 'ES', 'spain': 'ES', 'españa': 'ES',
-  'italië': 'IT', 'italie': 'IT', 'italy': 'IT', 'italia': 'IT',
-  'verenigd koninkrijk': 'GB', 'united kingdom': 'GB', 'engeland': 'GB',
-  'polen': 'PL', 'poland': 'PL',
+  'nederland': 'nl', 'netherlands': 'nl', 'the netherlands': 'nl',
+  'belgië': 'be', 'belgie': 'be', 'belgique': 'be', 'belgium': 'be',
+  'duitsland': 'de', 'germany': 'de', 'deutschland': 'de',
+  'frankrijk': 'fr', 'france': 'fr',
+  'luxemburg': 'lu', 'luxembourg': 'lu',
+  'denemarken': 'dk', 'denmark': 'dk',
+  'zweden': 'se', 'sweden': 'se',
+  'noorwegen': 'no', 'norway': 'no',
+  'zwitserland': 'ch', 'switzerland': 'ch', 'schweiz': 'ch',
+  'oostenrijk': 'at', 'austria': 'at', 'österreich': 'at',
+  'spanje': 'es', 'spain': 'es', 'españa': 'es',
+  'italië': 'it', 'italie': 'it', 'italy': 'it', 'italia': 'it',
+  'verenigd koninkrijk': 'gb', 'united kingdom': 'gb', 'engeland': 'gb',
+  'polen': 'pl', 'poland': 'pl',
 }
 
-function countryToFlag(name: string): string {
+function CountryFlag({ name }: { name: string }) {
   const code = COUNTRY_TO_CODE[name.toLowerCase().trim()]
-  if (!code) return ''
-  return code.replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)))
+  if (!code) return <span className="text-gray-300 text-xs">{name}</span>
+  return <span className={`fi fi-${code} rounded-sm`} title={name} />
 }
 
 function buildAddressLine(option: RecipientOption): string {
@@ -57,6 +58,7 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
 
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const justSelectedRef = useRef(false)
   const listId = useId()
 
   // Sync externe waarde (bijv. bij reset)
@@ -66,6 +68,10 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
 
   // Herbereken suggesties bij querywijziging
   useEffect(() => {
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false
+      return
+    }
     const results = filterRecipients(recipients, query)
     setSuggestions(results)
     setIsOpen(results.length > 0)
@@ -84,6 +90,7 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
   }, [])
 
   const selectOption = useCallback((option: RecipientOption) => {
+    justSelectedRef.current = true
     onChange(option.value)
     setQuery(option.value)
     setIsOpen(false)
@@ -145,7 +152,6 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
           className="absolute z-50 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-h-72 overflow-y-auto"
         >
           {suggestions.map((option, index) => {
-            const flag = countryToFlag(option.land)
             const addressLine = buildAddressLine(option)
             const isActive = index === activeIndex
             return (
@@ -164,25 +170,22 @@ export default function RecipientAutocomplete({ id, value, onChange, recipients 
                 onMouseEnter={() => setActiveIndex(index)}
               >
                 {/* Categoriebadge */}
-                <span className={`flex-shrink-0 mt-0.5 text-[10px] font-bold rounded px-1.5 py-0.5 leading-tight ${TAB_COLOR[option.type]}`}>
+                <span className={`w-24 flex-shrink-0 mt-0.5 text-[10px] font-bold rounded px-1.5 py-0.5 leading-tight text-center ${TAB_COLOR[option.type]}`}>
                   {TAB_LABEL[option.type]}
                 </span>
 
                 {/* Naam + adres */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{option.label}</p>
-                  {(addressLine || option.land) && (
-                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
-                      {addressLine && <span className="truncate">{addressLine}</span>}
-                      {option.land && (
-                        <span className="flex-shrink-0 flex items-center gap-0.5">
-                          {flag
-                            ? <span title={option.land}>{flag}</span>
-                            : <span className="text-gray-300">{option.land}</span>
-                          }
-                        </span>
-                      )}
-                    </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-gray-800 truncate flex-1">{option.label}</p>
+                    {option.land && (
+                      <span className="flex-shrink-0">
+                        <CountryFlag name={option.land} />
+                      </span>
+                    )}
+                  </div>
+                  {addressLine && (
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">{addressLine}</p>
                   )}
                 </div>
               </li>

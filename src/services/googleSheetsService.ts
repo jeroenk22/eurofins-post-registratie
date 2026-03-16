@@ -55,7 +55,7 @@ export function formatPersonName(row: Pick<PersonRow, 'Code' | 'Voornaam' | 'Tus
 async function fetchSheetTab(tabName: string): Promise<string[][]> {
   const sheetId = getSheetId()
   const apiKey = getApiKey()
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tabName)}?key=${apiKey}`
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(`'${tabName}'`)}?key=${apiKey}`
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Fout bij ophalen tabblad '${tabName}': HTTP ${response.status}`)
@@ -78,12 +78,14 @@ export function parsePersonRows(rows: string[][], type: 'Monsternemers' | 'AP06'
   return rowsToObjects(rows)
     .map((obj, index) => {
       const p = obj as unknown as PersonRow
-      const value = formatPersonName(p)
+      const name = formatPersonName(p)
+      const value = p.Plaats ? `${name} (${p.Plaats})` : name
+      const label = value
       const searchTerms = [p.Code, p.Voornaam, p.Achternaam, p.Postcode, p.Plaats].filter(Boolean)
       return {
         id: `${type}-${index}`,
         type,
-        label: value,
+        label,
         value,
         searchTerms,
         adres: p.Adres ?? '',
@@ -169,7 +171,11 @@ export function isCacheStale(): boolean {
 export function filterRecipients(recipients: RecipientOption[], query: string): RecipientOption[] {
   const q = query.toLowerCase().trim()
   if (q.length < 2) return []
+  const words = q.split(/\s+/)
   return recipients
-    .filter(r => r.searchTerms.some(term => term.toLowerCase().includes(q)))
+    .filter(r => {
+      const searchable = [r.label, ...r.searchTerms].join(' ').toLowerCase()
+      return words.every(word => searchable.includes(word))
+    })
     .slice(0, 10)
 }
