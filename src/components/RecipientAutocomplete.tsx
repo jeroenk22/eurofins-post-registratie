@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { filterRecipients, type RecipientOption, type SheetTab } from '../services/googleSheetsService'
-import 'flag-icons/css/flag-icons.min.css'
 
 interface RecipientAutocompleteProps {
   id: string
@@ -42,7 +41,16 @@ const COUNTRY_TO_CODE: Record<string, string> = {
 function CountryFlag({ name }: { name: string }) {
   const code = COUNTRY_TO_CODE[name.toLowerCase().trim()]
   if (!code) return <span className="text-gray-300 text-xs">{name}</span>
-  return <span className={`fi fi-${code} rounded-sm`} title={name} />
+  return (
+    <img
+      src={`https://flagcdn.com/w20/${code}.png`}
+      width="16"
+      height="12"
+      alt={name}
+      title={name}
+      className="inline-block rounded-sm align-middle"
+    />
+  )
 }
 
 function buildAddressLine(option: RecipientOption): string {
