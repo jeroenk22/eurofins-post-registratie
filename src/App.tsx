@@ -3,6 +3,7 @@ import type { SubmitState } from "./types";
 import { useStore } from "./useStore";
 import { submitToWebhook, isWebhookConfigured } from "./webhookService";
 import { validateForm } from "./validation";
+import { useRecipientData } from "./hooks/useRecipientData";
 import Header from "./components/Header";
 import PostCard from "./components/PostCard";
 import SuccessScreen from "./components/SuccessScreen";
@@ -12,6 +13,7 @@ import PwaInstallBanner from "./components/PwaInstallBanner";
 
 export default function App() {
   const store = useStore();
+  const { recipients } = useRecipientData();
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -93,6 +95,7 @@ export default function App() {
                   onUpdate={store.updateEntry}
                   onRemove={store.removeEntry}
                   showRemove={store.entries.length > 1}
+                  recipients={recipients}
                 />
               ))}
 

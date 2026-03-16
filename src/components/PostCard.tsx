@@ -1,6 +1,7 @@
 import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
-import FormField from './FormField'
+import RecipientAutocomplete from './RecipientAutocomplete'
+import type { RecipientOption } from '../services/googleSheetsService'
 
 const SHELVES = [1, 2, 3, 4, 5, 6, 7, 8] as const
 
@@ -10,9 +11,10 @@ interface PostCardProps {
   onUpdate: (id: string, patch: Partial<PostEntry>) => void
   onRemove: (id: string) => void
   showRemove: boolean
+  recipients: RecipientOption[]
 }
 
-export default function PostCard({ entry, index, onUpdate, onRemove, showRemove }: PostCardProps) {
+export default function PostCard({ entry, index, onUpdate, onRemove, showRemove, recipients }: PostCardProps) {
   const set = <K extends keyof PostEntry>(key: K, val: PostEntry[K]) =>
     onUpdate(entry.id, { [key]: val } as Partial<PostEntry>)
 
@@ -95,15 +97,11 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove 
 
       {/* Naam */}
       <div className="mb-3">
-        <FormField
+        <RecipientAutocomplete
           id={`name-${entry.id}`}
-          label="Naam / Bedrijf ontvanger *"
-          type="text"
-          placeholder="bijv. Jan de Vries of Acme B.V."
           value={entry.name}
-          onChange={e => set('name', e.currentTarget.value)}
-          autoComplete="off"
-          autoCorrect="off"
+          onChange={v => set('name', v)}
+          recipients={recipients}
         />
       </div>
 
