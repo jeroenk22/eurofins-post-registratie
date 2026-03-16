@@ -34,16 +34,8 @@ interface MestklantRow {
 const CACHE_KEY = 'recipient_data_cache'
 const CACHE_TTL_MS = 10 * 60 * 1000
 
-function getSheetId(): string {
-  return import.meta.env.VITE_GOOGLE_SHEETS_ID ?? ''
-}
-
-function getApiKey(): string {
-  return import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ?? ''
-}
-
 export function isGoogleSheetsConfigured(): boolean {
-  return !!(getSheetId() && getApiKey())
+  return true // Configuratie wordt server-side afgehandeld via Netlify Function
 }
 
 export function formatPersonName(row: Pick<PersonRow, 'Code' | 'Voornaam' | 'Tussenvoegsel' | 'Achternaam'>): string {
@@ -53,9 +45,7 @@ export function formatPersonName(row: Pick<PersonRow, 'Code' | 'Voornaam' | 'Tus
 }
 
 async function fetchSheetTab(tabName: string): Promise<string[][]> {
-  const sheetId = getSheetId()
-  const apiKey = getApiKey()
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(`'${tabName}'`)}?key=${apiKey}`
+  const url = `/.netlify/functions/sheets?tab=${encodeURIComponent(tabName)}`
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Fout bij ophalen tabblad '${tabName}': HTTP ${response.status}`)

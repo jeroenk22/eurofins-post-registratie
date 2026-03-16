@@ -242,15 +242,11 @@ describe('LocalStorage caching', () => {
   })
 })
 
-// --- fetchAllRecipients integratie (mock) ---
+// --- isGoogleSheetsConfigured ---
 
-describe('fetchAllRecipients', () => {
-  it('gooit een fout als sheets niet geconfigureerd zijn', async () => {
-    vi.stubEnv('VITE_GOOGLE_SHEETS_ID', '')
-    vi.stubEnv('VITE_GOOGLE_SHEETS_API_KEY', '')
-    // We testen dit via de isGoogleSheetsConfigured check
+describe('isGoogleSheetsConfigured', () => {
+  it('geeft altijd true terug (configuratie is server-side via Netlify Function)', async () => {
     const { isGoogleSheetsConfigured } = await import('../services/googleSheetsService')
-    expect(isGoogleSheetsConfigured()).toBe(false)
-    vi.unstubAllEnvs()
+    expect(isGoogleSheetsConfigured()).toBe(true)
   })
 })
