@@ -248,8 +248,6 @@ describe('fetchAllRecipients', () => {
   it('gooit een fout als sheets niet geconfigureerd zijn', async () => {
     vi.stubEnv('VITE_GOOGLE_SHEETS_ID', '')
     vi.stubEnv('VITE_GOOGLE_SHEETS_API_KEY', '')
-    const { fetchAllRecipients: fetch } = await import('../services/googleSheetsService')
-    // fetch zelf gooit geen fout, maar de fetch naar de URL zou mislukken
     // We testen dit via de isGoogleSheetsConfigured check
     const { isGoogleSheetsConfigured } = await import('../services/googleSheetsService')
     expect(isGoogleSheetsConfigured()).toBe(false)

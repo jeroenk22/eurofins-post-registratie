@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useRecipientData } from '../hooks/useRecipientData'
 import type { RecipientOption } from '../services/googleSheetsService'
@@ -101,7 +101,7 @@ describe('useRecipientData', () => {
   })
 
   it('zet een interval op van 10 minuten', () => {
-    const spy = vi.spyOn(global, 'setInterval')
+    const spy = vi.spyOn(window, 'setInterval')
     vi.mocked(isCacheStale).mockReturnValue(false)
 
     renderHook(() => useRecipientData())

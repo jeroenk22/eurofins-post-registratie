@@ -1,6 +1,5 @@
 import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
-import FormField from './FormField'
 import RecipientAutocomplete from './RecipientAutocomplete'
 import type { RecipientOption } from '../services/googleSheetsService'
 
