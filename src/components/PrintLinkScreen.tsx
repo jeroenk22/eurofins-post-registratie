@@ -88,8 +88,8 @@ export default function PrintLinkScreen({ entries }: PrintLinkScreenProps) {
                     <p className="text-sm font-medium text-gray-800 truncate">
                       {i + 1}. {entry.name || <span className="text-gray-400 italic">Naam onbekend</span>}
                     </p>
-                    {entry.schapnummer && (
-                      <p className="text-xs text-gray-500">{entry.schapnummer}</p>
+                    {entry.route && (
+                      <p className="text-xs text-gray-500">{entry.route}</p>
                     )}
                   </div>
                   <button

@@ -14,14 +14,23 @@ interface SuccessScreenProps {
   onReset: () => void;
 }
 
-function formatShelf(entry: PostEntry): string {
-  if (entry.shelf === "overig") return `Overig: ${entry.shelfDescription}`;
-  if (entry.shelf) return `Schap ${entry.shelf}`;
+function formatRoute(entry: PostEntry): string {
+  if (entry.shelf === "overig") return entry.shelfDescription ? `Overig: ${entry.shelfDescription}` : "Overig";
+  if (entry.shelf) return `Route ${entry.shelf}`;
   return "";
 }
 
 function toPrintEntry(e: PostEntry): PrintEntry {
-  return { name: e.name, schapnummer: formatShelf(e), colli: e.colli };
+  return {
+    name: e.name,
+    adres: e.adres,
+    postcode: e.postcode,
+    plaats: e.plaats,
+    land: e.land,
+    route: formatRoute(e),
+    colli: e.colli,
+    spoed: e.spoed,
+  };
 }
 
 export default function SuccessScreen({
@@ -109,8 +118,8 @@ export default function SuccessScreen({
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {i + 1}. {entry.name || <span className="text-gray-400 italic">Naam onbekend</span>}
                 </p>
-                {formatShelf(entry) && (
-                  <p className="text-xs text-gray-500">{formatShelf(entry)}</p>
+                {formatRoute(entry) && (
+                  <p className="text-xs text-gray-500">{formatRoute(entry)}</p>
                 )}
               </div>
               <button

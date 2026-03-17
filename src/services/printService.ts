@@ -12,15 +12,15 @@ export const LABEL_FORMATS: LabelFormat[] = [
   { id: 'dymo_11354',      name: 'DYMO 11354 – multipurpose (57×32mm)', widthMm: 57,  heightMm: 32  },
   { id: 'dymo_11352',      name: 'DYMO 11352 – klein (54×25mm)',         widthMm: 54,  heightMm: 25  },
   { id: 'dymo_s0904980',   name: 'DYMO 99014 – verzending (54×101mm)',  widthMm: 54,  heightMm: 101 },
-  // Brother QL — DK-serie
-  { id: 'brother_dk11201', name: 'Brother DK-11201 – adres (29×90mm)',       widthMm: 29, heightMm: 90  },
-  { id: 'brother_dk11209', name: 'Brother DK-11209 – klein adres (29×62mm)', widthMm: 29, heightMm: 62  },
-  { id: 'brother_dk11208', name: 'Brother DK-11208 – groot adres (38×90mm)', widthMm: 38, heightMm: 90  },
-  { id: 'brother_dk11202', name: 'Brother DK-11202 – verzending (62×100mm)', widthMm: 62, heightMm: 100 },
+  // Brother QL — DK-serie (landscape: rol is de korte kant, lengte is de brede kant)
+  { id: 'brother_dk11201', name: 'Brother DK-11201 – adres (29×90mm)',       widthMm: 90, heightMm: 29  },
+  { id: 'brother_dk11209', name: 'Brother DK-11209 – klein adres (29×62mm)', widthMm: 62, heightMm: 29  },
+  { id: 'brother_dk11208', name: 'Brother DK-11208 – groot adres (38×90mm)', widthMm: 90, heightMm: 38  },
+  { id: 'brother_dk11202', name: 'Brother DK-11202 – verzending (62×100mm)', widthMm: 100, heightMm: 62 },
 ]
 
 const FORMAT_STORAGE_KEY = 'label_format'
-const DEFAULT_FORMAT_ID  = 'dymo_99010'
+const DEFAULT_FORMAT_ID  = 'brother_dk11208'
 
 export function getSelectedFormat(): LabelFormat {
   const stored = localStorage.getItem(FORMAT_STORAGE_KEY)
@@ -33,48 +33,77 @@ export function setSelectedFormat(id: string): void {
 
 export interface PrintEntry {
   name: string
-  schapnummer: string  // al geformatteerd, bijv. "Schap 3" of "Overig: koeling"
+  adres: string
+  postcode: string
+  plaats: string
+  route: string  // al geformatteerd, bijv. "Route 6" of "Overig: koeling"
   colli: number
+  spoed: boolean
+  land: string
 }
 
 export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   if (entries.length === 0) return
 
   // Flatten to individual labels
-  const labels: Array<{ name: string; schapnummer: string; index: number; total: number }> = []
+  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean }> = []
   for (const entry of entries) {
+    // Strip the "(plaats)" suffix added by autocomplete value formatting, but only if it matches exactly
+    const suffix = entry.plaats ? ` (${entry.plaats})` : ''
+    const cleanName = suffix && entry.name.endsWith(suffix)
+      ? entry.name.slice(0, -suffix.length)
+      : entry.name
     for (let i = 1; i <= entry.colli; i++) {
-      labels.push({ name: entry.name, schapnummer: entry.schapnummer, index: i, total: entry.colli })
+      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed })
     }
   }
 
   const { widthMm, heightMm } = format
-  const isPortrait = heightMm > widthMm
+  const shortMm = Math.min(widthMm, heightMm)
 
-  // Font sizes based on label height
+  // Font sizes based on the short dimension of the label
   let fontName: string
-  let fontSschap: string
+  let fontAddr: string
+  let fontRoute: string
   let fontColli: string
-  if (heightMm <= 28) {
+  let fontSpoed: string
+  if (shortMm <= 28) {
     fontName  = '9pt'
-    fontSschap = '7pt'
-    fontColli  = '8pt'
-  } else if (heightMm <= 40) {
-    fontName  = '11pt'
-    fontSschap = '8pt'
-    fontColli  = '10pt'
+    fontAddr  = '7pt'
+    fontRoute = '9pt'
+    fontColli = '9pt'
+    fontSpoed = '8pt'
+  } else if (shortMm <= 40) {
+    fontName  = '15pt'
+    fontAddr  = '11pt'
+    fontRoute = '13pt'
+    fontColli = '14pt'
+    fontSpoed = '11pt'
   } else {
-    fontName  = '14pt'
-    fontSschap = '10pt'
-    fontColli  = '12pt'
+    fontName  = '16pt'
+    fontAddr  = '12pt'
+    fontRoute = '13pt'
+    fontColli = '14pt'
+    fontSpoed = '12pt'
   }
 
   const labelHtml = labels.map((l, i) => {
     const isLast = i === labels.length - 1
+    const postcodeplaats = [l.postcode, l.plaats].filter(Boolean).join('  ')
     return `<div class="label" style="break-after:${isLast ? 'avoid' : 'page'}">
-  <div class="name">${escapeHtml(l.name)}</div>
-  ${l.schapnummer ? `<div class="schap">Schap: ${escapeHtml(l.schapnummer)}</div>` : ''}
-  <div class="colli">${l.index} / ${l.total} colli</div>
+  <div class="content">
+    <div class="name">${escapeHtml(l.name)}</div>
+    ${l.adres ? `<div class="addr">${escapeHtml(l.adres)}</div>` : ''}
+    ${postcodeplaats ? `<div class="addr">${escapeHtml(postcodeplaats)}</div>` : ''}
+    ${l.land ? `<div class="addr">${escapeHtml(l.land)}</div>` : ''}
+  </div>
+  <div class="bottom">
+    <div class="bottom-left">
+      ${l.spoed ? `<div class="spoed">SPOED</div>` : ''}
+      ${l.route ? `<div class="route">${escapeHtml(l.route)}</div>` : ''}
+    </div>
+    <div class="colli">${l.index}/${l.total}</div>
+  </div>
 </div>`
   }).join('\n')
 
@@ -85,21 +114,35 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
 <style>
 @page {
   size: ${widthMm}mm ${heightMm}mm;
-  margin: 2mm;
+  margin: 0;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: Arial, Helvetica, sans-serif;
-  width: ${widthMm - 4}mm;
+  width: ${widthMm}mm;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .label {
-  width: 100%;
-  height: ${heightMm - 4}mm;
+  width: ${widthMm}mm;
+  height: ${heightMm}mm;
+  padding: 3mm 4mm;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: ${isPortrait ? '3mm' : '1mm'};
+  justify-content: space-between;
   overflow: hidden;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 3mm;
+  margin-bottom: 1mm;
 }
 .name {
   font-size: ${fontName};
@@ -107,10 +150,45 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
-.schap {
-  font-size: ${fontSschap};
-  color: #444;
+.route {
+  font-size: ${fontRoute};
+  font-weight: bold;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.addr {
+  font-size: ${fontAddr};
+  color: #333;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.bottom-left {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+}
+.route {
+  font-size: ${fontRoute};
+  font-weight: bold;
+  white-space: nowrap;
+}
+.spoed {
+  font-size: ${fontSpoed};
+  font-weight: bold;
+  color: #fff;
+  background: red;
+  padding: 1mm 2.5mm;
+  border-radius: 1mm;
+  letter-spacing: 0.5pt;
 }
 .colli {
   font-size: ${fontColli};

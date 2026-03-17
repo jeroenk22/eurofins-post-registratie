@@ -9,6 +9,10 @@ export interface PostEntry {
   shelf: number | 'overig' | null; // per entry
   shelfDescription: string; // beschrijving wanneer shelf === 'overig'
   name: string;
+  adres: string;
+  postcode: string;
+  plaats: string;
+  land: string;
   colli: number;
   spoed: boolean;
   photos: Photo[];

@@ -6,6 +6,7 @@
   command = "npm run dev"
   targetPort = 5173
   port = 8888
+  startTimeout = 60
 
 [[edge_functions]]
   path     = "/*"

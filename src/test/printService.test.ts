@@ -9,8 +9,8 @@ import {
 } from "../services/printService";
 
 const sampleEntries: PrintEntry[] = [
-  { name: "Jan de Vries", schapnummer: "Schap 3", colli: 2 },
-  { name: "Acme B.V.", schapnummer: "Overig: koeling", colli: 1 },
+  { name: "Jan de Vries", adres: "Hoofdstraat 1", postcode: "1234 AB", plaats: "Amsterdam", land: "Nederland", route: "Route 3", colli: 2, spoed: false },
+  { name: "Acme B.V.", adres: "", postcode: "", plaats: "", land: "", route: "Overig: koeling", colli: 1, spoed: true },
 ];
 
 describe("encodePrintData / decodePrintData", () => {

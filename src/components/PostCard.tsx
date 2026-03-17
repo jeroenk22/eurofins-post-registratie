@@ -62,11 +62,13 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           onChange={v => { set('name', v); if (!v) set('shelf', null) }}
           onSelect={option => {
             const n = Number(option.route)
-            if (Number.isInteger(n) && n >= 1 && n <= 8) {
-              set('shelf', n)
-            } else {
-              set('shelf', null)
-            }
+            onUpdate(entry.id, {
+              adres: option.adres,
+              postcode: option.postcode,
+              plaats: option.plaats,
+              land: option.land,
+              shelf: Number.isInteger(n) && n >= 1 && n <= 8 ? n : null,
+            })
           }}
           recipients={recipients}
         />
