@@ -67,7 +67,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   let fontRoute: string
   let fontColli: string
   let fontSpoed: string
-  if (shortMm <= 28) {
+  if (shortMm < 30) {
     fontName  = '9pt'
     fontAddr  = '7pt'
     fontRoute = '9pt'
