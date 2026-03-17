@@ -54,6 +54,22 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         )}
       </div>
 
+      {/* Naam */}
+      <div className="mb-3">
+        <RecipientAutocomplete
+          id={`name-${entry.id}`}
+          value={entry.name}
+          onChange={v => { set('name', v); if (!v) set('shelf', null) }}
+          onSelect={option => {
+            const n = Number(option.route)
+            if (Number.isInteger(n) && n >= 1 && n <= 8) {
+              set('shelf', n)
+            }
+          }}
+          recipients={recipients}
+        />
+      </div>
+
       {/* Schap selector */}
       <div className="mb-3">
         <p className="label-base">Schap nummer *</p>
@@ -92,22 +108,6 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           value={entry.shelfDescription}
           onChange={e => set('shelfDescription', e.currentTarget.value)}
           aria-label="Locatiebeschrijving overige plek"
-        />
-      </div>
-
-      {/* Naam */}
-      <div className="mb-3">
-        <RecipientAutocomplete
-          id={`name-${entry.id}`}
-          value={entry.name}
-          onChange={v => set('name', v)}
-          onSelect={option => {
-            const n = Number(option.routenummer)
-            if (Number.isInteger(n) && n >= 1 && n <= 8) {
-              set('shelf', n)
-            }
-          }}
-          recipients={recipients}
         />
       </div>
 

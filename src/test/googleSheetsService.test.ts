@@ -50,8 +50,8 @@ describe('parsePersonRows', () => {
     expect(result[0].postcode).toBe('1234AB')
     expect(result[0].plaats).toBe('Amsterdam')
     expect(result[0].land).toBe('Nederland')
-    expect(result[0].routenummer).toBe('R1')
-    expect(result[1].routenummer).toBe('R2')
+    expect(result[0].route).toBe('R1')
+    expect(result[1].route).toBe('R2')
   })
 
   it('slaat lege rijen over', () => {
@@ -120,7 +120,7 @@ describe('filterRecipients', () => {
       postcode: '1234AB',
       plaats: 'Amsterdam',
       land: 'Nederland',
-      routenummer: '',
+      route: '',
     },
     {
       id: 'b',
@@ -132,7 +132,7 @@ describe('filterRecipients', () => {
       postcode: '9999ZZ',
       plaats: 'Groningen',
       land: 'Nederland',
-      routenummer: '',
+      route: '',
     },
   ]
 
@@ -179,7 +179,7 @@ describe('filterRecipients', () => {
       postcode: '',
       plaats: '',
       land: '',
-      routenummer: '',
+      route: '',
     }))
     expect(filterRecipients(many, 'persoon')).toHaveLength(10)
   })
@@ -203,7 +203,7 @@ describe('LocalStorage caching', () => {
       postcode: '',
       plaats: '',
       land: '',
-      routenummer: '',
+      route: '',
     },
   ]
 

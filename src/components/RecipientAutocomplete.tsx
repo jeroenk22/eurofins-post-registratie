@@ -130,29 +130,49 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
     }
   }
 
+  const handleClear = () => {
+    setQuery('')
+    onChange('')
+    setSuggestions([])
+    setIsOpen(false)
+    inputRef.current?.focus()
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <label htmlFor={id} className="label-base">
         Naam / Bedrijf ontvanger *
       </label>
-      <input
-        ref={inputRef}
-        id={id}
-        type="text"
-        role="combobox"
-        aria-expanded={isOpen}
-        aria-controls={listId}
-        aria-autocomplete="list"
-        aria-activedescendant={activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined}
-        className="input-base"
-        placeholder="bijv. Jan de Vries of Acme B.V."
-        value={query}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onFocus={() => { if (suggestions.length > 0) setIsOpen(true) }}
-        autoComplete="off"
-        autoCorrect="off"
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined}
+          className="input-base !pr-7"
+          placeholder="bijv. Jan de Vries of Acme B.V."
+          value={query}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => { if (suggestions.length > 0) setIsOpen(true) }}
+          autoComplete="off"
+          autoCorrect="off"
+        />
+        {query && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); handleClear() }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            aria-label="Veld leegmaken"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {isOpen && (
         <ul
@@ -185,9 +205,9 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
                     <span className={`sm:w-24 flex-shrink-0 sm:mt-0.5 text-[10px] font-bold rounded px-1.5 py-0.5 leading-tight text-center ${TAB_COLOR[option.type]}`}>
                       {TAB_LABEL[option.type]}
                     </span>
-                    {option.routenummer && (
+                    {option.route && (
                       <span className="flex-shrink-0 sm:w-24 text-[10px] font-bold text-white rounded px-1.5 py-0.5 leading-tight text-center" style={{ backgroundColor: '#ff7b27' }}>
-                        Schap {option.routenummer}
+                        Schap {option.route}
                       </span>
                     )}
                   </div>

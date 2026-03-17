@@ -15,6 +15,7 @@ const recipients: RecipientOption[] = [
     postcode: '1234AB',
     plaats: 'Amsterdam',
     land: 'Nederland',
+    route: '3',
   },
   {
     id: 'AP-0',
@@ -26,6 +27,7 @@ const recipients: RecipientOption[] = [
     postcode: '5678CD',
     plaats: 'Utrecht',
     land: 'Nederland',
+    route: '',
   },
   {
     id: 'Mestklanten-0',
@@ -37,6 +39,7 @@ const recipients: RecipientOption[] = [
     postcode: '9999ZZ',
     plaats: 'Groningen',
     land: 'Nederland',
+    route: '',
   },
 ]
 
