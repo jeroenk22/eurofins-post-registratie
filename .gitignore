@@ -7,3 +7,9 @@ dist-ssr
 !.env.example
 .DS_Store
 *.tsbuildinfo
+
+# Local Netlify folder
+.netlify
+
+# Deno
+deno.lock

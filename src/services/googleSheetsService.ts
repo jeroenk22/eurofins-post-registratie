@@ -10,6 +10,7 @@ export interface RecipientOption {
   postcode: string
   plaats: string
   land: string
+  route: string  // Waarde uit de kolom 'Route' in de sheet, gebruikt als schapnummer
 }
 
 interface PersonRow {
@@ -21,6 +22,7 @@ interface PersonRow {
   Postcode: string
   Plaats: string
   Land: string
+  Route?: string
 }
 
 interface MestklantRow {
@@ -82,6 +84,7 @@ export function parsePersonRows(rows: string[][], type: 'Monsternemers' | 'AP06'
         postcode: p.Postcode ?? '',
         plaats: p.Plaats ?? '',
         land: p.Land ?? '',
+        route: p.Route ?? '',
       } satisfies RecipientOption
     })
     .filter(r => r.searchTerms.length > 0)
@@ -104,6 +107,7 @@ export function parseMestklantRows(rows: string[][]): RecipientOption[] {
         postcode: m.Postcode ?? '',
         plaats: m.Plaats ?? '',
         land: m.Land ?? '',
+        route: '',
       } satisfies RecipientOption
     })
     .filter(r => r.searchTerms.length > 0)

@@ -1,4 +1,5 @@
 import type { PostEntry, SubmitPayload } from "./types";
+import { encodePrintData, type PrintEntry } from "./services/printService";
 
 // Functie i.p.v. constante — zodat tests de env kunnen overschrijven
 function getWebhookUrl(): string | undefined {
@@ -21,6 +22,35 @@ export async function submitToWebhook(
 
   const now = new Date();
 
+  const base = `${window.location.origin}${window.location.pathname}`;
+
+  const submitEntries = entries.map((e, i) => {
+    const shelf = e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`;
+    const route = e.shelf === 'overig' ? (e.shelfDescription ? `Overig: ${e.shelfDescription}` : 'Overig') : `Route ${e.shelf}`;
+    const printEntry: PrintEntry = { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, spoed: e.spoed };
+    return {
+      entry_number: i + 1,
+      shelf,
+      recipient: e.name.trim(),
+      colli: e.colli,
+      spoed: e.spoed,
+      photo_count: e.photos.length,
+      photos: e.photos.map((p) => ({
+        filename: p.name,
+        base64: p.data,
+        recipient: e.name.trim(),
+        spoed: e.spoed,
+      })),
+      print_url: `${base}?printData=${encodePrintData([printEntry])}`,
+    };
+  });
+
+  const allPrintEntries: PrintEntry[] = entries.map((e) => {
+    const route = e.shelf === 'overig' ? (e.shelfDescription ? `Overig: ${e.shelfDescription}` : 'Overig') : `Route ${e.shelf}`;
+    return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, spoed: e.spoed };
+  });
+  const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
+
   const payload: SubmitPayload = {
     submitted_at: now.toISOString(),
     datetime_nl: now.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }),
@@ -28,25 +58,13 @@ export async function submitToWebhook(
     sender_phone: senderPhone.trim() || null,
     sender_email: senderEmail.trim() || null,
     total_entries: entries.length,
-    entries: entries.map((e, i) => ({
-      entry_number: i + 1,
-      shelf: e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`,
-      recipient: e.name.trim(),
-      colli: e.colli,
-      spoed: e.spoed,
-      photo_count: e.photos.length,
-      // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
-      // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
-      // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,
-      // waardoor de bestandsnaam anders niet correct kan worden opgebouwd.
-      // De duplicatie is bewust en alleen zichtbaar in de interne webhook payload.
-      photos: e.photos.map((p) => ({
-        filename: p.name,
-        base64: p.data,
-        recipient: e.name.trim(),
-        spoed: e.spoed,
-      })),
-    })),
+    print_url: printUrl,
+    // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
+    // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
+    // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,
+    // waardoor de bestandsnaam anders niet correct kan worden opgebouwd.
+    // De duplicatie is bewust en alleen zichtbaar in de interne webhook payload.
+    entries: submitEntries,
   };
 
   const res = await fetch(url, {

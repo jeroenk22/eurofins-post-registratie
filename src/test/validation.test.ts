@@ -5,7 +5,7 @@ import { validateForm, isValidEmail } from '../validation'
 const mockPhoto = { id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }
 
 const validEntry = (): PostEntry => ({
-  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', colli: 1, spoed: false, photos: [mockPhoto],
+  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', adres: '', postcode: '', plaats: '', land: '', colli: 1, spoed: false, photos: [mockPhoto],
 })
 
 describe('validateForm', () => {

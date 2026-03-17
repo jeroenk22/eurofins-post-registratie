@@ -14,6 +14,7 @@ const mockRecipients: RecipientOption[] = [
     postcode: '1234AB',
     plaats: 'Amsterdam',
     land: 'Nederland',
+    route: '',
   },
 ]
 

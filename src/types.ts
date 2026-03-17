@@ -9,6 +9,10 @@ export interface PostEntry {
   shelf: number | 'overig' | null; // per entry
   shelfDescription: string; // beschrijving wanneer shelf === 'overig'
   name: string;
+  adres: string;
+  postcode: string;
+  plaats: string;
+  land: string;
   colli: number;
   spoed: boolean;
   photos: Photo[];
@@ -22,6 +26,7 @@ export interface SubmitPayload {
   sender_email: string | null;
   total_entries: number;
   entries: SubmitEntry[];
+  print_url: string;
 }
 
 export interface SubmitEntry {
@@ -32,6 +37,7 @@ export interface SubmitEntry {
   spoed: boolean;
   photo_count: number;
   photos: SubmitPhoto[];
+  print_url: string;
 }
 
 export interface SubmitPhoto {

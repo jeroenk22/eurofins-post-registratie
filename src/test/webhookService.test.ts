@@ -7,6 +7,10 @@ const makeEntry = (overrides: Partial<PostEntry> = {}): PostEntry => ({
   shelf: 3,
   shelfDescription: '',
   name: "Acme B.V.",
+  adres: '',
+  postcode: '',
+  plaats: '',
+  land: '',
   colli: 2,
   spoed: false,
   photos: [],
@@ -80,6 +84,11 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].spoed).toBe(true);
     expect(body.sender_email).toBe("sophie@example.com");
     expect(body.sender_phone).toBeNull();
+    expect(typeof body.print_url).toBe("string");
+    expect(body.print_url).toContain("printData=");
+    expect(typeof body.entries[0].print_url).toBe("string");
+    expect(body.entries[0].print_url).toContain("printData=");
+    expect(typeof body.entries[1].print_url).toBe("string");
 
     // Foto's krijgen recipient en spoed mee zodat Make's foto-iterator
     // deze waarden beschikbaar heeft in geneste sub-routes (zie webhookService.ts)
