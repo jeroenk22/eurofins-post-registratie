@@ -44,7 +44,7 @@ describe("getSelectedFormat / setSelectedFormat", () => {
 
   it("returns the default format when nothing is stored", () => {
     const format = getSelectedFormat();
-    expect(format.id).toBe("dymo_99010");
+    expect(format.id).toBe("brother_dk11208");
   });
 
   it("returns the stored format after setSelectedFormat", () => {
@@ -54,7 +54,7 @@ describe("getSelectedFormat / setSelectedFormat", () => {
 
   it("falls back to default for an unknown stored id", () => {
     localStorage.setItem("label_format", "onbekend_formaat");
-    expect(getSelectedFormat().id).toBe("dymo_99010");
+    expect(getSelectedFormat().id).toBe("brother_dk11208");
   });
 });
 
