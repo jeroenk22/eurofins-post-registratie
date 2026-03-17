@@ -64,6 +64,8 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             const n = Number(option.route)
             if (Number.isInteger(n) && n >= 1 && n <= 8) {
               set('shelf', n)
+            } else {
+              set('shelf', null)
             }
           }}
           recipients={recipients}
