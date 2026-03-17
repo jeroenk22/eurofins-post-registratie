@@ -32,7 +32,7 @@ describe('formatPersonName', () => {
 // --- parsePersonRows ---
 
 describe('parsePersonRows', () => {
-  const headers = ['Code', 'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Routenummer', 'Adres', 'Postcode', 'Plaats', 'Land']
+  const headers = ['Code', 'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Route', 'Adres', 'Postcode', 'Plaats', 'Land']
   const rows: string[][] = [
     headers,
     ['M001', 'Jan', 'de', 'Vries', 'R1', 'Kerkstraat 1', '1234AB', 'Amsterdam', 'Nederland'],
