@@ -15,7 +15,7 @@ interface SuccessScreenProps {
 }
 
 function formatRoute(entry: PostEntry): string {
-  if (entry.shelf === "overig") return entry.shelfDescription ? `Overig: ${entry.shelfDescription}` : "Overig";
+  if (entry.shelf === "overig") return "";
   if (entry.shelf) return `Route ${entry.shelf}`;
   return "";
 }

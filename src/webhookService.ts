@@ -26,7 +26,7 @@ export async function submitToWebhook(
 
   const submitEntries = entries.map((e, i) => {
     const shelf = e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`;
-    const route = e.shelf === 'overig' ? (e.shelfDescription ? `Overig: ${e.shelfDescription}` : 'Overig') : `Route ${e.shelf}`;
+    const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
     const printEntry: PrintEntry = { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, spoed: e.spoed };
     return {
       entry_number: i + 1,
@@ -46,7 +46,7 @@ export async function submitToWebhook(
   });
 
   const allPrintEntries: PrintEntry[] = entries.map((e) => {
-    const route = e.shelf === 'overig' ? (e.shelfDescription ? `Overig: ${e.shelfDescription}` : 'Overig') : `Route ${e.shelf}`;
+    const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
     return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, spoed: e.spoed };
   });
   const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
