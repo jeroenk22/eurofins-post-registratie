@@ -59,7 +59,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         <RecipientAutocomplete
           id={`name-${entry.id}`}
           value={entry.name}
-          onChange={v => { set('name', v); if (!v) { set('shelf', null); set('spoed', false) } }}
+          onChange={v => { set('name', v); if (!v) { set('shelf', null); set('spoed', false); set('colli', 1) } }}
           onSelect={option => {
             const n = Number(option.route)
             const shelf = Number.isInteger(n) && n >= 1 && n <= 8 ? n : null

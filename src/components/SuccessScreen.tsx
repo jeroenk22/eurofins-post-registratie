@@ -1,12 +1,12 @@
 import { useState } from "react";
 import type { PostEntry } from "../types";
 import {
-  LABEL_FORMATS,
   getSelectedFormat,
   setSelectedFormat,
   printLabels,
   type PrintEntry,
 } from "../services/printService";
+import LabelFormatSelect from "./LabelFormatSelect";
 
 interface SuccessScreenProps {
   entries: PostEntry[];
@@ -73,27 +73,11 @@ export default function SuccessScreen({
       {!senderEmail && <div className="mb-6" />}
 
       {/* Print sectie */}
-      <div className="w-full max-w-sm border border-gray-200 rounded-xl overflow-hidden mb-6">
+      <div className="w-full max-w-sm border border-gray-200 rounded-xl mb-6">
         {/* Formaat selector */}
-        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
-          <label
-            htmlFor="label-format"
-            className="text-xs font-medium text-gray-600 whitespace-nowrap"
-          >
-            Formaat:
-          </label>
-          <select
-            id="label-format"
-            value={formatId}
-            onChange={(e) => handleFormatChange(e.currentTarget.value)}
-            className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-ef-blue/40"
-          >
-            {LABEL_FORMATS.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
+        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-xl flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-gray-600">Formaat:</span>
+          <LabelFormatSelect value={formatId} onChange={handleFormatChange} />
         </div>
 
         {/* Print alle labels */}
@@ -108,7 +92,7 @@ export default function SuccessScreen({
         </div>
 
         {/* Print per entry */}
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 rounded-b-xl overflow-hidden">
           {entries.map((entry, i) => (
             <div
               key={entry.id}
