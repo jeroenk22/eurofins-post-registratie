@@ -94,14 +94,12 @@ export function parseMestklantRows(rows: string[][]): RecipientOption[] {
   return rowsToObjects(rows)
     .map((obj, index) => {
       const m = obj as unknown as MestklantRow
-      const postcodeplaats = [m.Postcode, m.Plaats].filter(Boolean).join(' ')
-      const value = postcodeplaats ? `${m.Naam} (${postcodeplaats})` : m.Naam
       const searchTerms = [m.Naam, m.Postcode, m.Plaats].filter(Boolean)
       return {
         id: `Mestklanten-${index}`,
         type: 'Mestklanten' as const,
-        label: value,
-        value,
+        label: m.Naam,
+        value: m.Naam,
         searchTerms,
         adres: m.Adres ?? '',
         postcode: m.Postcode ?? '',

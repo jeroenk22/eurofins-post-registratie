@@ -23,7 +23,9 @@ export default function App() {
 
   const store = useStore();
   const { recipients } = useRecipientData();
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [submitState, setSubmitState] = useState<SubmitState>(() =>
+    sessionStorage.getItem("submit_state") === "success" ? "success" : "idle"
+  );
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async () => {
@@ -44,6 +46,7 @@ export default function App() {
         store.senderEmail,
       );
       setSubmitState("success");
+      sessionStorage.setItem("submit_state", "success");
     } catch (e) {
       setSubmitState("error");
       setErrorMsg(
@@ -54,6 +57,7 @@ export default function App() {
 
   const handleReset = () => {
     store.reset();
+    sessionStorage.removeItem("submit_state");
     setSubmitState("idle");
     setErrorMsg("");
   };

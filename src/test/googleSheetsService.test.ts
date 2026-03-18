@@ -87,8 +87,8 @@ describe('parseMestklantRows', () => {
   it('parst Mestklanten correct', () => {
     const result = parseMestklantRows(rows)
     expect(result).toHaveLength(1)
-    expect(result[0].label).toBe('Acme B.V. (9999ZZ Groningen)')
-    expect(result[0].value).toBe('Acme B.V. (9999ZZ Groningen)')
+    expect(result[0].label).toBe('Acme B.V.')
+    expect(result[0].value).toBe('Acme B.V.')
     expect(result[0].type).toBe('Mestklanten')
   })
 
@@ -125,8 +125,8 @@ describe('filterRecipients', () => {
     {
       id: 'b',
       type: 'Mestklanten',
-      label: 'Acme B.V. (9999ZZ Groningen)',
-      value: 'Acme B.V. (9999ZZ Groningen)',
+      label: 'Acme B.V.',
+      value: 'Acme B.V.',
       searchTerms: ['Acme B.V.', '9999ZZ', 'Groningen'],
       adres: 'Industrieweg 10',
       postcode: '9999ZZ',
