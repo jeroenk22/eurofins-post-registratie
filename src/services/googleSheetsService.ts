@@ -31,6 +31,7 @@ interface MestklantRow {
   Postcode: string
   Plaats: string
   Land: string
+  Route?: string
 }
 
 const CACHE_KEY = 'recipient_data_cache'
@@ -105,7 +106,7 @@ export function parseMestklantRows(rows: string[][]): RecipientOption[] {
         postcode: m.Postcode ?? '',
         plaats: m.Plaats ?? '',
         land: m.Land ?? '',
-        route: '',
+        route: m.Route ?? '',
       } satisfies RecipientOption
     })
     .filter(r => r.searchTerms.length > 0)
