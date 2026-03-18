@@ -87,6 +87,16 @@ export default function PrintLinkScreen({ entries }: PrintLinkScreenProps) {
               ))}
             </div>
           </div>
+
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => { window.location.href = "/"; }}
+              className="px-5 py-2.5 rounded-lg bg-ef-blue text-white text-sm font-semibold hover:bg-ef-blue/90 transition-colors"
+            >
+              + Nieuwe aanmelding
+            </button>
+          </div>
         </div>
       </div>
     </div>
