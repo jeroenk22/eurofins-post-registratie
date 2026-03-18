@@ -44,7 +44,6 @@ npm run build
     "colli": 3,
     "spoed": true,
     "photo_count": 1,
-    "print_url": "https://app.example.com/?printData=...",
     "photos": [{
       "filename": "foto.jpg",
       "base64": "data:image/jpeg;base64,...",
