@@ -37,7 +37,6 @@ export interface SubmitEntry {
   spoed: boolean;
   photo_count: number;
   photos: SubmitPhoto[];
-  print_url: string;
 }
 
 export interface SubmitPhoto {

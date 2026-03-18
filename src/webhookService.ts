@@ -26,8 +26,6 @@ export async function submitToWebhook(
 
   const submitEntries = entries.map((e, i) => {
     const shelf = e.shelf === 'overig' ? `Overig: ${e.shelfDescription}` : `Schap ${e.shelf}`;
-    const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
-    const printEntry: PrintEntry = { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, spoed: e.spoed };
     return {
       entry_number: i + 1,
       shelf,
@@ -41,7 +39,6 @@ export async function submitToWebhook(
         recipient: e.name.trim(),
         spoed: e.spoed,
       })),
-      print_url: `${base}?printData=${encodePrintData([printEntry])}`,
     };
   });
 
