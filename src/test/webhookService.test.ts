@@ -86,9 +86,8 @@ describe("submitToWebhook", () => {
     expect(body.sender_phone).toBeNull();
     expect(typeof body.print_url).toBe("string");
     expect(body.print_url).toContain("printData=");
-    expect(typeof body.entries[0].print_url).toBe("string");
-    expect(body.entries[0].print_url).toContain("printData=");
-    expect(typeof body.entries[1].print_url).toBe("string");
+    expect(body.entries[0].print_url).toBeUndefined();
+    expect(body.entries[1].print_url).toBeUndefined();
 
     // Foto's krijgen recipient en spoed mee zodat Make's foto-iterator
     // deze waarden beschikbaar heeft in geneste sub-routes (zie webhookService.ts)
