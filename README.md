@@ -32,21 +32,32 @@ npm run build
 {
   "submitted_at": "2026-02-25T14:30:00.000Z",
   "datetime_nl": "25-2-2026 15:30:00",
-  "shelf": "Schap 3",
   "sender_name": "Sophie Jansen",
   "sender_phone": "06 12345678",
   "sender_email": "sophie@eurofins.com",
   "total_entries": 1,
+  "print_url": "https://app.example.com/?printData=...",
   "entries": [{
     "entry_number": 1,
+    "shelf": "Schap 3",
     "recipient": "Acme B.V.",
     "colli": 3,
     "spoed": true,
     "photo_count": 1,
-    "photos": [{ "filename": "foto.jpg", "base64": "data:image/jpeg;base64,..." }]
+    "print_url": "https://app.example.com/?printData=...",
+    "photos": [{
+      "filename": "foto.jpg",
+      "base64": "data:image/jpeg;base64,...",
+      "recipient": "Acme B.V.",
+      "spoed": true
+    }]
   }]
 }
 ```
+
+> `sender_phone` en `sender_email` zijn `null` als niet ingevuld.
+> `shelf` is per entry: `"Schap 1"` t/m `"Schap 8"` of `"Overig: <omschrijving>"`.
+> `recipient` en `spoed` worden per foto herhaald zodat Make.com deze beschikbaar heeft in de foto-iterator.
 
 ## Make.com — e-mailbevestiging aan invoerder
 Voeg in je scenario een **Email** module toe (na de webhook trigger):
