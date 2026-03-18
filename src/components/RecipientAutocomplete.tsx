@@ -67,7 +67,7 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
 
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const justSelectedRef = useRef(false)
+  const justSelectedRef = useRef(true) // Start op true: geen auto-open bij laden met herstelde waarde
   const listId = useId()
 
   // Sync externe waarde (bijv. bij reset)
@@ -77,10 +77,7 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
 
   // Herbereken suggesties bij querywijziging
   useEffect(() => {
-    if (justSelectedRef.current) {
-      justSelectedRef.current = false
-      return
-    }
+    if (justSelectedRef.current) return
     const results = filterRecipients(recipients, query)
     setSuggestions(results)
     setIsOpen(results.length > 0)
@@ -108,6 +105,7 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
   }, [onChange, onSelect])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    justSelectedRef.current = false // Gebruiker typt actief: suggesties mogen weer openen
     const v = e.target.value
     setQuery(v)
     onChange(v)
