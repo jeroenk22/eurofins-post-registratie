@@ -77,11 +77,11 @@ describe('parsePersonRows', () => {
 // --- parseMestklantRows ---
 
 describe('parseMestklantRows', () => {
-  const headers = ['Naam', 'Adres', 'Postcode', 'Plaats', 'Land']
+  const headers = ['Naam', 'Adres', 'Postcode', 'Plaats', 'Land', 'Route']
   const rows: string[][] = [
     headers,
-    ['Acme B.V.', 'Industrieweg 10', '9999ZZ', 'Groningen', 'Nederland'],
-    ['', '', '', '', ''], // lege rij → gefilterd
+    ['Acme B.V.', 'Industrieweg 10', '9999ZZ', 'Groningen', 'Nederland', 'R5'],
+    ['', '', '', '', '', ''], // lege rij → gefilterd
   ]
 
   it('parst Mestklanten correct', () => {
@@ -90,10 +90,18 @@ describe('parseMestklantRows', () => {
     expect(result[0].label).toBe('Acme B.V.')
     expect(result[0].value).toBe('Acme B.V.')
     expect(result[0].type).toBe('Mestklanten')
+    expect(result[0].route).toBe('R5')
+  })
+
+  it('route is leeg als kolom ontbreekt', () => {
+    const headersZonderRoute = ['Naam', 'Adres', 'Postcode', 'Plaats', 'Land']
+    const sparseRows: string[][] = [headersZonderRoute, ['Klant X', '', '', '', '']]
+    const result = parseMestklantRows(sparseRows)
+    expect(result[0].route).toBe('')
   })
 
   it('bouwt value zonder postcode/plaats als beide leeg', () => {
-    const sparseRows: string[][] = [headers, ['Klant X', '', '', '', '']]
+    const sparseRows: string[][] = [headers, ['Klant X', '', '', '', '', '']]
     const result = parseMestklantRows(sparseRows)
     expect(result[0].value).toBe('Klant X')
   })
