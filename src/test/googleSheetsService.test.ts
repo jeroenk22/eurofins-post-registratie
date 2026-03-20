@@ -43,7 +43,7 @@ describe('parsePersonRows', () => {
   it('parst geldige rijen correct', () => {
     const result = parsePersonRows(rows, 'Monsternemers')
     expect(result).toHaveLength(2)
-    expect(result[0].label).toBe('M001 - Jan de Vries (Amsterdam)')
+    expect(result[0].label).toBe('M001 - Jan de Vries')
     expect(result[0].value).toBe('M001 - Jan de Vries (Amsterdam)')
     expect(result[0].type).toBe('Monsternemers')
     expect(result[0].adres).toBe('Kerkstraat 1')
@@ -88,7 +88,7 @@ describe('parseMestklantRows', () => {
     const result = parseMestklantRows(rows)
     expect(result).toHaveLength(1)
     expect(result[0].label).toBe('Acme B.V.')
-    expect(result[0].value).toBe('Acme B.V.')
+    expect(result[0].value).toBe('Acme B.V. (Groningen)')
     expect(result[0].type).toBe('Mestklanten')
     expect(result[0].route).toBe('R5')
   })

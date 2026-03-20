@@ -73,7 +73,7 @@ export function parsePersonRows(rows: string[][], type: 'Monsternemers' | 'AP06'
       const p = obj as unknown as PersonRow
       const name = formatPersonName(p)
       const value = p.Plaats ? `${name} (${p.Plaats})` : name
-      const label = value
+      const label = name
       const searchTerms = [p.Code, p.Voornaam, p.Achternaam, p.Postcode, p.Plaats].filter(Boolean)
       return {
         id: `${type}-${index}`,
@@ -100,7 +100,7 @@ export function parseMestklantRows(rows: string[][]): RecipientOption[] {
         id: `Mestklanten-${index}`,
         type: 'Mestklanten' as const,
         label: m.Naam,
-        value: m.Naam,
+        value: m.Plaats ? `${m.Naam} (${m.Plaats})` : m.Naam,
         searchTerms,
         adres: m.Adres ?? '',
         postcode: m.Postcode ?? '',
