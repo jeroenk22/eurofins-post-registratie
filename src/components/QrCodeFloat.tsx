@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PostEntry } from '../types'
 
 interface Props {
@@ -7,31 +7,55 @@ interface Props {
   syncedEntryIds: Set<string>
 }
 
+type PushState = 'pending' | 'synced' | 'error'
+
 export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
+  const [pushState, setPushState] = useState<PushState>('pending')
+  const abortRef = useRef<AbortController | null>(null)
 
   const viteAppUrl = import.meta.env.VITE_APP_URL
   const appUrl = (viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin).replace(/\/$/, '')
-  const entriesParam = encodeURIComponent(JSON.stringify(entries.map(e => ({ id: e.id, name: e.name }))))
-  const mobileUrl = `${appUrl}/?mobile=${sessionId}&entries=${entriesParam}`
+  const mobileUrl = `${appUrl}/?mobile=${sessionId}`
 
-  // Push entries to backend whenever they change
+  const selectedEntries = entries.filter(e => e.name && e.adres)
+
+  // Push entries to backend; toon QR pas na bevestiging
   useEffect(() => {
-    if (entries.length === 0) return
+    if (selectedEntries.length === 0) return
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setPushState('pending')
+    setQrDataUrl('')
+
     fetch('/.netlify/functions/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: sessionId,
-        entries: entries.map(e => ({ id: e.id, name: e.name })),
+        entries: selectedEntries.map(e => ({ id: e.id, name: e.name })),
       }),
-    }).catch(() => {})
-  }, [sessionId, entries])
+      signal: controller.signal,
+    })
+      .then(r => {
+        if (!controller.signal.aborted) {
+          setPushState(r.ok ? 'synced' : 'error')
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setPushState('error')
+      })
 
-  // Generate QR code as data URL
+    return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name))])
+
+  // Genereer QR zodra push geslaagd is en paneel open staat
   useEffect(() => {
-    if (collapsed) return
+    if (pushState !== 'synced' || collapsed) return
     setQrDataUrl('')
     import('qrcode').then(mod => {
       const QRCode = (mod.default ?? mod) as { toDataURL: (text: string, opts: object) => Promise<string> }
@@ -41,13 +65,9 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
         color: { dark: '#003c71', light: '#ffffff' },
       })
     }).then(url => setQrDataUrl(url)).catch(() => {})
-  }, [mobileUrl, collapsed])
+  }, [mobileUrl, pushState, collapsed])
 
-  // Alleen tonen als er minstens 1 ontvanger echt geselecteerd is via de autocomplete
-  // (adres wordt gevuld bij selectie uit de dropdown)
-  const selectedEntries = entries.filter(e => e.name && e.adres)
   if (selectedEntries.length === 0) return null
-  const namedEntries = selectedEntries
 
   return (
     <div className="hidden md:block fixed top-6 right-6 z-50">
@@ -65,17 +85,29 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
         {!collapsed && (
           <div className="p-3">
             <div className="flex justify-center mb-2">
-              {qrDataUrl
-                ? <img src={qrDataUrl} alt="QR code" width={164} height={164} className="rounded-lg" />
-                : <div className="w-[164px] h-[164px] rounded-lg bg-gray-50 animate-pulse" />
-              }
+              {pushState === 'error' ? (
+                <div className="w-[164px] h-[164px] rounded-lg bg-red-50 flex flex-col items-center justify-center gap-2">
+                  <p className="text-xs text-red-400 text-center px-2">Verbinding mislukt</p>
+                  <button
+                    type="button"
+                    onClick={() => setPushState('pending')}
+                    className="text-xs text-ef-blue underline"
+                  >
+                    Opnieuw
+                  </button>
+                </div>
+              ) : !qrDataUrl ? (
+                <div className="w-[164px] h-[164px] rounded-lg bg-gray-50 animate-pulse" />
+              ) : (
+                <img src={qrDataUrl} alt="QR code" width={164} height={164} className="rounded-lg" />
+              )}
             </div>
             <p className="text-[11px] text-gray-400 text-center mb-3 leading-tight">
               Scan met je telefoon om<br />foto's toe te voegen
             </p>
 
             <div className="space-y-1.5 border-t border-gray-100 pt-2">
-              {namedEntries.map(e => {
+              {selectedEntries.map(e => {
                 const synced = syncedEntryIds.has(e.id)
                 const hasLocalPhotos = e.photos.length > 0
                 return (

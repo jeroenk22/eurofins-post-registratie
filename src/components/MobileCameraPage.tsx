@@ -9,7 +9,6 @@ interface MobileEntry {
 
 interface Props {
   sessionId: string
-  initialEntries?: MobileEntry[]
 }
 
 function loadPhotos(sessionId: string): Record<string, Photo[]> {
@@ -30,7 +29,7 @@ function savePhotos(sessionId: string, photos: Record<string, Photo[]>): void {
   }
 }
 
-export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
+export default function MobileCameraPage({ sessionId }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
   const [photos, setPhotos] = useState<Record<string, Photo[]>>(() => loadPhotos(sessionId))
   const [loading, setLoading] = useState(true)
@@ -40,14 +39,8 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
   const [submitted, setSubmitted] = useState(() => sessionStorage.getItem(`submitted-${sessionId}`) === '1')
   const [submitError, setSubmitError] = useState('')
 
-  // Laad entries: uit URL (initialEntries) of via Netlify Function als fallback
+  // Laad entries van de server
   useEffect(() => {
-    if (initialEntries) {
-      setEntries(initialEntries)
-      setLoading(false)
-      return
-    }
-
     let cancelled = false
     let attempts = 0
 
