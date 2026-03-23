@@ -136,7 +136,9 @@ export default function MobileCameraPage({ sessionId }: Props) {
         <LogoBar />
         <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-green-100 max-w-sm w-full">
-          <p className="text-4xl mb-3">✅</p>
+          <div className="w-16 h-16 rounded-full bg-mi-green-light border-2 border-mi-green flex items-center justify-center text-3xl mb-5 text-mi-green mx-auto">
+            ✓
+          </div>
           <h2 className="font-bold text-gray-800 mb-2">Foto's geüpload!</h2>
           <p className="text-sm text-gray-500 leading-relaxed mb-5">
             De foto's worden automatisch getoond op de desktop.
