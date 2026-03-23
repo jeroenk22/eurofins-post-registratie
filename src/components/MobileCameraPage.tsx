@@ -29,13 +29,21 @@ export default function MobileCameraPage({ sessionId }: Props) {
     const tryFetch = async () => {
       try {
         const r = await fetch(`/.netlify/functions/session?id=${encodeURIComponent(sessionId)}`)
-        if (!r.ok) throw new Error('Sessie niet gevonden. Scan de QR-code opnieuw.')
+        if (!r.ok) {
+          // HTTP-fout (bijv. 404): niet opnieuw proberen, direct foutmelding tonen
+          if (!cancelled) {
+            setLoadError('Sessie niet gevonden. Scan de QR-code opnieuw.')
+            setLoading(false)
+          }
+          return
+        }
         const data = await r.json()
         if (!cancelled) {
           setEntries(data.entries ?? [])
           setLoading(false)
         }
       } catch (e) {
+        // Netwerkstoringen: retry tot 5x (desktop is mogelijk nog bezig met pushen)
         attempts++
         if (attempts < 5 && !cancelled) {
           setTimeout(tryFetch, 1500)

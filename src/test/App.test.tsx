@@ -15,6 +15,16 @@ vi.mock('../components/PwaInstallBanner', () => ({
   default: () => null,
 }))
 
+vi.mock('../components/MobileCameraPage', () => ({
+  default: ({ sessionId }: { sessionId: string }) => (
+    <div>MobileCameraPage:{sessionId}</div>
+  ),
+}))
+
+vi.mock('../components/QrCodeFloat', () => ({
+  default: () => null,
+}))
+
 const SUBMIT_STATE_KEY = 'submit_state'
 const FORM_DRAFT_KEY = 'form_draft'
 
@@ -27,6 +37,19 @@ const draftWithEntry = JSON.stringify({
   senderName: 'Sophie',
   senderPhone: '',
   senderEmail: 'sophie@example.com',
+})
+
+describe('App — mobiele routing', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/')
+  })
+
+  it('rendert MobileCameraPage bij ?mobile= parameter', () => {
+    window.history.pushState({}, '', '?mobile=test-session-123')
+    render(<App />)
+    expect(screen.getByText('MobileCameraPage:test-session-123')).toBeInTheDocument()
+    expect(screen.queryByText('📤 Versturen')).not.toBeInTheDocument()
+  })
 })
 
 describe('App — submit_state persistentie', () => {
