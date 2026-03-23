@@ -31,6 +31,7 @@ export async function submitToWebhook(
       shelf,
       recipient: e.name.trim(),
       colli: e.colli,
+      colli_omschrijvingen: e.colliOmschrijvingen,
       spoed: e.spoed,
       photo_count: e.photos.length,
       photos: e.photos.map((p) => ({
@@ -44,7 +45,7 @@ export async function submitToWebhook(
 
   const allPrintEntries: PrintEntry[] = entries.map((e) => {
     const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
-    return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, spoed: e.spoed };
+    return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, colliOmschrijvingen: e.colliOmschrijvingen, spoed: e.spoed };
   });
   const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
 

@@ -124,7 +124,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
             <button
               type="button"
-              onClick={() => entry.colli > 1 && set('colli', entry.colli - 1)}
+              onClick={() => entry.colli > 1 && onUpdate(entry.id, { colli: entry.colli - 1, colliOmschrijvingen: (entry.colliOmschrijvingen ?? []).slice(0, -1) })}
               className="w-10 h-10 text-gray-500 hover:bg-gray-50 text-lg flex items-center justify-center transition-colors flex-shrink-0"
             >
               −
@@ -134,7 +134,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             </span>
             <button
               type="button"
-              onClick={() => set('colli', entry.colli + 1)}
+              onClick={() => onUpdate(entry.id, { colli: entry.colli + 1, colliOmschrijvingen: [...(entry.colliOmschrijvingen ?? []), ''] })}
               className="w-10 h-10 text-gray-500 hover:bg-gray-50 text-lg flex items-center justify-center transition-colors flex-shrink-0"
             >
               +
@@ -158,6 +158,24 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             ⚡ Spoed
           </button>
         </div>
+      </div>
+
+      {/* Colli omschrijvingen */}
+      <div className="mb-3 space-y-1.5">
+        {Array.from({ length: entry.colli }, (_, i) => (
+          <input
+            key={i}
+            type="text"
+            className="input-base"
+            placeholder={entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)'}
+            value={(entry.colliOmschrijvingen ?? [])[i] ?? ''}
+            onChange={e => {
+              const updated = [...(entry.colliOmschrijvingen ?? [])]
+              updated[i] = e.currentTarget.value
+              set('colliOmschrijvingen', updated)
+            }}
+          />
+        ))}
       </div>
 
       <PhotoUpload photos={entry.photos} onChange={updatePhotos} />

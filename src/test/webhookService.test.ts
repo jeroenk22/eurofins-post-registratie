@@ -12,6 +12,7 @@ const makeEntry = (overrides: Partial<PostEntry> = {}): PostEntry => ({
   plaats: '',
   land: '',
   colli: 2,
+  colliOmschrijvingen: [],
   spoed: false,
   photos: [],
   ...overrides,
@@ -95,6 +96,20 @@ describe("submitToWebhook", () => {
     expect(foto.recipient).toBe("Jan de Vries");
     expect(foto.spoed).toBe(true);
     expect(foto.filename).toBe("foto_1.jpg");
+  });
+
+  it("stuurt colli_omschrijvingen mee in de payload", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entries: PostEntry[] = [
+      makeEntry({ colli: 2, colliOmschrijvingen: ["doos grond", "buis"] }),
+      makeEntry({ id: "test-2", colli: 1, colliOmschrijvingen: [] }),
+    ];
+    await submitToWebhook(entries, "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].colli_omschrijvingen).toEqual(["doos grond", "buis"]);
+    expect(body.entries[1].colli_omschrijvingen).toEqual([]);
   });
 
   it("formats overig shelf with description prefix", async () => {

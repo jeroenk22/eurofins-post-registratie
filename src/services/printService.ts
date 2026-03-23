@@ -38,6 +38,7 @@ export interface PrintEntry {
   plaats: string
   route: string  // al geformatteerd, bijv. "Route 6" of "Overig: koeling"
   colli: number
+  colliOmschrijvingen: string[]
   spoed: boolean
   land: string
 }
@@ -46,7 +47,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   if (entries.length === 0) return
 
   // Flatten to individual labels
-  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean }> = []
+  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean; omschrijving: string }> = []
   for (const entry of entries) {
     // Strip the "(plaats)" suffix added by autocomplete value formatting, but only if it matches exactly
     const suffix = entry.plaats ? ` (${entry.plaats})` : ''
@@ -54,7 +55,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
       ? entry.name.slice(0, -suffix.length)
       : entry.name
     for (let i = 1; i <= entry.colli; i++) {
-      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed })
+      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving: entry.colliOmschrijvingen[i - 1] ?? '' })
     }
   }
 
@@ -96,6 +97,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     ${l.adres ? `<div class="addr">${escapeHtml(l.adres)}</div>` : ''}
     ${postcodeplaats ? `<div class="addr">${escapeHtml(postcodeplaats)}</div>` : ''}
     ${l.land ? `<div class="addr">${escapeHtml(l.land)}</div>` : ''}
+    ${l.omschrijving ? `<div class="omschrijving">${escapeHtml(l.omschrijving)}</div>` : ''}
   </div>
   <div class="bottom">
     <div class="bottom-left">
@@ -193,6 +195,15 @@ body {
 .colli {
   font-size: ${fontColli};
   font-weight: bold;
+}
+.omschrijving {
+  font-size: ${fontAddr};
+  font-style: italic;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1mm;
 }
 </style>
 </head>

@@ -15,6 +15,7 @@ const baseEntry: PostEntry = {
   plaats: '',
   land: '',
   colli: 1,
+  colliOmschrijvingen: [],
   spoed: false,
   photos: [],
 }
@@ -45,6 +46,52 @@ const recipients: RecipientOption[] = [
     route: '',
   },
 ]
+
+describe('PostCard — colli omschrijvingen', () => {
+  it('toont één omschrijvingsveld bij colli=1', () => {
+    const onUpdate = vi.fn()
+    render(
+      <PostCard entry={baseEntry} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
+    )
+    expect(screen.getAllByPlaceholderText(/omschrijving collo/i)).toHaveLength(1)
+  })
+
+  it('toont twee omschrijvingsvelden bij colli=2', () => {
+    const onUpdate = vi.fn()
+    render(
+      <PostCard entry={{ ...baseEntry, colli: 2, colliOmschrijvingen: ['', ''] }} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
+    )
+    expect(screen.getAllByPlaceholderText(/omschrijving collo/i)).toHaveLength(2)
+  })
+
+  it('roept onUpdate aan met uitgebreide array bij klikken +', () => {
+    const onUpdate = vi.fn()
+    render(
+      <PostCard entry={baseEntry} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
+    )
+    fireEvent.click(screen.getByText('+'))
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colli: 2, colliOmschrijvingen: [''] })
+  })
+
+  it('roept onUpdate aan met ingekorte array bij klikken −', () => {
+    const onUpdate = vi.fn()
+    render(
+      <PostCard entry={{ ...baseEntry, colli: 2, colliOmschrijvingen: ['doos', 'buis'] }} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
+    )
+    fireEvent.click(screen.getByText('−'))
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colli: 1, colliOmschrijvingen: ['doos'] })
+  })
+
+  it('roept onUpdate aan met bijgewerkte omschrijving bij typen', async () => {
+    const onUpdate = vi.fn()
+    render(
+      <PostCard entry={{ ...baseEntry, colli: 2, colliOmschrijvingen: ['', ''] }} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
+    )
+    const inputs = screen.getAllByPlaceholderText(/omschrijving collo/i)
+    fireEvent.change(inputs[1], { target: { value: 'buis' } })
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colliOmschrijvingen: ['', 'buis'] })
+  })
+})
 
 describe('PostCard — naam/spoed/schap reset-logica', () => {
   it('reset shelf en spoed bij leegmaken naam', async () => {

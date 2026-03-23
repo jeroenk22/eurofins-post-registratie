@@ -18,6 +18,7 @@ export function newEntry(): PostEntry {
     plaats: "",
     land: "",
     colli: 1,
+    colliOmschrijvingen: [],
     spoed: false,
     photos: [],
   };

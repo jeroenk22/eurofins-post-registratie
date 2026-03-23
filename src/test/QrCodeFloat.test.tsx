@@ -13,7 +13,7 @@ vi.mock('qrcode', () => ({
 function makeEntry(overrides: Partial<PostEntry> = {}): PostEntry {
   return {
     id: 'e1', shelf: 1, shelfDescription: '', name: '', adres: '',
-    postcode: '', plaats: '', land: '', colli: 1, spoed: false, photos: [],
+    postcode: '', plaats: '', land: '', colli: 1, colliOmschrijvingen: [], spoed: false, photos: [],
     ...overrides,
   }
 }
