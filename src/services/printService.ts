@@ -96,17 +96,14 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     <div class="name">${escapeHtml(l.name)}</div>
     ${l.adres ? `<div class="addr">${escapeHtml(l.adres)}</div>` : ''}
     ${postcodeplaats ? `<div class="addr">${escapeHtml(postcodeplaats)}</div>` : ''}
-    ${l.land ? `<div class="addr">${escapeHtml(l.land)}</div>` : ''}
+    ${(l.land || l.omschrijving) ? `<div class="land-row"><span class="addr">${escapeHtml(l.land)}</span>${l.omschrijving ? `<span class="omschrijving">${escapeHtml(l.omschrijving)}</span>` : ''}</div>` : ''}
   </div>
   <div class="bottom">
     <div class="bottom-left">
       ${l.spoed ? `<div class="spoed">SPOED</div>` : ''}
       ${l.route ? `<div class="route">${escapeHtml(l.route)}</div>` : ''}
     </div>
-    <div class="bottom-right">
-      ${l.omschrijving ? `<div class="omschrijving">${escapeHtml(l.omschrijving)}</div>` : ''}
-      <div class="colli">${l.index}/${l.total}</div>
-    </div>
+    <div class="colli">${l.index}/${l.total}</div>
   </div>
 </div>`
   }).join('\n')
@@ -194,18 +191,15 @@ body {
   border-radius: 1mm;
   letter-spacing: 0.5pt;
 }
-.bottom-right {
+.land-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5mm;
-  min-width: 0;
-  max-width: 55%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2mm;
 }
 .colli {
   font-size: ${fontColli};
   font-weight: bold;
-  flex-shrink: 0;
 }
 .omschrijving {
   font-size: ${fontAddr};
@@ -214,8 +208,9 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
   text-align: right;
+  min-width: 0;
+  flex-shrink: 1;
 }
 </style>
 </head>
