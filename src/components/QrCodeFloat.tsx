@@ -12,7 +12,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
   const [qrDataUrl, setQrDataUrl] = useState('')
 
   const viteAppUrl = import.meta.env.VITE_APP_URL
-  const appUrl = viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin
+  const appUrl = (viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin).replace(/\/$/, '')
   const mobileUrl = `${appUrl}/?mobile=${sessionId}`
 
   // Push entries to backend whenever they change
