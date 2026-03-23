@@ -15,6 +15,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
   const [pushState, setPushState] = useState<PushState>('pending')
   const [retryCount, setRetryCount] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
+  const hasSyncedRef = useRef(false)
 
   const viteAppUrl = import.meta.env.VITE_APP_URL
   const appUrl = (viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin).replace(/\/$/, '')
@@ -22,42 +23,51 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
 
   const selectedEntries = entries.filter(e => e.name && e.adres)
 
-  // Push entries to backend; toon QR pas na bevestiging
+  // Push entries naar backend; na eerste sync gaan vervolgpushes stil
   useEffect(() => {
     if (selectedEntries.length === 0) return
 
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
-    setPushState('pending')
-    setQrDataUrl('')
+
+    if (!hasSyncedRef.current) {
+      setPushState('pending')
+    }
 
     fetch('/.netlify/functions/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: sessionId,
-        entries: selectedEntries.map(e => ({ id: e.id, name: e.name })),
+        entries: selectedEntries.map(e => ({ id: e.id, name: e.name, colli: e.colli, desktopPhotoCount: e.photos.length })),
       }),
       signal: controller.signal,
     })
       .then(r => {
-        if (!controller.signal.aborted) {
-          setPushState(r.ok ? 'synced' : 'error')
+        if (controller.signal.aborted) return
+        if (!hasSyncedRef.current) {
+          if (r.ok) {
+            hasSyncedRef.current = true
+            setPushState('synced')
+          } else {
+            setPushState('error')
+          }
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setPushState('error')
+        if (!controller.signal.aborted && !hasSyncedRef.current) {
+          setPushState('error')
+        }
       })
 
     return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name)), retryCount])
+  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name + e.colli + e.photos.length)), retryCount])
 
-  // Genereer QR zodra push geslaagd is en paneel open staat
+  // Genereer QR eenmalig zodra eerste push geslaagd is en paneel open staat
   useEffect(() => {
-    if (pushState !== 'synced' || collapsed) return
-    setQrDataUrl('')
+    if (pushState !== 'synced' || collapsed || qrDataUrl) return
     import('qrcode').then(mod => {
       const QRCode = (mod.default ?? mod) as { toDataURL: (text: string, opts: object) => Promise<string> }
       return QRCode.toDataURL(mobileUrl, {
@@ -66,7 +76,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
         color: { dark: '#003c71', light: '#ffffff' },
       })
     }).then(url => setQrDataUrl(url)).catch(() => {})
-  }, [mobileUrl, pushState, collapsed])
+  }, [mobileUrl, pushState, collapsed, qrDataUrl])
 
   if (selectedEntries.length === 0) return null
 

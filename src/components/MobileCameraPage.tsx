@@ -2,9 +2,21 @@ import { useEffect, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
 
+function LogoBar() {
+  return (
+    <div className="bg-white border-b border-gray-100 flex items-center justify-between px-4 py-3 gap-4">
+      <img src="/miedema_logo.svg" alt="Miedema Ophaaldienst" className="h-8 w-auto object-contain" />
+      <div className="h-8 w-px bg-gray-200 flex-shrink-0" />
+      <img src="/eurofins_agro.svg" alt="Eurofins Agro" className="h-7 w-auto object-contain" />
+    </div>
+  )
+}
+
 interface MobileEntry {
   id: string
   name: string
+  colli: number
+  desktopPhotoCount: number
 }
 
 interface Props {
@@ -94,6 +106,15 @@ export default function MobileCameraPage({ sessionId }: Props) {
     setPhotos(prev => ({ ...prev, [entryId]: (prev[entryId] ?? []).filter(p => p.id !== photoId) }))
 
   const handleSubmit = async () => {
+    const missing = entries.filter(
+      entry => (photos[entry.id] ?? []).length === 0 && entry.desktopPhotoCount === 0
+    )
+    if (missing.length > 0) {
+      setSubmitError(
+        `Voeg minimaal 1 foto toe voor: ${missing.map(e => e.name || '(geen naam)').join(', ')}`
+      )
+      return
+    }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -122,9 +143,13 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <LogoBar />
+        <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-green-100 max-w-sm w-full">
-          <p className="text-4xl mb-3">✅</p>
+          <div className="w-16 h-16 rounded-full bg-mi-green-light border-2 border-mi-green flex items-center justify-center text-3xl mb-5 text-mi-green mx-auto">
+            ✓
+          </div>
           <h2 className="font-bold text-gray-800 mb-2">Foto's geüpload!</h2>
           <p className="text-sm text-gray-500 leading-relaxed mb-5">
             De foto's worden automatisch getoond op de desktop.
@@ -140,25 +165,32 @@ export default function MobileCameraPage({ sessionId }: Props) {
             Lukt dat niet? Sluit dit tabblad dan handmatig.
           </p>
         </div>
+        </div>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-sm text-gray-400">Laden…</p>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <LogoBar />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-gray-400">Laden…</p>
+        </div>
       </div>
     )
   }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <LogoBar />
+        <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-6 text-center shadow-sm border border-red-100 max-w-sm w-full">
           <p className="text-2xl mb-2">⚠️</p>
           <p className="text-sm text-red-600">{loadError}</p>
           <p className="text-xs text-gray-400 mt-2">Scan de QR-code opnieuw op de desktop.</p>
+        </div>
         </div>
       </div>
     )
@@ -166,6 +198,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <LogoBar />
       {/* Header */}
       <div className="bg-ef-blue text-white px-4 py-4 flex items-center gap-3">
         <span className="text-2xl">📷</span>
@@ -182,9 +215,17 @@ export default function MobileCameraPage({ sessionId }: Props) {
           const entryPhotos = photos[entry.id] ?? []
           return (
             <div key={entry.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-              <h3 className="font-semibold text-sm text-gray-800 mb-3 truncate">
+              <h3 className="font-semibold text-sm text-gray-800 truncate">
                 {entry.name || '(geen naam)'}
               </h3>
+              <p className="text-xs text-gray-400 mb-3">
+                {entry.colli} {entry.colli === 1 ? 'collo' : 'colli'}
+                {entry.desktopPhotoCount > 0 && (
+                  <span className="ml-2 text-green-600">
+                    · Reeds {entry.desktopPhotoCount} {entry.desktopPhotoCount === 1 ? "foto" : "foto's"} geüpload via desktop
+                  </span>
+                )}
+              </p>
 
               <label className="flex w-full border-2 border-dashed border-gray-200 rounded-lg p-3 items-center gap-2.5 cursor-pointer hover:border-ef-blue hover:bg-ef-blue-light transition-colors">
                 <span className="text-xl">📷</span>

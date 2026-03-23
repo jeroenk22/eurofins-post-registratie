@@ -3,6 +3,8 @@ import { getStore } from '@netlify/blobs'
 export interface MobileEntry {
   id: string
   name: string
+  colli: number
+  desktopPhotoCount: number
 }
 
 export interface MobilePhoto {

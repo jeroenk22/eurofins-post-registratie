@@ -10,8 +10,15 @@ vi.mock('../photoUtils', () => ({
 
 const mockSession = {
   entries: [
-    { id: 'e1', name: 'Kees Hin' },
-    { id: 'e2', name: 'Wim Scholten' },
+    { id: 'e1', name: 'Kees Hin', colli: 1, desktopPhotoCount: 0 },
+    { id: 'e2', name: 'Wim Scholten', colli: 2, desktopPhotoCount: 0 },
+  ],
+}
+
+const mockSessionWithDesktopPhotos = {
+  entries: [
+    { id: 'e1', name: 'Kees Hin', colli: 1, desktopPhotoCount: 2 },
+    { id: 'e2', name: 'Wim Scholten', colli: 1, desktopPhotoCount: 0 },
   ],
 }
 
@@ -49,13 +56,43 @@ describe('MobileCameraPage', () => {
     expect(await screen.findByText(/Sessie niet gevonden/)).toBeInTheDocument()
   })
 
-  it('toont successcherm na uploaden', async () => {
+  it('blokkeert uploaden zonder foto als desktopPhotoCount 0 is', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => mockSession,
+    } as Response)
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Kees Hin')
+
+    fireEvent.click(screen.getByText("📤 Foto's uploaden"))
+    expect(await screen.findByText(/Voeg minimaal 1 foto toe voor/)).toBeInTheDocument()
+    expect(screen.queryByText("Foto's geüpload!")).not.toBeInTheDocument()
+  })
+
+  it('toont melding als entry al desktop-fotos heeft', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => mockSessionWithDesktopPhotos,
+    } as Response)
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Kees Hin')
+    expect(screen.getByText(/Reeds 2 foto's geüpload via desktop/)).toBeInTheDocument()
+  })
+
+  it('toont successcherm na uploaden als entry desktop-fotos heeft', async () => {
     vi.mocked(fetch)
-      .mockResolvedValueOnce({ ok: true, json: async () => mockSession } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => mockSessionWithDesktopPhotos } as Response)
       .mockResolvedValue({ ok: true } as Response)
 
     render(<MobileCameraPage sessionId="test-session" />)
     await screen.findByText('Kees Hin')
+
+    // e1 heeft desktopPhotoCount=2 (optioneel), e2 heeft 0 → moet foto krijgen
+    const inputs = screen.getAllByText('Foto\'s toevoegen (meerdere mogelijk)')
+    fireEvent.change(inputs[1].closest('label')!.querySelector('input')!, {
+      target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
+    })
+    await screen.findByText('×') // foto preview verschijnt
 
     fireEvent.click(screen.getByText("📤 Foto's uploaden"))
     expect(await screen.findByText("Foto's geüpload!")).toBeInTheDocument()
@@ -63,11 +100,18 @@ describe('MobileCameraPage', () => {
 
   it('POST naar session endpoint per entry bij uploaden', async () => {
     vi.mocked(fetch)
-      .mockResolvedValueOnce({ ok: true, json: async () => mockSession } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => mockSessionWithDesktopPhotos } as Response)
       .mockResolvedValue({ ok: true } as Response)
 
     render(<MobileCameraPage sessionId="test-session" />)
     await screen.findByText('Kees Hin')
+
+    // Voeg foto toe aan e2 (desktopPhotoCount=0)
+    const inputs = screen.getAllByText('Foto\'s toevoegen (meerdere mogelijk)')
+    fireEvent.change(inputs[1].closest('label')!.querySelector('input')!, {
+      target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
+    })
+    await screen.findByText('×')
 
     fireEvent.click(screen.getByText("📤 Foto's uploaden"))
     await screen.findByText("Foto's geüpload!")
