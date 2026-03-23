@@ -19,7 +19,7 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
   const [loadError, setLoadError] = useState('')
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(() => sessionStorage.getItem(`submitted-${sessionId}`) === '1')
   const [submitError, setSubmitError] = useState('')
 
   // Laad entries: uit URL (initialEntries) of via Netlify Function als fallback
@@ -94,6 +94,7 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
           }),
         ),
       )
+      sessionStorage.setItem(`submitted-${sessionId}`, '1')
       setSubmitted(true)
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Uploaden mislukt.')
@@ -127,8 +128,18 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
         <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-green-100 max-w-sm w-full">
           <p className="text-4xl mb-3">✅</p>
           <h2 className="font-bold text-gray-800 mb-2">Foto's geüpload!</h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Je kunt dit scherm sluiten. De foto's worden nu automatisch getoond op de desktop.
+          <p className="text-sm text-gray-500 leading-relaxed mb-5">
+            De foto's worden automatisch getoond op de desktop.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.close()}
+            className="w-full py-3 rounded-xl bg-ef-blue text-white text-sm font-bold hover:bg-ef-blue/90 active:scale-[0.98] transition-all mb-3"
+          >
+            Tabblad sluiten
+          </button>
+          <p className="text-xs text-gray-400">
+            Lukt dat niet? Sluit dit tabblad dan handmatig.
           </p>
         </div>
       </div>
