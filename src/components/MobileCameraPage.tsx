@@ -12,9 +12,27 @@ interface Props {
   initialEntries?: MobileEntry[]
 }
 
+function loadPhotos(sessionId: string): Record<string, Photo[]> {
+  try {
+    const raw = sessionStorage.getItem(`mobile-photos-${sessionId}`)
+    if (!raw) return {}
+    return JSON.parse(raw) as Record<string, Photo[]>
+  } catch {
+    return {}
+  }
+}
+
+function savePhotos(sessionId: string, photos: Record<string, Photo[]>): void {
+  try {
+    sessionStorage.setItem(`mobile-photos-${sessionId}`, JSON.stringify(photos))
+  } catch {
+    // QuotaExceededError: foto's blijven in memory, uploaden werkt nog steeds
+  }
+}
+
 export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
-  const [photos, setPhotos] = useState<Record<string, Photo[]>>({})
+  const [photos, setPhotos] = useState<Record<string, Photo[]>>(() => loadPhotos(sessionId))
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
@@ -63,6 +81,12 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
     return () => { cancelled = true }
   }, [sessionId])
 
+  // Sla foto's op in sessionStorage zodat ze bewaard blijven als de camera-app
+  // de browser-tab tijdelijk uit het geheugen gooit
+  useEffect(() => {
+    savePhotos(sessionId, photos)
+  }, [sessionId, photos])
+
   const handleFiles = async (entryId: string, files: FileList) => {
     setUploadErrors(prev => ({ ...prev, [entryId]: '' }))
     try {
@@ -95,6 +119,7 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
         ),
       )
       sessionStorage.setItem(`submitted-${sessionId}`, '1')
+      sessionStorage.removeItem(`mobile-photos-${sessionId}`)
       setSubmitted(true)
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Uploaden mislukt.')
