@@ -15,6 +15,7 @@ function LogoBar() {
 interface MobileEntry {
   id: string
   name: string
+  colli: number
 }
 
 interface Props {
@@ -204,9 +205,12 @@ export default function MobileCameraPage({ sessionId }: Props) {
           const entryPhotos = photos[entry.id] ?? []
           return (
             <div key={entry.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-              <h3 className="font-semibold text-sm text-gray-800 mb-3 truncate">
+              <h3 className="font-semibold text-sm text-gray-800 truncate">
                 {entry.name || '(geen naam)'}
               </h3>
+              <p className="text-xs text-gray-400 mb-3">
+                {entry.colli} {entry.colli === 1 ? 'collo' : 'colli'}
+              </p>
 
               <label className="flex w-full border-2 border-dashed border-gray-200 rounded-lg p-3 items-center gap-2.5 cursor-pointer hover:border-ef-blue hover:bg-ef-blue-light transition-colors">
                 <span className="text-xl">📷</span>

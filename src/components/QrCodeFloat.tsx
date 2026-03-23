@@ -37,7 +37,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: sessionId,
-        entries: selectedEntries.map(e => ({ id: e.id, name: e.name })),
+        entries: selectedEntries.map(e => ({ id: e.id, name: e.name, colli: e.colli })),
       }),
       signal: controller.signal,
     })
