@@ -64,22 +64,22 @@ describe('PostCard — colli omschrijvingen', () => {
     expect(screen.getAllByPlaceholderText(/omschrijving collo/i)).toHaveLength(2)
   })
 
-  it('roept onUpdate aan met uitgebreide array bij klikken +', () => {
+  it('roept onUpdate aan met verhoogd colli bij klikken +', () => {
     const onUpdate = vi.fn()
     render(
       <PostCard entry={baseEntry} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
     )
     fireEvent.click(screen.getByText('+'))
-    expect(onUpdate).toHaveBeenCalledWith('test-1', { colli: 2, colliOmschrijvingen: [''] })
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colli: 2 })
   })
 
-  it('roept onUpdate aan met ingekorte array bij klikken −', () => {
+  it('roept onUpdate aan met verlaagd colli bij klikken − en behoudt omschrijvingen', () => {
     const onUpdate = vi.fn()
     render(
       <PostCard entry={{ ...baseEntry, colli: 2, colliOmschrijvingen: ['doos', 'buis'] }} index={0} onUpdate={onUpdate} onRemove={vi.fn()} showRemove={false} recipients={[]} />
     )
     fireEvent.click(screen.getByText('−'))
-    expect(onUpdate).toHaveBeenCalledWith('test-1', { colli: 1, colliOmschrijvingen: ['doos'] })
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colli: 1 })
   })
 
   it('roept onUpdate aan met bijgewerkte omschrijving bij typen', async () => {

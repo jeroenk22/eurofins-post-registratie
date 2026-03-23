@@ -124,7 +124,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
             <button
               type="button"
-              onClick={() => entry.colli > 1 && onUpdate(entry.id, { colli: entry.colli - 1, colliOmschrijvingen: (entry.colliOmschrijvingen ?? []).slice(0, -1) })}
+              onClick={() => entry.colli > 1 && set('colli', entry.colli - 1)}
               className="w-10 h-10 text-gray-500 hover:bg-gray-50 text-lg flex items-center justify-center transition-colors flex-shrink-0"
             >
               −
@@ -134,7 +134,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             </span>
             <button
               type="button"
-              onClick={() => onUpdate(entry.id, { colli: entry.colli + 1, colliOmschrijvingen: [...(entry.colliOmschrijvingen ?? []), ''] })}
+              onClick={() => set('colli', entry.colli + 1)}
               className="w-10 h-10 text-gray-500 hover:bg-gray-50 text-lg flex items-center justify-center transition-colors flex-shrink-0"
             >
               +
@@ -162,20 +162,39 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
 
       {/* Colli omschrijvingen */}
       <div className="mb-3 space-y-1.5">
-        {Array.from({ length: entry.colli }, (_, i) => (
-          <input
-            key={i}
-            type="text"
-            className="input-base"
-            placeholder={entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)'}
-            value={(entry.colliOmschrijvingen ?? [])[i] ?? ''}
-            onChange={e => {
-              const updated = [...(entry.colliOmschrijvingen ?? [])]
-              updated[i] = e.currentTarget.value
-              set('colliOmschrijvingen', updated)
-            }}
-          />
-        ))}
+        {Array.from({ length: entry.colli }, (_, i) => {
+          const omschrijving = (entry.colliOmschrijvingen ?? [])[i] ?? ''
+          return (
+            <div key={i} className="relative">
+              <input
+                type="text"
+                className="input-base !pr-7"
+                placeholder={entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)'}
+                value={omschrijving}
+                onChange={e => {
+                  const updated = [...(entry.colliOmschrijvingen ?? [])]
+                  updated[i] = e.currentTarget.value
+                  set('colliOmschrijvingen', updated)
+                }}
+              />
+              {omschrijving && (
+                <button
+                  type="button"
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    const updated = [...(entry.colliOmschrijvingen ?? [])]
+                    updated[i] = ''
+                    set('colliOmschrijvingen', updated)
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Veld leegmaken"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       <PhotoUpload photos={entry.photos} onChange={updatePhotos} />

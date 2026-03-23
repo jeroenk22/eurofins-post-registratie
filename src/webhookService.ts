@@ -31,7 +31,7 @@ export async function submitToWebhook(
       shelf,
       recipient: e.name.trim(),
       colli: e.colli,
-      colli_omschrijvingen: e.colliOmschrijvingen,
+      colli_omschrijvingen: (e.colliOmschrijvingen ?? []).slice(0, e.colli),
       spoed: e.spoed,
       photo_count: e.photos.length,
       photos: e.photos.map((p) => ({
