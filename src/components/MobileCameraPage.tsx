@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
 
+function LogoBar() {
+  return (
+    <div className="bg-white border-b border-gray-100 flex items-center justify-between px-4 py-3 gap-4">
+      <img src="/miedema_logo.svg" alt="Miedema Ophaaldienst" className="h-8 w-auto object-contain" />
+      <div className="h-8 w-px bg-gray-200 flex-shrink-0" />
+      <img src="/eurofins_agro.svg" alt="Eurofins Agro" className="h-7 w-auto object-contain" />
+    </div>
+  )
+}
+
 interface MobileEntry {
   id: string
   name: string
@@ -122,7 +132,9 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <LogoBar />
+        <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-green-100 max-w-sm w-full">
           <p className="text-4xl mb-3">✅</p>
           <h2 className="font-bold text-gray-800 mb-2">Foto's geüpload!</h2>
@@ -140,25 +152,32 @@ export default function MobileCameraPage({ sessionId }: Props) {
             Lukt dat niet? Sluit dit tabblad dan handmatig.
           </p>
         </div>
+        </div>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-sm text-gray-400">Laden…</p>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <LogoBar />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-gray-400">Laden…</p>
+        </div>
       </div>
     )
   }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <LogoBar />
+        <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-6 text-center shadow-sm border border-red-100 max-w-sm w-full">
           <p className="text-2xl mb-2">⚠️</p>
           <p className="text-sm text-red-600">{loadError}</p>
           <p className="text-xs text-gray-400 mt-2">Scan de QR-code opnieuw op de desktop.</p>
+        </div>
         </div>
       </div>
     )
@@ -166,6 +185,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <LogoBar />
       {/* Header */}
       <div className="bg-ef-blue text-white px-4 py-4 flex items-center gap-3">
         <span className="text-2xl">📷</span>
