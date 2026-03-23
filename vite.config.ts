@@ -76,6 +76,9 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true, // luister op 0.0.0.0 zodat de dev server bereikbaar is via lokaal IP
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
