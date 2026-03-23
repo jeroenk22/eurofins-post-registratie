@@ -120,26 +120,6 @@ export default function MobileCameraPage({ sessionId }: Props) {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-sm text-gray-400">Laden…</p>
-      </div>
-    )
-  }
-
-  if (loadError) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-xl p-6 text-center shadow-sm border border-red-100 max-w-sm w-full">
-          <p className="text-2xl mb-2">⚠️</p>
-          <p className="text-sm text-red-600">{loadError}</p>
-          <p className="text-xs text-gray-400 mt-2">Scan de QR-code opnieuw op de desktop.</p>
-        </div>
-      </div>
-    )
-  }
-
   if (submitted) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -159,6 +139,26 @@ export default function MobileCameraPage({ sessionId }: Props) {
           <p className="text-xs text-gray-400">
             Lukt dat niet? Sluit dit tabblad dan handmatig.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-sm text-gray-400">Laden…</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl p-6 text-center shadow-sm border border-red-100 max-w-sm w-full">
+          <p className="text-2xl mb-2">⚠️</p>
+          <p className="text-sm text-red-600">{loadError}</p>
+          <p className="text-xs text-gray-400 mt-2">Scan de QR-code opnieuw op de desktop.</p>
         </div>
       </div>
     )

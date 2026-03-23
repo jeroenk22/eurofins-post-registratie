@@ -18,6 +18,7 @@ const mockSession = {
 describe('MobileCameraPage', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
+    sessionStorage.clear()
   })
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -78,5 +79,11 @@ describe('MobileCameraPage', () => {
     const bodies = postCalls.map(([, init]) => JSON.parse((init as RequestInit).body as string))
     expect(bodies[0].entryId).toBe('e1')
     expect(bodies[1].entryId).toBe('e2')
+  })
+
+  it('herstelt successtatus na refresh via sessionStorage', () => {
+    sessionStorage.setItem('submitted-test-session', '1')
+    render(<MobileCameraPage sessionId="test-session" />)
+    expect(screen.getByText("Foto's geüpload!")).toBeInTheDocument()
   })
 })

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import QrCodeFloat from '../components/QrCodeFloat'
 import type { PostEntry } from '../types'
 
@@ -26,7 +27,6 @@ describe('QrCodeFloat', () => {
   })
 
   it('rendert niet als geen enkele entry via autocomplete geselecteerd is', () => {
-    // naam getypt maar geen adres → nog niet via dropdown geselecteerd
     const entries = [makeEntry({ name: 'Kees Hin', adres: '' })]
     const { container } = render(
       <QrCodeFloat sessionId="s1" entries={entries} syncedEntryIds={new Set()} />
@@ -69,10 +69,37 @@ describe('QrCodeFloat', () => {
   it('pusht entries naar session endpoint bij render', async () => {
     const entries = [makeEntry({ name: 'Kees Hin', adres: 'Kerkstraat 1' })]
     render(<QrCodeFloat sessionId="s1" entries={entries} syncedEntryIds={new Set()} />)
-    await screen.findByText("Foto's via mobiel")
-    expect(fetch).toHaveBeenCalledWith(
-      '/.netlify/functions/session',
-      expect.objectContaining({ method: 'POST' }),
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/.netlify/functions/session',
+        expect.objectContaining({ method: 'POST' }),
+      )
     )
+  })
+
+  it('toont QR-code nadat push geslaagd is', async () => {
+    const entries = [makeEntry({ name: 'Kees Hin', adres: 'Kerkstraat 1' })]
+    render(<QrCodeFloat sessionId="s1" entries={entries} syncedEntryIds={new Set()} />)
+    expect(await screen.findByAltText('QR code')).toBeInTheDocument()
+  })
+
+  it('toont foutmelding als push mislukt', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    const entries = [makeEntry({ name: 'Kees Hin', adres: 'Kerkstraat 1' })]
+    render(<QrCodeFloat sessionId="s1" entries={entries} syncedEntryIds={new Set()} />)
+    expect(await screen.findByText(/Verbinding mislukt/)).toBeInTheDocument()
+  })
+
+  it('herprobeert push bij klikken op Opnieuw', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    const entries = [makeEntry({ name: 'Kees Hin', adres: 'Kerkstraat 1' })]
+    render(<QrCodeFloat sessionId="s1" entries={entries} syncedEntryIds={new Set()} />)
+    await screen.findByText(/Verbinding mislukt/)
+
+    // Tweede poging slaagt
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+    await user.click(screen.getByText('Opnieuw'))
+    expect(await screen.findByAltText('QR code')).toBeInTheDocument()
   })
 })

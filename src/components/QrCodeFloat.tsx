@@ -13,6 +13,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [pushState, setPushState] = useState<PushState>('pending')
+  const [retryCount, setRetryCount] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
 
   const viteAppUrl = import.meta.env.VITE_APP_URL
@@ -51,7 +52,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
 
     return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name))])
+  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name)), retryCount])
 
   // Genereer QR zodra push geslaagd is en paneel open staat
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
                   <p className="text-xs text-red-400 text-center px-2">Verbinding mislukt</p>
                   <button
                     type="button"
-                    onClick={() => setPushState('pending')}
+                    onClick={() => setRetryCount(c => c + 1)}
                     className="text-xs text-ef-blue underline"
                   >
                     Opnieuw
