@@ -2,6 +2,9 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  VITE_APP_URL = "$DEPLOY_PRIME_URL"
+
 [dev]
   command = "npm run dev"
   targetPort = 5173

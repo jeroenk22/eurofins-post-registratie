@@ -15,6 +15,16 @@ vi.mock('../components/PwaInstallBanner', () => ({
   default: () => null,
 }))
 
+vi.mock('../components/MobileCameraPage', () => ({
+  default: ({ sessionId }: { sessionId: string }) => (
+    <div>MobileCameraPage:{sessionId}</div>
+  ),
+}))
+
+vi.mock('../components/QrCodeFloat', () => ({
+  default: () => null,
+}))
+
 const SUBMIT_STATE_KEY = 'submit_state'
 const FORM_DRAFT_KEY = 'form_draft'
 
@@ -28,6 +38,7 @@ const draftWithEntry = JSON.stringify({
   senderPhone: '',
   senderEmail: 'sophie@example.com',
 })
+
 
 describe('App — submit_state persistentie', () => {
   beforeEach(() => sessionStorage.clear())

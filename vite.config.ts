@@ -18,9 +18,6 @@ export default defineConfig({
         orientation: "portrait",
         scope: "/",
         start_url: "/",
-        launch_handler: {
-          client_mode: "navigate-existing",
-        },
         icons: [
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
           {
@@ -76,6 +73,9 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true, // luister op 0.0.0.0 zodat de dev server bereikbaar is via lokaal IP
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],

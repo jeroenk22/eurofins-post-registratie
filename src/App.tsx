@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { SubmitState } from "./types";
+import { useCallback, useRef, useState } from "react";
+import type { Photo, SubmitState } from "./types";
 import { useStore } from "./useStore";
 import { submitToWebhook, isWebhookConfigured } from "./webhookService";
 import { validateForm } from "./validation";
@@ -11,11 +11,25 @@ import PrintLinkScreen from "./components/PrintLinkScreen";
 import SectionDivider from "./components/SectionDivider";
 import FormField from "./components/FormField";
 import PwaInstallBanner from "./components/PwaInstallBanner";
+import QrCodeFloat from "./components/QrCodeFloat";
+import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
 import { decodePrintData } from "./services/printService";
 
+// Generate a stable session ID for this browser session
+function getSessionId(): string {
+  let id = sessionStorage.getItem("mobile_session_id");
+  if (!id) {
+    id = `s${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    sessionStorage.setItem("mobile_session_id", id);
+  }
+  return id;
+}
+
 export default function App() {
-  // Print-link detectie: ?printData=... opent direct het printscherm
-  const printDataParam = new URLSearchParams(window.location.search).get("printData");
+  const params = new URLSearchParams(window.location.search);
+
+  // Print-link mode
+  const printDataParam = params.get("printData");
   if (printDataParam) {
     const printEntries = decodePrintData(printDataParam);
     if (printEntries) return <PrintLinkScreen entries={printEntries} />;
@@ -27,6 +41,27 @@ export default function App() {
     sessionStorage.getItem("submit_state") === "success" ? "success" : "idle"
   );
   const [errorMsg, setErrorMsg] = useState("");
+  const [sessionId] = useState(getSessionId);
+
+  // Stable ref so the sync callback never causes re-renders
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  const handlePhotosReceived = useCallback((entryId: string, mobilePhotos: Photo[]) => {
+    const entry = storeRef.current.entries.find(e => e.id === entryId);
+    if (!entry) return;
+    const existingIds = new Set(entry.photos.map(p => p.id));
+    const toAdd = mobilePhotos.filter(p => !existingIds.has(p.id));
+    if (toAdd.length > 0) {
+      storeRef.current.updateEntry(entryId, { photos: [...entry.photos, ...toAdd] });
+    }
+  }, []);
+
+  const syncedEntryIds = useMobilePhotoSync(
+    sessionId,
+    handlePhotosReceived,
+    submitState === "idle" || submitState === "error",
+  );
 
   const handleSubmit = async () => {
     const err = validateForm(store.entries, store.senderName, store.senderEmail);
@@ -192,6 +227,13 @@ export default function App() {
         </div>
       </div>
       <PwaInstallBanner />
+      {submitState !== "success" && (
+        <QrCodeFloat
+          sessionId={sessionId}
+          entries={store.entries}
+          syncedEntryIds={syncedEntryIds}
+        />
+      )}
     </>
   );
 }
