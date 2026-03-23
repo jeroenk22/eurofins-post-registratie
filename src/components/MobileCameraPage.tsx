@@ -16,6 +16,7 @@ interface MobileEntry {
   id: string
   name: string
   colli: number
+  colliOmschrijvingen: string[]
   desktopPhotoCount: number
 }
 
@@ -218,14 +219,23 @@ export default function MobileCameraPage({ sessionId }: Props) {
               <h3 className="font-semibold text-sm text-gray-800 truncate">
                 {entry.name || '(geen naam)'}
               </h3>
-              <p className="text-xs text-gray-400 mb-3">
-                {entry.colli} {entry.colli === 1 ? 'collo' : 'colli'}
+              <div className="text-xs text-gray-400 mb-3">
+                <span>{entry.colli} {entry.colli === 1 ? 'collo' : 'colli'}</span>
                 {entry.desktopPhotoCount > 0 && (
                   <span className="ml-2 text-green-600">
                     · Reeds {entry.desktopPhotoCount} {entry.desktopPhotoCount === 1 ? "foto" : "foto's"} geüpload via desktop
                   </span>
                 )}
-              </p>
+                {(entry.colliOmschrijvingen ?? []).some(o => o) && (
+                  <ul className="mt-1 space-y-0.5">
+                    {(entry.colliOmschrijvingen ?? []).map((omschrijving, i) =>
+                      omschrijving ? (
+                        <li key={i}>Collo {i + 1}: {omschrijving}</li>
+                      ) : null
+                    )}
+                  </ul>
+                )}
+              </div>
 
               <label className="flex w-full border-2 border-dashed border-gray-200 rounded-lg p-3 items-center gap-2.5 cursor-pointer hover:border-ef-blue hover:bg-ef-blue-light transition-colors">
                 <span className="text-xl">📷</span>

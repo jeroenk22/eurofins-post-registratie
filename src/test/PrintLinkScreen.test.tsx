@@ -4,8 +4,8 @@ import PrintLinkScreen from '../components/PrintLinkScreen'
 import type { PrintEntry } from '../services/printService'
 
 const entries: PrintEntry[] = [
-  { name: 'Bart Wijtvliet', adres: 'Kerkstraat 1', postcode: '1234AB', plaats: 'Zevenbergen', land: 'Nederland', route: 'Route 5', colli: 3, spoed: false },
-  { name: 'Adrie Bakker', adres: 'Dorpsweg 5', postcode: '5678CD', plaats: 'Ovezande', land: 'Nederland', route: 'Route 5', colli: 2, spoed: false },
+  { name: 'Bart Wijtvliet', adres: 'Kerkstraat 1', postcode: '1234AB', plaats: 'Zevenbergen', land: 'Nederland', route: 'Route 5', colli: 3, colliOmschrijvingen: [], spoed: false },
+  { name: 'Adrie Bakker', adres: 'Dorpsweg 5', postcode: '5678CD', plaats: 'Ovezande', land: 'Nederland', route: 'Route 5', colli: 2, colliOmschrijvingen: [], spoed: false },
 ]
 
 describe('PrintLinkScreen', () => {

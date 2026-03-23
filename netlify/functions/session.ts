@@ -4,6 +4,7 @@ export interface MobileEntry {
   id: string
   name: string
   colli: number
+  colliOmschrijvingen: string[]
   desktopPhotoCount: number
 }
 

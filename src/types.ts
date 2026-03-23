@@ -14,6 +14,7 @@ export interface PostEntry {
   plaats: string;
   land: string;
   colli: number;
+  colliOmschrijvingen: string[];
   spoed: boolean;
   photos: Photo[];
 }
@@ -34,6 +35,7 @@ export interface SubmitEntry {
   shelf: string; // per entry
   recipient: string;
   colli: number;
+  colli_omschrijvingen: string[];
   spoed: boolean;
   photo_count: number;
   photos: SubmitPhoto[];

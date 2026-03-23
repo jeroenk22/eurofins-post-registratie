@@ -160,6 +160,44 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         </div>
       </div>
 
+      {/* Colli omschrijvingen */}
+      <div className="mb-3 space-y-1.5">
+        {Array.from({ length: entry.colli }, (_, i) => {
+          const omschrijving = (entry.colliOmschrijvingen ?? [])[i] ?? ''
+          return (
+            <div key={i} className="relative">
+              <input
+                type="text"
+                className="input-base !pr-7"
+                placeholder={entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)'}
+                value={omschrijving}
+                onChange={e => {
+                  const updated = [...(entry.colliOmschrijvingen ?? [])]
+                  updated[i] = e.currentTarget.value
+                  set('colliOmschrijvingen', updated)
+                }}
+              />
+              {omschrijving && (
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onMouseDown={e => {
+                    e.preventDefault()
+                    const updated = [...(entry.colliOmschrijvingen ?? [])]
+                    updated[i] = ''
+                    set('colliOmschrijvingen', updated)
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Veld leegmaken"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
       <PhotoUpload photos={entry.photos} onChange={updatePhotos} />
     </div>
   )

@@ -1,17 +1,65 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import {
   LABEL_FORMATS,
   getSelectedFormat,
   setSelectedFormat,
   encodePrintData,
   decodePrintData,
+  printLabels,
   type PrintEntry,
 } from "../services/printService";
 
 const sampleEntries: PrintEntry[] = [
-  { name: "Jan de Vries", adres: "Hoofdstraat 1", postcode: "1234 AB", plaats: "Amsterdam", land: "Nederland", route: "Route 3", colli: 2, spoed: false },
-  { name: "Acme B.V.", adres: "", postcode: "", plaats: "", land: "", route: "Overig: koeling", colli: 1, spoed: true },
+  { name: "Jan de Vries", adres: "Hoofdstraat 1", postcode: "1234 AB", plaats: "Amsterdam", land: "Nederland", route: "Route 3", colli: 2, colliOmschrijvingen: [], spoed: false },
+  { name: "Acme B.V.", adres: "", postcode: "", plaats: "", land: "", route: "Overig: koeling", colli: 1, colliOmschrijvingen: [], spoed: true },
 ];
+
+describe("printLabels — colli omschrijving op label", () => {
+  const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!
+  let writtenHtml: string
+
+  beforeEach(() => {
+    const mockDoc = { write: vi.fn((html: string) => { writtenHtml = html }), close: vi.fn() }
+    const mockWin = { document: mockDoc, focus: vi.fn(), print: vi.fn(), close: vi.fn() }
+    vi.stubGlobal('open', vi.fn().mockReturnValue(mockWin))
+  })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("toont omschrijving op het label als die ingevuld is", () => {
+    const entries: PrintEntry[] = [
+      { name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "", colli: 1, colliOmschrijvingen: ["doos grond"], spoed: false },
+    ]
+    printLabels(entries, format)
+    expect(writtenHtml).toContain("doos grond")
+  })
+
+  it("toont geen omschrijving-div als die leeg is", () => {
+    const entries: PrintEntry[] = [
+      { name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "", colli: 1, colliOmschrijvingen: [""], spoed: false },
+    ]
+    printLabels(entries, format)
+    expect(writtenHtml).not.toContain('class="omschrijving"')
+  })
+
+  it("plaatst de juiste omschrijving op elk collo-label", () => {
+    const entries: PrintEntry[] = [
+      { name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "", colli: 2, colliOmschrijvingen: ["doos A", "buis B"], spoed: false },
+    ]
+    printLabels(entries, format)
+    expect(writtenHtml).toContain("doos A")
+    expect(writtenHtml).toContain("buis B")
+  })
+
+  it("escapet HTML-tekens in de omschrijving", () => {
+    const entries: PrintEntry[] = [
+      { name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "", colli: 1, colliOmschrijvingen: ["<script>alert(1)</script>"], spoed: false },
+    ]
+    printLabels(entries, format)
+    expect(writtenHtml).not.toContain("<script>")
+    expect(writtenHtml).toContain("&lt;script&gt;")
+  })
+})
 
 describe("encodePrintData / decodePrintData", () => {
   it("round-trips correctly", () => {

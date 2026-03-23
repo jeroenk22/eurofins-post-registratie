@@ -29,6 +29,7 @@ function toPrintEntry(e: PostEntry): PrintEntry {
     land: e.land,
     route: formatRoute(e),
     colli: e.colli,
+    colliOmschrijvingen: e.colliOmschrijvingen,
     spoed: e.spoed,
   };
 }

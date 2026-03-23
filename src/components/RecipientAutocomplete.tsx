@@ -163,6 +163,7 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
         {query && (
           <button
             type="button"
+            tabIndex={-1}
             onMouseDown={e => { e.preventDefault(); handleClear() }}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             aria-label="Veld leegmaken"
