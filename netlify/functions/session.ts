@@ -65,11 +65,12 @@ export const handler: Handler = async (event: HandlerEvent) => {
         return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ ok: true }) }
       }
 
-      // Store photos for a specific entry
+      // Store photos for a specific entry (upsert: maakt sessie aan als die niet bestaat)
       if (body.entryId !== undefined && body.photos !== undefined) {
         const raw = await store.get(body.id, { type: 'text' })
-        if (!raw) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) }
-        const session = JSON.parse(raw) as SessionData
+        const session: SessionData = raw
+          ? (JSON.parse(raw) as SessionData)
+          : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
         session.photos[body.entryId] = body.photos
         session.updatedAt = Date.now()
         await store.set(body.id, JSON.stringify(session))

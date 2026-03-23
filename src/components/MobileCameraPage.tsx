@@ -86,7 +86,12 @@ export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: sessionId, entryId: entry.id, photos: photos[entry.id] ?? [] }),
-          }).then(r => { if (!r.ok) throw new Error('Upload mislukt') }),
+          }).then(async r => {
+            if (!r.ok) {
+              const body = await r.json().catch(() => ({}))
+              throw new Error(`Upload mislukt (${r.status}): ${body.error ?? 'onbekende fout'}`)
+            }
+          }),
         ),
       )
       setSubmitted(true)
