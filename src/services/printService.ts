@@ -204,6 +204,7 @@ body {
 .omschrijving {
   font-size: ${fontAddr};
   font-style: italic;
+  font-weight: bold;
   color: #555;
   white-space: nowrap;
   overflow: hidden;
