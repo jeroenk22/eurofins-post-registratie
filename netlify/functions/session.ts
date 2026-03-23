@@ -38,7 +38,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
     if (event.httpMethod === 'GET') {
       const id = event.queryStringParameters?.id
       if (!id) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) }
-      const raw = await store.get(id)
+      const raw = await store.get(id, { type: 'text' })
       if (!raw) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) }
       return { statusCode: 200, headers: HEADERS, body: raw }
     }
@@ -55,7 +55,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
       // Upsert entries (preserves existing photos)
       if (body.entries !== undefined) {
-        const raw = await store.get(body.id)
+        const raw = await store.get(body.id, { type: 'text' })
         const existing: SessionData = raw
           ? (JSON.parse(raw) as SessionData)
           : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
@@ -67,7 +67,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
       // Store photos for a specific entry
       if (body.entryId !== undefined && body.photos !== undefined) {
-        const raw = await store.get(body.id)
+        const raw = await store.get(body.id, { type: 'text' })
         if (!raw) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) }
         const session = JSON.parse(raw) as SessionData
         session.photos[body.entryId] = body.photos
