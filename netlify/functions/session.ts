@@ -1,5 +1,3 @@
-/// <reference types="node" />
-import type { Handler, HandlerEvent } from '@netlify/functions'
 import { getStore } from '@netlify/blobs'
 
 export interface MobileEntry {
@@ -27,31 +25,32 @@ const HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
-export const handler: Handler = async (event: HandlerEvent) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: HEADERS, body: '' }
+export default async (request: Request): Promise<Response> => {
+  if (request.method === 'OPTIONS') {
+    return new Response('', { status: 204, headers: HEADERS })
   }
 
   try {
     const store = getStore('mobile-sessions')
+    const url = new URL(request.url)
 
-    if (event.httpMethod === 'GET') {
-      const id = event.queryStringParameters?.id
-      if (!id) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) }
+    if (request.method === 'GET') {
+      const id = url.searchParams.get('id')
+      if (!id) return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400, headers: HEADERS })
       const raw = await store.get(id, { type: 'text' })
-      if (!raw) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) }
-      return { statusCode: 200, headers: HEADERS, body: raw }
+      if (!raw) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: HEADERS })
+      return new Response(raw, { status: 200, headers: HEADERS })
     }
 
-    if (event.httpMethod === 'POST') {
-      const body = JSON.parse(event.body ?? '{}') as {
+    if (request.method === 'POST') {
+      const body = await request.json() as {
         id: string
         entries?: MobileEntry[]
         entryId?: string
         photos?: MobilePhoto[]
       }
 
-      if (!body.id) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) }
+      if (!body.id) return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400, headers: HEADERS })
 
       // Upsert entries (preserves existing photos)
       if (body.entries !== undefined) {
@@ -62,7 +61,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
         existing.entries = body.entries
         existing.updatedAt = Date.now()
         await store.set(body.id, JSON.stringify(existing))
-        return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ ok: true }) }
+        return new Response(JSON.stringify({ ok: true }), { status: 200, headers: HEADERS })
       }
 
       // Store photos for a specific entry (upsert: maakt sessie aan als die niet bestaat)
@@ -74,19 +73,18 @@ export const handler: Handler = async (event: HandlerEvent) => {
         session.photos[body.entryId] = body.photos
         session.updatedAt = Date.now()
         await store.set(body.id, JSON.stringify(session))
-        return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ ok: true }) }
+        return new Response(JSON.stringify({ ok: true }), { status: 200, headers: HEADERS })
       }
 
-      return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Invalid body' }) }
+      return new Response(JSON.stringify({ error: 'Invalid body' }), { status: 400, headers: HEADERS })
     }
 
-    return { statusCode: 405, headers: HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) }
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: HEADERS })
   } catch (err) {
     console.error('Session error:', err)
-    return {
-      statusCode: 500,
-      headers: HEADERS,
-      body: JSON.stringify({ error: err instanceof Error ? err.message : 'Internal error' }),
-    }
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : 'Internal error' }),
+      { status: 500, headers: HEADERS },
+    )
   }
 }
