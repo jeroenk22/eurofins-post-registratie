@@ -52,7 +52,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
 
     return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name)), retryCount])
+  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name + e.colli)), retryCount])
 
   // Genereer QR zodra push geslaagd is en paneel open staat
   useEffect(() => {
