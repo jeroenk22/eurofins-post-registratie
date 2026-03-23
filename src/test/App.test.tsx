@@ -39,18 +39,6 @@ const draftWithEntry = JSON.stringify({
   senderEmail: 'sophie@example.com',
 })
 
-describe('App — mobiele routing', () => {
-  afterEach(() => {
-    window.history.pushState({}, '', '/')
-  })
-
-  it('rendert MobileCameraPage bij ?mobile= parameter', () => {
-    window.history.pushState({}, '', '?mobile=test-session-123')
-    render(<App />)
-    expect(screen.getByText('MobileCameraPage:test-session-123')).toBeInTheDocument()
-    expect(screen.queryByText('📤 Versturen')).not.toBeInTheDocument()
-  })
-})
 
 describe('App — submit_state persistentie', () => {
   beforeEach(() => sessionStorage.clear())

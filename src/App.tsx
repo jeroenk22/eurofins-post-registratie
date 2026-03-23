@@ -12,7 +12,6 @@ import SectionDivider from "./components/SectionDivider";
 import FormField from "./components/FormField";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import QrCodeFloat from "./components/QrCodeFloat";
-import MobileCameraPage from "./components/MobileCameraPage";
 import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
 import { decodePrintData } from "./services/printService";
 
@@ -34,12 +33,6 @@ export default function App() {
   if (printDataParam) {
     const printEntries = decodePrintData(printDataParam);
     if (printEntries) return <PrintLinkScreen entries={printEntries} />;
-  }
-
-  // Mobile photo page mode
-  const mobileParam = params.get("mobile");
-  if (mobileParam) {
-    return <MobileCameraPage sessionId={mobileParam} />;
   }
 
   const store = useStore();

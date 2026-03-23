@@ -18,9 +18,6 @@ export default defineConfig({
         orientation: "portrait",
         scope: "/",
         start_url: "/",
-        launch_handler: {
-          client_mode: "navigate-existing",
-        },
         icons: [
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
           {
