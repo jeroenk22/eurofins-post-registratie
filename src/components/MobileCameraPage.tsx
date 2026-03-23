@@ -9,9 +9,10 @@ interface MobileEntry {
 
 interface Props {
   sessionId: string
+  initialEntries?: MobileEntry[]
 }
 
-export default function MobileCameraPage({ sessionId }: Props) {
+export default function MobileCameraPage({ sessionId, initialEntries }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
   const [photos, setPhotos] = useState<Record<string, Photo[]>>({})
   const [loading, setLoading] = useState(true)
@@ -21,8 +22,14 @@ export default function MobileCameraPage({ sessionId }: Props) {
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  // Load session entries on mount, retry up to 5x (desktop may still be pushing)
+  // Laad entries: uit URL (initialEntries) of via Netlify Function als fallback
   useEffect(() => {
+    if (initialEntries) {
+      setEntries(initialEntries)
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
     let attempts = 0
 
@@ -30,7 +37,6 @@ export default function MobileCameraPage({ sessionId }: Props) {
       try {
         const r = await fetch(`/.netlify/functions/session?id=${encodeURIComponent(sessionId)}`)
         if (!r.ok) {
-          // HTTP-fout (bijv. 404): niet opnieuw proberen, direct foutmelding tonen
           if (!cancelled) {
             setLoadError('Sessie niet gevonden. Scan de QR-code opnieuw.')
             setLoading(false)
@@ -43,7 +49,6 @@ export default function MobileCameraPage({ sessionId }: Props) {
           setLoading(false)
         }
       } catch (e) {
-        // Netwerkstoringen: retry tot 5x (desktop is mogelijk nog bezig met pushen)
         attempts++
         if (attempts < 5 && !cancelled) {
           setTimeout(tryFetch, 1500)
