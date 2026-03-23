@@ -16,6 +16,7 @@ interface MobileEntry {
   id: string
   name: string
   colli: number
+  desktopPhotoCount: number
 }
 
 interface Props {
@@ -105,6 +106,15 @@ export default function MobileCameraPage({ sessionId }: Props) {
     setPhotos(prev => ({ ...prev, [entryId]: (prev[entryId] ?? []).filter(p => p.id !== photoId) }))
 
   const handleSubmit = async () => {
+    const missing = entries.filter(
+      entry => (photos[entry.id] ?? []).length === 0 && entry.desktopPhotoCount === 0
+    )
+    if (missing.length > 0) {
+      setSubmitError(
+        `Voeg minimaal 1 foto toe voor: ${missing.map(e => e.name || '(geen naam)').join(', ')}`
+      )
+      return
+    }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -210,6 +220,11 @@ export default function MobileCameraPage({ sessionId }: Props) {
               </h3>
               <p className="text-xs text-gray-400 mb-3">
                 {entry.colli} {entry.colli === 1 ? 'collo' : 'colli'}
+                {entry.desktopPhotoCount > 0 && (
+                  <span className="ml-2 text-green-600">
+                    · Reeds {entry.desktopPhotoCount} {entry.desktopPhotoCount === 1 ? "foto" : "foto's"} geüpload via desktop
+                  </span>
+                )}
               </p>
 
               <label className="flex w-full border-2 border-dashed border-gray-200 rounded-lg p-3 items-center gap-2.5 cursor-pointer hover:border-ef-blue hover:bg-ef-blue-light transition-colors">

@@ -40,7 +40,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: sessionId,
-        entries: selectedEntries.map(e => ({ id: e.id, name: e.name, colli: e.colli })),
+        entries: selectedEntries.map(e => ({ id: e.id, name: e.name, colli: e.colli, desktopPhotoCount: e.photos.length })),
       }),
       signal: controller.signal,
     })
@@ -63,7 +63,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
 
     return () => controller.abort()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name + e.colli)), retryCount])
+  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name + e.colli + e.photos.length)), retryCount])
 
   // Genereer QR eenmalig zodra eerste push geslaagd is en paneel open staat
   useEffect(() => {
