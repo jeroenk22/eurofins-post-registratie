@@ -90,6 +90,23 @@ describe('QrCodeFloat', () => {
     expect(await screen.findByText(/Verbinding mislukt/)).toBeInTheDocument()
   })
 
+  it('pusht opnieuw als colliOmschrijvingen veranderen', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    const entry = makeEntry({ name: 'Kees Hin', adres: 'Kerkstraat 1', colli: 2, colliOmschrijvingen: [] })
+    const { rerender } = render(
+      <QrCodeFloat sessionId="s1" entries={[entry]} syncedEntryIds={new Set()} />
+    )
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    rerender(
+      <QrCodeFloat sessionId="s1" entries={[{ ...entry, colliOmschrijvingen: ['doos', 'pallet'] }]} syncedEntryIds={new Set()} />
+    )
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)
+    expect(body.entries[0].colliOmschrijvingen).toEqual(['doos', 'pallet'])
+  })
+
   it('herprobeert push bij klikken op Opnieuw', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))

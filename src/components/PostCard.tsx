@@ -180,6 +180,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
               {omschrijving && (
                 <button
                   type="button"
+                  tabIndex={-1}
                   onMouseDown={e => {
                     e.preventDefault()
                     const updated = [...(entry.colliOmschrijvingen ?? [])]
