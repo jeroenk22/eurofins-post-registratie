@@ -205,7 +205,7 @@ body {
   font-size: ${fontAddr};
   font-style: italic;
   font-weight: bold;
-  color: #555;
+  color: #000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
