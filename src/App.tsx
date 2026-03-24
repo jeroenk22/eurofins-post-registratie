@@ -42,6 +42,7 @@ export default function App() {
   );
   const [errorMsg, setErrorMsg] = useState("");
   const [sessionId] = useState(getSessionId);
+  const [sessionReady, setSessionReady] = useState(false);
 
   // Stable ref so the sync callback never causes re-renders
   const storeRef = useRef(store);
@@ -60,7 +61,7 @@ export default function App() {
   const syncedEntryIds = useMobilePhotoSync(
     sessionId,
     handlePhotosReceived,
-    submitState === "idle" || submitState === "error",
+    sessionReady && (submitState === "idle" || submitState === "error"),
   );
 
   const handleSubmit = async () => {
@@ -232,6 +233,7 @@ export default function App() {
           sessionId={sessionId}
           entries={store.entries}
           syncedEntryIds={syncedEntryIds}
+          onSessionReady={() => setSessionReady(true)}
         />
       )}
     </>
