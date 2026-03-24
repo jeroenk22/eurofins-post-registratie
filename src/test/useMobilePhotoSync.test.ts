@@ -13,10 +13,12 @@ describe('useMobilePhotoSync', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.stubGlobal('fetch', vi.fn())
+    sessionStorage.clear()
   })
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    sessionStorage.clear()
   })
 
   it('pollt niet als enabled=false', async () => {
@@ -60,6 +62,24 @@ describe('useMobilePhotoSync', () => {
     const { result } = renderHook(() => useMobilePhotoSync('s1', callback, true))
     await act(() => vi.advanceTimersByTimeAsync(100))
     expect(result.current.has('e1')).toBe(true)
+  })
+
+  it('hersynct foto\'s niet na refresh als updatedAt ongewijzigd is', async () => {
+    const photos = [{ id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }]
+    vi.mocked(fetch).mockResolvedValue(makeSessionResponse({ e1: photos }, 1000))
+    const callback = vi.fn()
+
+    // Eerste mount: foto's worden gesynchroniseerd, updatedAt=1000 opgeslagen
+    const { unmount } = renderHook(() => useMobilePhotoSync('s1', callback, true))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(callback).toHaveBeenCalledTimes(1)
+    unmount()
+
+    // Tweede mount (simuleert refresh): zelfde updatedAt=1000, callback mag niet opnieuw vuren
+    callback.mockClear()
+    renderHook(() => useMobilePhotoSync('s1', callback, true))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(callback).not.toHaveBeenCalled()
   })
 
   it('stopt met pollen na unmount', async () => {

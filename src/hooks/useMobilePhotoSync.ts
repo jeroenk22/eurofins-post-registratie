@@ -12,7 +12,10 @@ export function useMobilePhotoSync(
   enabled: boolean,
 ) {
   const [syncedEntryIds, setSyncedEntryIds] = useState<Set<string>>(new Set())
-  const lastUpdatedRef = useRef(0)
+  const storageKey = `sync_updated_${sessionId}`
+  const lastUpdatedRef = useRef((() => {
+    try { return parseInt(sessionStorage.getItem(storageKey) ?? '0', 10) } catch { return 0 }
+  })())
   const knownCountsRef = useRef<Record<string, number>>({})
   const callbackRef = useRef(onPhotosReceived)
   callbackRef.current = onPhotosReceived
@@ -27,6 +30,7 @@ export function useMobilePhotoSync(
         const data: SessionData = await r.json()
         if (data.updatedAt <= lastUpdatedRef.current) return
         lastUpdatedRef.current = data.updatedAt
+        try { sessionStorage.setItem(storageKey, String(data.updatedAt)) } catch { /* ignore */ }
 
         const added: string[] = []
         for (const [entryId, photos] of Object.entries(data.photos)) {
