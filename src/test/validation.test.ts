@@ -114,7 +114,7 @@ describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
   })
 
   it('geeft geen fout als mestklant colli=2 heeft en beide omschrijvingen ingevuld', () => {
-    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech Mestzakken-KLEINE DOOS'] }
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Eijkelkamp deksels', 'DTech-KLEINE DOOS'] }
     expect(validateForm([entry], 'Sophie', '')).toBeNull()
   })
 
@@ -136,10 +136,10 @@ describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
   it('alle label-waarden zijn geldige omschrijvingen', () => {
     const labels = [
       'Eijkelkamp deksels',
-      'D-Tech Mestzakken-KLEINE DOOS',
-      'D-Tech Mestzakken-GROTE DOOS',
-      'Vaste mestzakken-(50 zakken)',
-      'Vaste mestzakken-(500 zakken)',
+      'DTech-KLEINE DOOS',
+      'DTech-GROTE DOOS',
+      'Vaste mestzakken (50st)',
+      'Vaste mestzakken (500st)',
     ]
     for (const label of labels) {
       const entry = { ...mestklantEntry(), colliOmschrijvingen: [label] }

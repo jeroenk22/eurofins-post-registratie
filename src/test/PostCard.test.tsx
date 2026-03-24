@@ -135,19 +135,19 @@ describe('PostCard — mestklant colli dropdown', () => {
       <PostCard entry={mestklantEntry} index={0} onUpdate={vi.fn()} onRemove={vi.fn()} showRemove={false} recipients={recipients} />
     )
     expect(screen.getByRole('option', { name: 'Eijkelkamp deksels' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'D-Tech Mestzakken-KLEINE DOOS' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'D-Tech Mestzakken-GROTE DOOS' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Vaste mestzakken-(50 zakken)' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Vaste mestzakken-(500 zakken)' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'DTech-KLEINE DOOS' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'DTech-GROTE DOOS' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Vaste mestzakken (50st)' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Vaste mestzakken (500st)' })).toBeInTheDocument()
   })
 
-  it('vaste mestzakken-(50 zakken) staat vóór vaste mestzakken-(500 zakken)', () => {
+  it('vaste mestzakken (50st) staat vóór vaste mestzakken (500st)', () => {
     render(
       <PostCard entry={mestklantEntry} index={0} onUpdate={vi.fn()} onRemove={vi.fn()} showRemove={false} recipients={recipients} />
     )
     const options = screen.getAllByRole('option').map(o => o.textContent)
-    const idx50 = options.indexOf('Vaste mestzakken-(50 zakken)')
-    const idx500 = options.indexOf('Vaste mestzakken-(500 zakken)')
+    const idx50 = options.indexOf('Vaste mestzakken (50st)')
+    const idx500 = options.indexOf('Vaste mestzakken (500st)')
     expect(idx50).toBeLessThan(idx500)
   })
 
@@ -186,10 +186,10 @@ describe('PostCard — mestklant colli dropdown', () => {
   it('elke vaste optie slaat het label op (label = option value)', () => {
     const labels = [
       'Eijkelkamp deksels',
-      'D-Tech Mestzakken-KLEINE DOOS',
-      'D-Tech Mestzakken-GROTE DOOS',
-      'Vaste mestzakken-(50 zakken)',
-      'Vaste mestzakken-(500 zakken)',
+      'DTech-KLEINE DOOS',
+      'DTech-GROTE DOOS',
+      'Vaste mestzakken (50st)',
+      'Vaste mestzakken (500st)',
     ]
     for (const label of labels) {
       const onUpdate = vi.fn()
@@ -231,9 +231,9 @@ describe('PostCard — mestklant colli dropdown', () => {
     )
     const select = screen.getByRole('combobox', { name: /omschrijving collo/i })
     fireEvent.change(select, { target: { value: '__anders__' } })
-    fireEvent.change(select, { target: { value: 'D-Tech Mestzakken-KLEINE DOOS' } })
+    fireEvent.change(select, { target: { value: 'DTech-KLEINE DOOS' } })
     expect(screen.queryByPlaceholderText(/vrije omschrijving/i)).not.toBeInTheDocument()
-    expect(onUpdate).toHaveBeenLastCalledWith('test-1', { colliOmschrijvingen: ['D-Tech Mestzakken-KLEINE DOOS'] })
+    expect(onUpdate).toHaveBeenLastCalledWith('test-1', { colliOmschrijvingen: ['DTech-KLEINE DOOS'] })
   })
 
   it('✕-knopje op select is niet zichtbaar als veld leeg is', () => {
@@ -297,8 +297,8 @@ describe('PostCard — mestklant colli dropdown', () => {
       />
     )
     const selects = screen.getAllByRole('combobox', { name: /omschrijving collo/i })
-    fireEvent.change(selects[1], { target: { value: 'D-Tech Mestzakken-KLEINE DOOS' } })
-    expect(onUpdate).toHaveBeenCalledWith('test-1', { colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech Mestzakken-KLEINE DOOS'] })
+    fireEvent.change(selects[1], { target: { value: 'DTech-KLEINE DOOS' } })
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colliOmschrijvingen: ['Eijkelkamp deksels', 'DTech-KLEINE DOOS'] })
   })
 
   it('bij colli=2 opent "Anders..." in tweede collo het tekstveld alleen voor dat collo', () => {
