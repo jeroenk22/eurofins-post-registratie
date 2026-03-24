@@ -5,17 +5,20 @@ interface Props {
   sessionId: string
   entries: PostEntry[]
   syncedEntryIds: Set<string>
+  onSessionReady?: () => void
 }
 
 type PushState = 'pending' | 'synced' | 'error'
 
-export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Props) {
+export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [pushState, setPushState] = useState<PushState>('pending')
   const [retryCount, setRetryCount] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
   const hasSyncedRef = useRef(false)
+  const onSessionReadyRef = useRef(onSessionReady)
+  onSessionReadyRef.current = onSessionReady
 
   const viteAppUrl = import.meta.env.VITE_APP_URL
   const appUrl = (viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin).replace(/\/$/, '')
@@ -50,6 +53,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds }: Prop
           if (r.ok) {
             hasSyncedRef.current = true
             setPushState('synced')
+            onSessionReadyRef.current?.()
           } else {
             setPushState('error')
           }
