@@ -12,11 +12,15 @@ export function useMobilePhotoSync(
   enabled: boolean,
 ) {
   const [syncedEntryIds, setSyncedEntryIds] = useState<Set<string>>(new Set())
-  const storageKey = `sync_updated_${sessionId}`
-  const lastUpdatedRef = useRef((() => {
-    try { return parseInt(sessionStorage.getItem(storageKey) ?? '0', 10) } catch { return 0 }
+  const idsKey = `sync_ids_${sessionId}`
+  const lastUpdatedRef = useRef(0)
+  // Bewaar per entry welke foto-IDs al gesynchroniseerd zijn, ook na refresh
+  const knownPhotoIdsRef = useRef<Record<string, Set<string>>>((() => {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(idsKey) ?? '{}') as Record<string, string[]>
+      return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, new Set(v)]))
+    } catch { return {} }
   })())
-  const knownCountsRef = useRef<Record<string, number>>({})
   const callbackRef = useRef(onPhotosReceived)
   callbackRef.current = onPhotosReceived
 
@@ -30,14 +34,21 @@ export function useMobilePhotoSync(
         const data: SessionData = await r.json()
         if (data.updatedAt <= lastUpdatedRef.current) return
         lastUpdatedRef.current = data.updatedAt
-        try { sessionStorage.setItem(storageKey, String(data.updatedAt)) } catch { /* ignore */ }
 
         const added: string[] = []
         for (const [entryId, photos] of Object.entries(data.photos)) {
-          const prev = knownCountsRef.current[entryId] ?? 0
-          if (photos.length > 0 && photos.length !== prev) {
-            knownCountsRef.current[entryId] = photos.length
-            callbackRef.current(entryId, photos)
+          const known = knownPhotoIdsRef.current[entryId] ?? new Set<string>()
+          const newPhotos = photos.filter(p => !known.has(p.id))
+          if (newPhotos.length > 0) {
+            if (!knownPhotoIdsRef.current[entryId]) knownPhotoIdsRef.current[entryId] = new Set()
+            photos.forEach(p => knownPhotoIdsRef.current[entryId].add(p.id))
+            try {
+              const toSave = Object.fromEntries(
+                Object.entries(knownPhotoIdsRef.current).map(([k, v]) => [k, [...v]])
+              )
+              sessionStorage.setItem(idsKey, JSON.stringify(toSave))
+            } catch { /* ignore */ }
+            callbackRef.current(entryId, newPhotos)
             added.push(entryId)
           }
         }
