@@ -1,7 +1,16 @@
+import { useState } from 'react'
 import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
 import RecipientAutocomplete from './RecipientAutocomplete'
 import type { RecipientOption } from '../services/googleSheetsService'
+
+const MESTKLANT_OPTIONS = [
+  { label: 'Eijkelkamp deksels', value: 'Doos deksels' },
+  { label: 'D-Tech Mestzakken-KLEINE DOOS', value: 'Doosje sealrollen' },
+  { label: 'D-Tech Mestzakken-GROTE DOOS', value: 'Grote doos sealrollen (10 doosjes)' },
+  { label: 'Vaste mestzakken-(50 zakken)', value: 'Setje vaste mestzakken (50 stuks)' },
+  { label: 'Vaste mestzakken-(500 zakken)', value: 'Grote doos vaste mestzakken (500 stuks)' },
+]
 
 const SHELVES = [1, 2, 3, 4, 5, 6, 7, 8] as const
 
@@ -12,11 +21,14 @@ interface PostCardProps {
   onRemove: (id: string) => void
   showRemove: boolean
   recipients: RecipientOption[]
+  showErrors?: boolean
 }
 
-export default function PostCard({ entry, index, onUpdate, onRemove, showRemove, recipients }: PostCardProps) {
+export default function PostCard({ entry, index, onUpdate, onRemove, showRemove, recipients, showErrors = false }: PostCardProps) {
   const set = <K extends keyof PostEntry>(key: K, val: PostEntry[K]) =>
     onUpdate(entry.id, { [key]: val } as Partial<PostEntry>)
+
+  const [andersIndices, setAndersIndices] = useState<Set<number>>(new Set())
 
   const updatePhotos = (fn: (prev: Photo[]) => Photo[]) =>
     onUpdate(entry.id, { photos: fn(entry.photos) })
@@ -59,7 +71,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         <RecipientAutocomplete
           id={`name-${entry.id}`}
           value={entry.name}
-          onChange={v => { set('name', v); if (!v) { set('shelf', null); set('spoed', false); set('colli', 1) } }}
+          onChange={v => { set('name', v); if (!v) { set('shelf', null); set('spoed', false); set('colli', 1); set('recipientType', undefined); setAndersIndices(new Set()) } }}
           onSelect={option => {
             const n = Number(option.route)
             const shelf = Number.isInteger(n) && n >= 1 && n <= 8 ? n : null
@@ -69,17 +81,21 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
               plaats: option.plaats,
               land: option.land,
               shelf,
+              recipientType: option.type,
+              colliOmschrijvingen: [],
               ...(shelf === null && { spoed: false }),
             })
+            setAndersIndices(new Set())
           }}
           recipients={recipients}
+          invalid={showErrors && !entry.name.trim()}
         />
       </div>
 
       {/* Schap selector */}
       <div className="mb-3">
         <p className="label-base">Schap nummer *</p>
-        <div className="grid grid-cols-9 gap-1.5">
+        <div className={`grid grid-cols-9 gap-1.5${showErrors && !entry.shelf ? ' rounded-lg ring-2 ring-red-400' : ''}`}>
           {SHELVES.map(n => (
             <button
               key={n}
@@ -109,7 +125,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         </div>
         <input
           type="text"
-          className={`input-base mt-1.5${entry.shelf !== 'overig' ? ' hidden' : ''}`}
+          className={`input-base mt-1.5${entry.shelf !== 'overig' ? ' hidden' : ''}${showErrors && entry.shelf === 'overig' && !entry.shelfDescription.trim() ? ' !border-red-400' : ''}`}
           placeholder="Beschrijf waar de zending klaar ligt..."
           value={entry.shelfDescription}
           onChange={e => set('shelfDescription', e.currentTarget.value)}
@@ -164,41 +180,111 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
       <div className="mb-3 space-y-1.5">
         {Array.from({ length: entry.colli }, (_, i) => {
           const omschrijving = (entry.colliOmschrijvingen ?? [])[i] ?? ''
+          const updateOmschrijving = (val: string) => {
+            const updated = [...(entry.colliOmschrijvingen ?? [])]
+            updated[i] = val
+            set('colliOmschrijvingen', updated)
+          }
+          const placeholder = entry.recipientType === 'Mestklanten'
+            ? (entry.colli > 1 ? `Omschrijving collo ${i + 1}` : 'Omschrijving collo')
+            : (entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)')
+          const colloError = showErrors && entry.recipientType === 'Mestklanten' && !omschrijving.trim()
           return (
             <div key={i} className="relative">
-              <input
-                type="text"
-                className="input-base !pr-7"
-                placeholder={entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)'}
-                value={omschrijving}
-                onChange={e => {
-                  const updated = [...(entry.colliOmschrijvingen ?? [])]
-                  updated[i] = e.currentTarget.value
-                  set('colliOmschrijvingen', updated)
-                }}
-              />
-              {omschrijving && (
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onMouseDown={e => {
-                    e.preventDefault()
-                    const updated = [...(entry.colliOmschrijvingen ?? [])]
-                    updated[i] = ''
-                    set('colliOmschrijvingen', updated)
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label="Veld leegmaken"
-                >
-                  ✕
-                </button>
+              {entry.recipientType === 'Mestklanten' ? (
+                <div className="space-y-1">
+                  <div className="relative">
+                    <select
+                      className={`input-base appearance-none !pr-7${colloError ? ' !border-red-400' : ''}`}
+                      value={andersIndices.has(i) ? '__anders__' : omschrijving}
+                      onChange={e => {
+                        if (e.currentTarget.value === '__anders__') {
+                          setAndersIndices(prev => new Set(prev).add(i))
+                          updateOmschrijving('')
+                        } else {
+                          setAndersIndices(prev => { const s = new Set(prev); s.delete(i); return s })
+                          updateOmschrijving(e.currentTarget.value)
+                        }
+                      }}
+                      aria-label={placeholder}
+                    >
+                      <option value="" disabled>{placeholder}</option>
+                      {MESTKLANT_OPTIONS.map(o => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                      <option value="__anders__">Anders...</option>
+                    </select>
+                    {(omschrijving || andersIndices.has(i)) && (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onMouseDown={e => {
+                          e.preventDefault()
+                          setAndersIndices(prev => { const s = new Set(prev); s.delete(i); return s })
+                          updateOmschrijving('')
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        aria-label="Veld leegmaken"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  {andersIndices.has(i) && (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className={`input-base !pr-7${colloError ? ' !border-red-400' : ''}`}
+                        placeholder="Vrije omschrijving..."
+                        value={omschrijving}
+                        onChange={e => updateOmschrijving(e.currentTarget.value)}
+                        autoFocus
+                      />
+                      {omschrijving && (
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onMouseDown={e => { e.preventDefault(); updateOmschrijving('') }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          aria-label="Veld leegmaken"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    className={`input-base !pr-7${colloError ? ' !border-red-400' : ''}`}
+                    placeholder={placeholder}
+                    value={omschrijving}
+                    onChange={e => updateOmschrijving(e.currentTarget.value)}
+                  />
+                  {omschrijving && (
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onMouseDown={e => {
+                        e.preventDefault()
+                        updateOmschrijving('')
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label="Veld leegmaken"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )
         })}
       </div>
 
-      <PhotoUpload photos={entry.photos} onChange={updatePhotos} />
+      <PhotoUpload photos={entry.photos} onChange={updatePhotos} invalid={showErrors && entry.photos.length === 0} />
     </div>
   )
 }

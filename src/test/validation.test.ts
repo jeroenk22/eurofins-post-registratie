@@ -87,6 +87,75 @@ describe('validateForm', () => {
   })
 })
 
+describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
+  const mestklantEntry = (): PostEntry => ({
+    ...validEntry(),
+    recipientType: 'Mestklanten',
+    colliOmschrijvingen: ['Doos deksels'],
+  })
+
+  it('geeft geen fout als mestklant 1 collo heeft met omschrijving', () => {
+    expect(validateForm([mestklantEntry()], 'Sophie', '')).toBeNull()
+  })
+
+  it('geeft fout als mestklant collo geen omschrijving heeft', () => {
+    const entry = { ...mestklantEntry(), colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft fout als mestklant collo alleen whitespace heeft', () => {
+    const entry = { ...mestklantEntry(), colliOmschrijvingen: ['   '] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft fout als mestklant colli=2 heeft maar slechts 1 omschrijving ingevuld', () => {
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Doos deksels', ''] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft geen fout als mestklant colli=2 heeft en beide omschrijvingen ingevuld', () => {
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Doos deksels', 'Doosje sealrollen'] }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  })
+
+  it('geeft geen fout voor niet-mestklant met lege omschrijvingen', () => {
+    const entry = { ...validEntry(), colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  })
+
+  it('geeft geen fout voor entry zonder recipientType met lege omschrijvingen', () => {
+    const entry = { ...validEntry(), recipientType: undefined, colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  })
+
+  it('mestklant omschrijving-fout gaat vóór foto-fout', () => {
+    const entry = { ...mestklantEntry(), colliOmschrijvingen: [], photos: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('alle TMS-waarden zijn geldige omschrijvingen', () => {
+    const tmsValues = [
+      'Doos deksels',
+      'Doosje sealrollen',
+      'Grote doos sealrollen (10 doosjes)',
+      'Setje vaste mestzakken (50 stuks)',
+      'Grote doos vaste mestzakken (500 stuks)',
+    ]
+    for (const value of tmsValues) {
+      const entry = { ...mestklantEntry(), colliOmschrijvingen: [value] }
+      expect(validateForm([entry], 'Sophie', ''), `TMS-waarde "${value}" moet geldig zijn`).toBeNull()
+    }
+  })
+
+  it('bij meerdere entries geeft fout als één mestklant-entry ontbreekt omschrijving', () => {
+    const entries = [
+      validEntry(),
+      { ...mestklantEntry(), id: '2', colliOmschrijvingen: [] },
+    ]
+    expect(validateForm(entries, 'Sophie', '')).toMatch(/omschrijving/)
+  })
+})
+
 describe('isValidEmail', () => {
   it('accepts a standard email address', () => {
     expect(isValidEmail('test@example.com')).toBe(true)

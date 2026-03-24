@@ -15,6 +15,7 @@ export interface PostEntry {
   land: string;
   colli: number;
   colliOmschrijvingen: string[];
+  recipientType?: 'Monsternemers' | 'AP06' | 'Mestklanten';
   spoed: boolean;
   photos: Photo[];
 }
