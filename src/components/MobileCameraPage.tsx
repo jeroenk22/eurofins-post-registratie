@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
 import { loadPhotos, savePhotos, clearPhotos } from '../photoStorage'
@@ -28,7 +28,6 @@ interface Props {
 export default function MobileCameraPage({ sessionId }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
   const [photos, setPhotos] = useState<Record<string, Photo[]>>({})
-  const photosLoaded = useRef(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
@@ -73,31 +72,29 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   // Laad foto's uit IndexedDB bij mount
   useEffect(() => {
-    loadPhotos(sessionId).then(data => {
-      photosLoaded.current = true
-      setPhotos(data)
-    })
+    loadPhotos(sessionId).then(setPhotos)
   }, [sessionId])
-
-  // Sla foto's op in IndexedDB zodat ze bewaard blijven als de camera-app
-  // de browser-tab tijdelijk uit het geheugen gooit
-  useEffect(() => {
-    if (!photosLoaded.current) return
-    savePhotos(sessionId, photos)
-  }, [sessionId, photos])
 
   const handleFiles = async (entryId: string, files: FileList) => {
     setUploadErrors(prev => ({ ...prev, [entryId]: '' }))
     try {
       const newPhotos = await processFiles(files)
-      setPhotos(prev => ({ ...prev, [entryId]: [...(prev[entryId] ?? []), ...newPhotos] }))
+      // Gebruik functionele updater vanwege de await hierboven (prev is altijd actueel)
+      setPhotos(prev => {
+        const updated = { ...prev, [entryId]: [...(prev[entryId] ?? []), ...newPhotos] }
+        void savePhotos(sessionId, updated)
+        return updated
+      })
     } catch (e) {
       setUploadErrors(prev => ({ ...prev, [entryId]: e instanceof Error ? e.message : 'Ongeldig bestand.' }))
     }
   }
 
-  const removePhoto = (entryId: string, photoId: string) =>
-    setPhotos(prev => ({ ...prev, [entryId]: (prev[entryId] ?? []).filter(p => p.id !== photoId) }))
+  const removePhoto = (entryId: string, photoId: string) => {
+    const updated = { ...photos, [entryId]: (photos[entryId] ?? []).filter(p => p.id !== photoId) }
+    setPhotos(updated)
+    void savePhotos(sessionId, updated)
+  }
 
   const handleSubmit = async () => {
     const missing = entries.filter(
