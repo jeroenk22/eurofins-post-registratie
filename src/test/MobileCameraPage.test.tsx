@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import MobileCameraPage from '../components/MobileCameraPage'
+import { loadPhotos, savePhotos } from '../photoStorage'
 
 vi.mock('../photoUtils', () => ({
   processFiles: vi.fn().mockResolvedValue([
     { id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' },
   ]),
+}))
+
+vi.mock('../photoStorage', () => ({
+  loadPhotos: vi.fn().mockResolvedValue({}),
+  savePhotos: vi.fn().mockResolvedValue(undefined),
+  clearPhotos: vi.fn().mockResolvedValue(undefined),
 }))
 
 const mockSession = {
@@ -129,5 +136,37 @@ describe('MobileCameraPage', () => {
     sessionStorage.setItem('submitted-test-session', '1')
     render(<MobileCameraPage sessionId="test-session" />)
     expect(screen.getByText("Foto's geüpload!")).toBeInTheDocument()
+  })
+
+  it('slaat verwijdering direct op zodat foto niet terugkomt na refresh', async () => {
+    // Simuleer een opgeslagen foto (alsof een eerdere sessie deze had opgeslagen)
+    vi.mocked(loadPhotos).mockResolvedValue({
+      e1: [{ id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }],
+    })
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => mockSession } as Response)
+
+    render(<MobileCameraPage sessionId="test-session" />)
+    // Wacht tot foto geladen is vanuit storage
+    expect(await screen.findByAltText('foto.jpg')).toBeInTheDocument()
+
+    // Verwijder de foto
+    fireEvent.click(screen.getByLabelText('Verwijder foto'))
+
+    // savePhotos moet zijn aangeroepen met een lege array voor e1
+    await waitFor(() => {
+      const calls = vi.mocked(savePhotos).mock.calls
+      const lastCall = calls[calls.length - 1]
+      expect(lastCall[1]).toMatchObject({ e1: [] })
+    })
+  })
+
+  it('herstelt foto\'s na accidentele refresh als gebruiker ze niet heeft verwijderd', async () => {
+    vi.mocked(loadPhotos).mockResolvedValue({
+      e1: [{ id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }],
+    })
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => mockSession } as Response)
+
+    render(<MobileCameraPage sessionId="test-session" />)
+    expect(await screen.findByAltText('foto.jpg')).toBeInTheDocument()
   })
 })

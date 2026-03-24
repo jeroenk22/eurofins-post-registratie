@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
+import { loadPhotos, savePhotos, clearPhotos } from '../photoStorage'
 
 function LogoBar() {
   return (
@@ -24,27 +25,9 @@ interface Props {
   sessionId: string
 }
 
-function loadPhotos(sessionId: string): Record<string, Photo[]> {
-  try {
-    const raw = sessionStorage.getItem(`mobile-photos-${sessionId}`)
-    if (!raw) return {}
-    return JSON.parse(raw) as Record<string, Photo[]>
-  } catch {
-    return {}
-  }
-}
-
-function savePhotos(sessionId: string, photos: Record<string, Photo[]>): void {
-  try {
-    sessionStorage.setItem(`mobile-photos-${sessionId}`, JSON.stringify(photos))
-  } catch {
-    // QuotaExceededError: foto's blijven in memory, uploaden werkt nog steeds
-  }
-}
-
 export default function MobileCameraPage({ sessionId }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
-  const [photos, setPhotos] = useState<Record<string, Photo[]>>(() => loadPhotos(sessionId))
+  const [photos, setPhotos] = useState<Record<string, Photo[]>>({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
@@ -87,24 +70,31 @@ export default function MobileCameraPage({ sessionId }: Props) {
     return () => { cancelled = true }
   }, [sessionId])
 
-  // Sla foto's op in sessionStorage zodat ze bewaard blijven als de camera-app
-  // de browser-tab tijdelijk uit het geheugen gooit
+  // Laad foto's uit IndexedDB bij mount
   useEffect(() => {
-    savePhotos(sessionId, photos)
-  }, [sessionId, photos])
+    loadPhotos(sessionId).then(setPhotos)
+  }, [sessionId])
 
   const handleFiles = async (entryId: string, files: FileList) => {
     setUploadErrors(prev => ({ ...prev, [entryId]: '' }))
     try {
       const newPhotos = await processFiles(files)
-      setPhotos(prev => ({ ...prev, [entryId]: [...(prev[entryId] ?? []), ...newPhotos] }))
+      // Gebruik functionele updater vanwege de await hierboven (prev is altijd actueel)
+      setPhotos(prev => {
+        const updated = { ...prev, [entryId]: [...(prev[entryId] ?? []), ...newPhotos] }
+        void savePhotos(sessionId, updated)
+        return updated
+      })
     } catch (e) {
       setUploadErrors(prev => ({ ...prev, [entryId]: e instanceof Error ? e.message : 'Ongeldig bestand.' }))
     }
   }
 
-  const removePhoto = (entryId: string, photoId: string) =>
-    setPhotos(prev => ({ ...prev, [entryId]: (prev[entryId] ?? []).filter(p => p.id !== photoId) }))
+  const removePhoto = (entryId: string, photoId: string) => {
+    const updated = { ...photos, [entryId]: (photos[entryId] ?? []).filter(p => p.id !== photoId) }
+    setPhotos(updated)
+    void savePhotos(sessionId, updated)
+  }
 
   const handleSubmit = async () => {
     const missing = entries.filter(
@@ -134,7 +124,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
         ),
       )
       sessionStorage.setItem(`submitted-${sessionId}`, '1')
-      sessionStorage.removeItem(`mobile-photos-${sessionId}`)
+      clearPhotos(sessionId)
       setSubmitted(true)
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Uploaden mislukt.')
