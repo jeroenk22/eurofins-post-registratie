@@ -1,3 +1,5 @@
+import { MESTKLANT_SHORT_BY_LABEL } from '../mestklantOptions'
+
 export interface LabelFormat {
   id: string
   name: string
@@ -46,6 +48,11 @@ export interface PrintEntry {
 export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   if (entries.length === 0) return
 
+  const { widthMm, heightMm } = format
+  const shortMm = Math.min(widthMm, heightMm)
+  // Gebruik het korte label voor formaten kleiner dan het standaard (brother_dk11208 = 38mm)
+  const useShortLabel = shortMm < 38
+
   // Flatten to individual labels
   const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean; omschrijving: string }> = []
   for (const entry of entries) {
@@ -55,12 +62,13 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
       ? entry.name.slice(0, -suffix.length)
       : entry.name
     for (let i = 1; i <= entry.colli; i++) {
-      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving: entry.colliOmschrijvingen[i - 1] ?? '' })
+      const rawOmschrijving = entry.colliOmschrijvingen[i - 1] ?? ''
+      const omschrijving = useShortLabel
+        ? (MESTKLANT_SHORT_BY_LABEL[rawOmschrijving] ?? rawOmschrijving)
+        : rawOmschrijving
+      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving })
     }
   }
-
-  const { widthMm, heightMm } = format
-  const shortMm = Math.min(widthMm, heightMm)
 
   // Font sizes based on the short dimension of the label
   let fontName: string

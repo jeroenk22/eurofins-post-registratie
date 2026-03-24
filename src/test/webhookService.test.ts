@@ -141,4 +141,36 @@ describe("submitToWebhook", () => {
     expect(body.sender_name).toBe("Sophie");
     expect(body.sender_phone).toBe("0612345678");
   });
+
+  it("mapt mestklant-labels naar TMS-waarden in colli_omschrijvingen", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({
+      recipientType: 'Mestklanten',
+      colli: 3,
+      colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech (KLEINE DOOS)', 'Vrij getypt pakket'],
+    });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].colli_omschrijvingen).toEqual([
+      'Doos deksels',
+      'Doosje sealrollen',
+      'Vrij getypt pakket',   // "Anders..."-waarde: geen mapping, pass-through
+    ]);
+  });
+
+  it("raakt colli_omschrijvingen niet aan bij niet-mestklanten", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({
+      recipientType: 'Monsternemers',
+      colli: 1,
+      colliOmschrijvingen: ['Eijkelkamp deksels'],
+    });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].colli_omschrijvingen).toEqual(['Eijkelkamp deksels']);
+  });
 });

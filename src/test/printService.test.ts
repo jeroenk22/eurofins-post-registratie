@@ -106,6 +106,59 @@ describe("getSelectedFormat / setSelectedFormat", () => {
   });
 });
 
+describe("printLabels — mestklant kort label op kleine etiketten", () => {
+  const makeEntry = (omschrijving: string) => ({
+    name: "Bakker", adres: "", postcode: "", plaats: "", land: "", route: "", colli: 1,
+    colliOmschrijvingen: [omschrijving], spoed: false,
+  })
+
+  beforeEach(() => {
+    vi.stubGlobal("window", { open: vi.fn().mockReturnValue({ document: { write: vi.fn(), close: vi.fn() }, focus: vi.fn(), print: vi.fn(), close: vi.fn() }) })
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("toont het volle label op het standaard formaat (38mm)", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11208')! // 38×90mm
+    printLabels([makeEntry('Eijkelkamp deksels')], format)
+    const writtenHtml = (window.open as ReturnType<typeof vi.fn>).mock.results[0].value.document.write.mock.calls[0][0] as string
+    expect(writtenHtml).toContain('Eijkelkamp deksels')
+    expect(writtenHtml).not.toContain('Deksels</span>')
+  })
+
+  it("toont het korte label op een klein formaat (< 38mm)", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11201')! // 29×90mm
+    printLabels([makeEntry('Eijkelkamp deksels')], format)
+    const writtenHtml = (window.open as ReturnType<typeof vi.fn>).mock.results[0].value.document.write.mock.calls[0][0] as string
+    expect(writtenHtml).toContain('Deksels')
+  })
+
+  it("mapt alle mestklant-labels correct naar het korte label", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11201')! // 29×90mm
+    const cases: [string, string][] = [
+      ['Eijkelkamp deksels',      'Deksels'],
+      ['D-Tech (KLEINE DOOS)',        'D-Tech (KLEINE DOOS)'],
+      ['D-Tech (GROTE DOOS)',         'D-Tech (GROTE DOOS)'],
+      ['Vaste mestzakken (500st)', 'Vaste mestzakken (500st)'],
+      ['Vaste mestzakken (50st)',  'Vaste mestzakken (50st)'],
+    ]
+    // window.open retourneert steeds hetzelfde mock-object; document.write accumuleert per aanroep
+    const getDocWrite = () => (window.open as ReturnType<typeof vi.fn>).mock.results[0].value.document.write as ReturnType<typeof vi.fn>
+    for (let i = 0; i < cases.length; i++) {
+      const [label, shortLabel] = cases[i]
+      printLabels([makeEntry(label)], format)
+      const writtenHtml = getDocWrite().mock.calls[i][0] as string
+      expect(writtenHtml, `label "${label}"`).toContain(shortLabel)
+    }
+  })
+
+  it("laat vrije tekst ongewijzigd op kleine etiketten (geen mapping)", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11201')! // 29×90mm
+    printLabels([makeEntry('Speciaal pakket')], format)
+    const writtenHtml = (window.open as ReturnType<typeof vi.fn>).mock.results[0].value.document.write.mock.calls[0][0] as string
+    expect(writtenHtml).toContain('Speciaal pakket')
+  })
+})
+
 describe("LABEL_FORMATS", () => {
   it("bevat DYMO en Brother formaten", () => {
     const ids = LABEL_FORMATS.map((f) => f.id);

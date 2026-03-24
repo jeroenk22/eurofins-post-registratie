@@ -86,4 +86,25 @@ describe('PhotoUpload', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verwijder foto' }))
     expect(onChange).toHaveBeenCalledOnce()
   })
+
+  it('uploadknop heeft grijze stippellijn als invalid niet gezet is', () => {
+    render(<PhotoUpload photos={[]} onChange={vi.fn()} />)
+    const btn = screen.getByRole('button', { name: /foto's toevoegen/i })
+    expect(btn.className).toContain('border-gray-200')
+    expect(btn.className).not.toContain('border-red-400')
+  })
+
+  it('uploadknop heeft rode stippellijn als invalid=true', () => {
+    render(<PhotoUpload photos={[]} onChange={vi.fn()} invalid />)
+    const btn = screen.getByRole('button', { name: /foto's toevoegen/i })
+    expect(btn.className).toContain('border-red-400')
+    expect(btn.className).not.toContain('border-gray-200')
+  })
+
+  it('uploadknop heeft grijze stippellijn als invalid=false', () => {
+    render(<PhotoUpload photos={[]} onChange={vi.fn()} invalid={false} />)
+    const btn = screen.getByRole('button', { name: /foto's toevoegen/i })
+    expect(btn.className).toContain('border-gray-200')
+    expect(btn.className).not.toContain('border-red-400')
+  })
 })

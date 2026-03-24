@@ -87,6 +87,75 @@ describe('validateForm', () => {
   })
 })
 
+describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
+  const mestklantEntry = (): PostEntry => ({
+    ...validEntry(),
+    recipientType: 'Mestklanten',
+    colliOmschrijvingen: ['Eijkelkamp deksels'],
+  })
+
+  it('geeft geen fout als mestklant 1 collo heeft met omschrijving', () => {
+    expect(validateForm([mestklantEntry()], 'Sophie', '')).toBeNull()
+  })
+
+  it('geeft fout als mestklant collo geen omschrijving heeft', () => {
+    const entry = { ...mestklantEntry(), colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft fout als mestklant collo alleen whitespace heeft', () => {
+    const entry = { ...mestklantEntry(), colliOmschrijvingen: ['   '] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft fout als mestklant colli=2 heeft maar slechts 1 omschrijving ingevuld', () => {
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Eijkelkamp deksels', ''] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft geen fout als mestklant colli=2 heeft en beide omschrijvingen ingevuld', () => {
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech (KLEINE DOOS)'] }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  })
+
+  it('geeft geen fout voor niet-mestklant met lege omschrijvingen', () => {
+    const entry = { ...validEntry(), colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  })
+
+  it('geeft geen fout voor entry zonder recipientType met lege omschrijvingen', () => {
+    const entry = { ...validEntry(), recipientType: undefined, colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  })
+
+  it('mestklant omschrijving-fout gaat vóór foto-fout', () => {
+    const entry = { ...mestklantEntry(), colliOmschrijvingen: [], photos: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('alle label-waarden zijn geldige omschrijvingen', () => {
+    const labels = [
+      'Eijkelkamp deksels',
+      'D-Tech (KLEINE DOOS)',
+      'D-Tech (GROTE DOOS)',
+      'Vaste mestzakken (50st)',
+      'Vaste mestzakken (500st)',
+    ]
+    for (const label of labels) {
+      const entry = { ...mestklantEntry(), colliOmschrijvingen: [label] }
+      expect(validateForm([entry], 'Sophie', ''), `Label "${label}" moet geldig zijn`).toBeNull()
+    }
+  })
+
+  it('bij meerdere entries geeft fout als één mestklant-entry ontbreekt omschrijving', () => {
+    const entries = [
+      validEntry(),
+      { ...mestklantEntry(), id: '2', colliOmschrijvingen: [] },
+    ]
+    expect(validateForm(entries, 'Sophie', '')).toMatch(/omschrijving/)
+  })
+})
+
 describe('isValidEmail', () => {
   it('accepts a standard email address', () => {
     expect(isValidEmail('test@example.com')).toBe(true)

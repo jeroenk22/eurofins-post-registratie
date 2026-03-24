@@ -5,9 +5,10 @@ import { processFiles } from '../photoUtils'
 interface PhotoUploadProps {
   photos: Photo[]
   onChange: (fn: (prev: Photo[]) => Photo[]) => void
+  invalid?: boolean
 }
 
-export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
+export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploadError, setUploadError] = useState('')
 
@@ -29,7 +30,7 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="w-full border-2 border-dashed border-gray-200 rounded-lg p-3 flex items-center gap-2.5 text-left hover:border-ef-blue hover:bg-ef-blue-light transition-colors"
+        className={`w-full border-2 border-dashed rounded-lg p-3 flex items-center gap-2.5 text-left hover:border-ef-blue hover:bg-ef-blue-light transition-colors ${invalid ? 'border-red-400' : 'border-gray-200'}`}
       >
         <span className="text-xl">📷</span>
         <span className="text-xs text-gray-500">Foto's toevoegen (meerdere mogelijk)</span>

@@ -41,6 +41,7 @@ export default function App() {
     sessionStorage.getItem("submit_state") === "success" ? "success" : "idle"
   );
   const [errorMsg, setErrorMsg] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
   const [sessionId] = useState(getSessionId);
   const [sessionReady, setSessionReady] = useState(false);
 
@@ -68,8 +69,10 @@ export default function App() {
     const err = validateForm(store.entries, store.senderName, store.senderEmail);
     if (err) {
       setErrorMsg(err);
+      setShowErrors(true);
       return;
     }
+    setShowErrors(false);
 
     setSubmitState("sending");
     setErrorMsg("");
@@ -96,6 +99,7 @@ export default function App() {
     sessionStorage.removeItem("submit_state");
     setSubmitState("idle");
     setErrorMsg("");
+    setShowErrors(false);
   };
 
   if (!isWebhookConfigured()) {
@@ -145,6 +149,7 @@ export default function App() {
                   onRemove={store.removeEntry}
                   showRemove={store.entries.length > 1}
                   recipients={recipients}
+                  showErrors={showErrors}
                 />
               ))}
 
@@ -170,6 +175,7 @@ export default function App() {
                     value={store.senderName}
                     onChange={(e) => store.setSenderName(e.currentTarget.value)}
                     autoComplete="name"
+                    className={showErrors && !store.senderName.trim() ? '!border-red-400' : ''}
                   />
                   <FormField
                     id="sender-phone"

@@ -7,6 +7,7 @@ interface RecipientAutocompleteProps {
   onChange: (value: string) => void
   onSelect?: (option: RecipientOption) => void
   recipients: RecipientOption[]
+  invalid?: boolean
 }
 
 const TAB_LABEL: Record<SheetTab, string> = {
@@ -59,7 +60,7 @@ function buildAddressLine(option: RecipientOption): string {
   return [option.adres, city].filter(Boolean).join(', ')
 }
 
-export default function RecipientAutocomplete({ id, value, onChange, onSelect, recipients }: RecipientAutocompleteProps) {
+export default function RecipientAutocomplete({ id, value, onChange, onSelect, recipients, invalid }: RecipientAutocompleteProps) {
   const [query, setQuery] = useState(value)
   const [suggestions, setSuggestions] = useState<RecipientOption[]>([])
   const [isOpen, setIsOpen] = useState(false)
@@ -151,7 +152,7 @@ export default function RecipientAutocomplete({ id, value, onChange, onSelect, r
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined}
-          className="input-base !pr-7"
+          className={`input-base !pr-7${invalid ? ' !border-red-400' : ''}`}
           placeholder="bijv. Jan de Vries of Acme B.V."
           value={query}
           onChange={handleChange}
