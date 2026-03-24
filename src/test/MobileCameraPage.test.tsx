@@ -8,6 +8,12 @@ vi.mock('../photoUtils', () => ({
   ]),
 }))
 
+vi.mock('../photoStorage', () => ({
+  loadPhotos: vi.fn().mockResolvedValue({}),
+  savePhotos: vi.fn().mockResolvedValue(undefined),
+  clearPhotos: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mockSession = {
   entries: [
     { id: 'e1', name: 'Kees Hin', colli: 1, desktopPhotoCount: 0 },

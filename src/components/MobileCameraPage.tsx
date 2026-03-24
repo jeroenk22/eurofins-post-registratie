@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
+import { loadPhotos, savePhotos, clearPhotos } from '../photoStorage'
 
 function LogoBar() {
   return (
@@ -24,27 +25,10 @@ interface Props {
   sessionId: string
 }
 
-function loadPhotos(sessionId: string): Record<string, Photo[]> {
-  try {
-    const raw = sessionStorage.getItem(`mobile-photos-${sessionId}`)
-    if (!raw) return {}
-    return JSON.parse(raw) as Record<string, Photo[]>
-  } catch {
-    return {}
-  }
-}
-
-function savePhotos(sessionId: string, photos: Record<string, Photo[]>): void {
-  try {
-    sessionStorage.setItem(`mobile-photos-${sessionId}`, JSON.stringify(photos))
-  } catch {
-    // QuotaExceededError: foto's blijven in memory, uploaden werkt nog steeds
-  }
-}
-
 export default function MobileCameraPage({ sessionId }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
-  const [photos, setPhotos] = useState<Record<string, Photo[]>>(() => loadPhotos(sessionId))
+  const [photos, setPhotos] = useState<Record<string, Photo[]>>({})
+  const photosLoaded = useRef(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
@@ -87,9 +71,18 @@ export default function MobileCameraPage({ sessionId }: Props) {
     return () => { cancelled = true }
   }, [sessionId])
 
-  // Sla foto's op in sessionStorage zodat ze bewaard blijven als de camera-app
+  // Laad foto's uit IndexedDB bij mount
+  useEffect(() => {
+    loadPhotos(sessionId).then(data => {
+      photosLoaded.current = true
+      setPhotos(data)
+    })
+  }, [sessionId])
+
+  // Sla foto's op in IndexedDB zodat ze bewaard blijven als de camera-app
   // de browser-tab tijdelijk uit het geheugen gooit
   useEffect(() => {
+    if (!photosLoaded.current) return
     savePhotos(sessionId, photos)
   }, [sessionId, photos])
 
@@ -134,7 +127,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
         ),
       )
       sessionStorage.setItem(`submitted-${sessionId}`, '1')
-      sessionStorage.removeItem(`mobile-photos-${sessionId}`)
+      clearPhotos(sessionId)
       setSubmitted(true)
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Uploaden mislukt.')
