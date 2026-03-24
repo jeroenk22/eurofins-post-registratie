@@ -91,7 +91,7 @@ describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
   const mestklantEntry = (): PostEntry => ({
     ...validEntry(),
     recipientType: 'Mestklanten',
-    colliOmschrijvingen: ['Doos deksels'],
+    colliOmschrijvingen: ['Eijkelkamp deksels'],
   })
 
   it('geeft geen fout als mestklant 1 collo heeft met omschrijving', () => {
@@ -109,12 +109,12 @@ describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
   })
 
   it('geeft fout als mestklant colli=2 heeft maar slechts 1 omschrijving ingevuld', () => {
-    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Doos deksels', ''] }
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Eijkelkamp deksels', ''] }
     expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
   })
 
   it('geeft geen fout als mestklant colli=2 heeft en beide omschrijvingen ingevuld', () => {
-    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Doos deksels', 'Doosje sealrollen'] }
+    const entry = { ...mestklantEntry(), colli: 2, colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech Mestzakken-KLEINE DOOS'] }
     expect(validateForm([entry], 'Sophie', '')).toBeNull()
   })
 
@@ -133,17 +133,17 @@ describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
     expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
   })
 
-  it('alle TMS-waarden zijn geldige omschrijvingen', () => {
-    const tmsValues = [
-      'Doos deksels',
-      'Doosje sealrollen',
-      'Grote doos sealrollen (10 doosjes)',
-      'Setje vaste mestzakken (50 stuks)',
-      'Grote doos vaste mestzakken (500 stuks)',
+  it('alle label-waarden zijn geldige omschrijvingen', () => {
+    const labels = [
+      'Eijkelkamp deksels',
+      'D-Tech Mestzakken-KLEINE DOOS',
+      'D-Tech Mestzakken-GROTE DOOS',
+      'Vaste mestzakken-(50 zakken)',
+      'Vaste mestzakken-(500 zakken)',
     ]
-    for (const value of tmsValues) {
-      const entry = { ...mestklantEntry(), colliOmschrijvingen: [value] }
-      expect(validateForm([entry], 'Sophie', ''), `TMS-waarde "${value}" moet geldig zijn`).toBeNull()
+    for (const label of labels) {
+      const entry = { ...mestklantEntry(), colliOmschrijvingen: [label] }
+      expect(validateForm([entry], 'Sophie', ''), `Label "${label}" moet geldig zijn`).toBeNull()
     }
   })
 

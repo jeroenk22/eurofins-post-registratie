@@ -3,14 +3,7 @@ import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
 import RecipientAutocomplete from './RecipientAutocomplete'
 import type { RecipientOption } from '../services/googleSheetsService'
-
-const MESTKLANT_OPTIONS = [
-  { label: 'Eijkelkamp deksels', value: 'Doos deksels' },
-  { label: 'D-Tech Mestzakken-KLEINE DOOS', value: 'Doosje sealrollen' },
-  { label: 'D-Tech Mestzakken-GROTE DOOS', value: 'Grote doos sealrollen (10 doosjes)' },
-  { label: 'Vaste mestzakken-(50 zakken)', value: 'Setje vaste mestzakken (50 stuks)' },
-  { label: 'Vaste mestzakken-(500 zakken)', value: 'Grote doos vaste mestzakken (500 stuks)' },
-]
+import { MESTKLANT_OPTIONS } from '../mestklantOptions'
 
 const SHELVES = [1, 2, 3, 4, 5, 6, 7, 8] as const
 
@@ -210,7 +203,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
                     >
                       <option value="" disabled>{placeholder}</option>
                       {MESTKLANT_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
+                        <option key={o.label} value={o.label}>{o.label}</option>
                       ))}
                       <option value="__anders__">Anders...</option>
                     </select>
