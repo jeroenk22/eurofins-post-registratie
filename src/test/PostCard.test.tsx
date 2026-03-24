@@ -135,8 +135,8 @@ describe('PostCard — mestklant colli dropdown', () => {
       <PostCard entry={mestklantEntry} index={0} onUpdate={vi.fn()} onRemove={vi.fn()} showRemove={false} recipients={recipients} />
     )
     expect(screen.getByRole('option', { name: 'Eijkelkamp deksels' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'DTech-KLEINE DOOS' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'DTech-GROTE DOOS' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'D-Tech (KLEINE DOOS)' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'D-Tech (GROTE DOOS)' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Vaste mestzakken (50st)' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Vaste mestzakken (500st)' })).toBeInTheDocument()
   })
@@ -186,8 +186,8 @@ describe('PostCard — mestklant colli dropdown', () => {
   it('elke vaste optie slaat het label op (label = option value)', () => {
     const labels = [
       'Eijkelkamp deksels',
-      'DTech-KLEINE DOOS',
-      'DTech-GROTE DOOS',
+      'D-Tech (KLEINE DOOS)',
+      'D-Tech (GROTE DOOS)',
       'Vaste mestzakken (50st)',
       'Vaste mestzakken (500st)',
     ]
@@ -231,9 +231,9 @@ describe('PostCard — mestklant colli dropdown', () => {
     )
     const select = screen.getByRole('combobox', { name: /omschrijving collo/i })
     fireEvent.change(select, { target: { value: '__anders__' } })
-    fireEvent.change(select, { target: { value: 'DTech-KLEINE DOOS' } })
+    fireEvent.change(select, { target: { value: 'D-Tech (KLEINE DOOS)' } })
     expect(screen.queryByPlaceholderText(/vrije omschrijving/i)).not.toBeInTheDocument()
-    expect(onUpdate).toHaveBeenLastCalledWith('test-1', { colliOmschrijvingen: ['DTech-KLEINE DOOS'] })
+    expect(onUpdate).toHaveBeenLastCalledWith('test-1', { colliOmschrijvingen: ['D-Tech (KLEINE DOOS)'] })
   })
 
   it('✕-knopje op select is niet zichtbaar als veld leeg is', () => {
@@ -297,8 +297,8 @@ describe('PostCard — mestklant colli dropdown', () => {
       />
     )
     const selects = screen.getAllByRole('combobox', { name: /omschrijving collo/i })
-    fireEvent.change(selects[1], { target: { value: 'DTech-KLEINE DOOS' } })
-    expect(onUpdate).toHaveBeenCalledWith('test-1', { colliOmschrijvingen: ['Eijkelkamp deksels', 'DTech-KLEINE DOOS'] })
+    fireEvent.change(selects[1], { target: { value: 'D-Tech (KLEINE DOOS)' } })
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech (KLEINE DOOS)'] })
   })
 
   it('bij colli=2 opent "Anders..." in tweede collo het tekstveld alleen voor dat collo', () => {

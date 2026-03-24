@@ -147,7 +147,7 @@ describe("submitToWebhook", () => {
     const entry = makeEntry({
       recipientType: 'Mestklanten',
       colli: 3,
-      colliOmschrijvingen: ['Eijkelkamp deksels', 'DTech-KLEINE DOOS', 'Vrij getypt pakket'],
+      colliOmschrijvingen: ['Eijkelkamp deksels', 'D-Tech (KLEINE DOOS)', 'Vrij getypt pakket'],
     });
     await submitToWebhook([entry], "Sophie", "", "");
     const body = JSON.parse(

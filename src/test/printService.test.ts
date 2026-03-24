@@ -136,10 +136,10 @@ describe("printLabels — mestklant kort label op kleine etiketten", () => {
     const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11201')! // 29×90mm
     const cases: [string, string][] = [
       ['Eijkelkamp deksels',      'Deksels'],
-      ['DTech-KLEINE DOOS',        'DTech-KLEIN'],
-      ['DTech-GROTE DOOS',         'DTech-GROOT'],
-      ['Vaste mestzakken (500st)', 'Vaste mestzkkn (500st)'],
-      ['Vaste mestzakken (50st)',  'Vaste mestzkkn (50st)'],
+      ['D-Tech (KLEINE DOOS)',        'D-Tech (KLEINE DOOS)'],
+      ['D-Tech (GROTE DOOS)',         'D-Tech (GROTE DOOS)'],
+      ['Vaste mestzakken (500st)', 'Vaste mestzakken (500st)'],
+      ['Vaste mestzakken (50st)',  'Vaste mestzakken (50st)'],
     ]
     // window.open retourneert steeds hetzelfde mock-object; document.write accumuleert per aanroep
     const getDocWrite = () => (window.open as ReturnType<typeof vi.fn>).mock.results[0].value.document.write as ReturnType<typeof vi.fn>
