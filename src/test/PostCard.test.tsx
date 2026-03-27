@@ -125,7 +125,7 @@ describe('PostCard — mestklant colli dropdown', () => {
     render(
       <PostCard entry={baseEntry} index={0} onUpdate={vi.fn()} onRemove={vi.fn()} showRemove={false} recipients={recipients} />
     )
-    expect(screen.getByPlaceholderText(/omschrijving collo \(optioneel\)/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/omschrijving collo/i)).toBeInTheDocument()
     // de select voor mestklanten mag er niet zijn
     expect(screen.queryByRole('combobox', { name: /omschrijving collo/i })).not.toBeInTheDocument()
   })
