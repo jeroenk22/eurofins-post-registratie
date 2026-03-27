@@ -5,7 +5,7 @@ import { validateForm, isValidEmail } from '../validation'
 const mockPhoto = { id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }
 
 const validEntry = (): PostEntry => ({
-  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', adres: '', postcode: '', plaats: '', land: '', colli: 1, colliOmschrijvingen: [], spoed: false, photos: [mockPhoto],
+  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', adres: '', postcode: '', plaats: '', land: '', colli: 1, colliOmschrijvingen: ['Test omschrijving'], spoed: false, photos: [mockPhoto],
 })
 
 describe('validateForm', () => {
@@ -87,7 +87,7 @@ describe('validateForm', () => {
   })
 })
 
-describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
+describe('validateForm — colli omschrijvingen verplicht', () => {
   const mestklantEntry = (): PostEntry => ({
     ...validEntry(),
     recipientType: 'Mestklanten',
@@ -118,14 +118,19 @@ describe('validateForm — mestklant colli omschrijvingen verplicht', () => {
     expect(validateForm([entry], 'Sophie', '')).toBeNull()
   })
 
-  it('geeft geen fout voor niet-mestklant met lege omschrijvingen', () => {
+  it('geeft fout voor niet-mestklant met lege omschrijving', () => {
     const entry = { ...validEntry(), colliOmschrijvingen: [] }
-    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
   })
 
-  it('geeft geen fout voor entry zonder recipientType met lege omschrijvingen', () => {
-    const entry = { ...validEntry(), recipientType: undefined, colliOmschrijvingen: [] }
-    expect(validateForm([entry], 'Sophie', '')).toBeNull()
+  it('geeft fout voor AP06-entry met lege omschrijving', () => {
+    const entry = { ...validEntry(), recipientType: 'AP06' as const, colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
+  })
+
+  it('geeft fout voor Monsternemer-entry met lege omschrijving', () => {
+    const entry = { ...validEntry(), recipientType: 'Monsternemers' as const, colliOmschrijvingen: [] }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/omschrijving/)
   })
 
   it('mestklant omschrijving-fout gaat vóór foto-fout', () => {

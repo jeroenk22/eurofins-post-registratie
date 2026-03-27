@@ -32,7 +32,7 @@ const draftWithEntry = JSON.stringify({
   entries: [{
     id: 'e1', shelf: 2, shelfDescription: '', name: 'Acme B.V.',
     adres: 'Kerkstraat 1', postcode: '1234AB', plaats: 'Zevenbergen',
-    land: 'Nederland', colli: 1, spoed: false, photos: [{ id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }],
+    land: 'Nederland', colli: 1, colliOmschrijvingen: ['Test omschrijving'], spoed: false, photos: [{ id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }],
   }],
   senderName: 'Sophie',
   senderPhone: '',

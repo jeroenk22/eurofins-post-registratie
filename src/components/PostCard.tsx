@@ -178,10 +178,8 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             updated[i] = val
             set('colliOmschrijvingen', updated)
           }
-          const placeholder = entry.recipientType === 'Mestklanten'
-            ? (entry.colli > 1 ? `Omschrijving collo ${i + 1}` : 'Omschrijving collo')
-            : (entry.colli > 1 ? `Omschrijving collo ${i + 1} (optioneel)` : 'Omschrijving collo (optioneel)')
-          const colloError = showErrors && entry.recipientType === 'Mestklanten' && !omschrijving.trim()
+          const placeholder = entry.colli > 1 ? `Omschrijving collo ${i + 1}` : 'Omschrijving collo'
+          const colloError = showErrors && !omschrijving.trim()
           return (
             <div key={i} className="relative">
               {entry.recipientType === 'Mestklanten' ? (
