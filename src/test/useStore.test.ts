@@ -113,6 +113,7 @@ describe("useStore — sessionStorage persistentie", () => {
       senderName: "Sophie",
       senderPhone: "0612345678",
       senderEmail: "sophie@example.com",
+      senderCcEmail: "",
     }));
     const { result } = renderHook(() => useStore());
     expect(result.current.senderName).toBe("Sophie");
@@ -154,6 +155,7 @@ describe("useStore — sessionStorage persistentie", () => {
         senderName: "Sophie",
         senderPhone: "",
         senderEmail: "",
+        senderCcEmail: "",
       };
       saveDraft(state);
       const saved = JSON.parse(store[SESSION_KEY]);
