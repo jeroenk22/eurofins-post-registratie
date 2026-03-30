@@ -1,0 +1,1905 @@
+{
+    "name": "Eurofins Post aanmeldingen - DEVELOPMENT",
+    "flow": [
+        {
+            "id": 1,
+            "module": "gateway:CustomWebHook",
+            "version": 1,
+            "parameters": {
+                "hook": 4001137,
+                "maxResults": 1
+            },
+            "mapper": {},
+            "metadata": {
+                "designer": {
+                    "x": 0,
+                    "y": 600
+                },
+                "restore": {
+                    "parameters": {
+                        "hook": {
+                            "data": {
+                                "editable": "true"
+                            },
+                            "label": "Eurofins Post aanmeldingen - DEVELOPMENT"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "hook",
+                        "type": "hook:gateway-webhook",
+                        "label": "Webhook",
+                        "required": true
+                    },
+                    {
+                        "name": "maxResults",
+                        "type": "number",
+                        "label": "Maximum number of results"
+                    }
+                ],
+                "advanced": true
+            }
+        },
+        {
+            "id": 2,
+            "module": "builtin:BasicFeeder",
+            "version": 1,
+            "parameters": {},
+            "mapper": {
+                "array": "{{1.entries}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 300,
+                    "y": 600
+                },
+                "restore": {
+                    "expect": {
+                        "array": {
+                            "mode": "edit"
+                        }
+                    }
+                },
+                "expect": [
+                    {
+                        "mode": "edit",
+                        "name": "array",
+                        "spec": [],
+                        "type": "array",
+                        "label": "Array"
+                    }
+                ]
+            }
+        },
+        {
+            "id": 9,
+            "module": "google-drive:searchForFilesFolders",
+            "version": 4,
+            "parameters": {
+                "__IMTCONN__": 13802777
+            },
+            "mapper": {
+                "limit": "1",
+                "query": "name = '{{formatDate(1.submitted_at; \"DD-MM-YYYY\")}}' and trashed = false",
+                "select": "list",
+                "folderId": "/16KSDC8US6LaMvHIYDKC_L-zvMpLcyKzG/1ynF7g9OpH0gRB5MbScv_EbiFTpv0khcs",
+                "retrieve": "folder",
+                "searchType": "custom",
+                "destination": "drive",
+                "searchScope": "limit"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 600,
+                    "y": 600
+                },
+                "restore": {
+                    "expect": {
+                        "select": {
+                            "label": "Select from the list"
+                        },
+                        "folderId": {
+                            "mode": "chose",
+                            "path": [
+                                "Eurofins",
+                                "Post aanmeldingen Wageningen DEVELOPMENT"
+                            ]
+                        },
+                        "retrieve": {
+                            "label": "Folders"
+                        },
+                        "searchType": {
+                            "label": "Enter custom search query"
+                        },
+                        "destination": {
+                            "label": "My Drive"
+                        },
+                        "searchScope": {
+                            "label": "Limit to the chosen folder"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "google-restricted"
+                            },
+                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:google-restricted",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "select",
+                        "type": "select",
+                        "label": "Select the Method",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "map",
+                                "list"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "retrieve",
+                        "type": "select",
+                        "label": "Retrieve",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "file",
+                                "folder",
+                                "file_folder"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "searchType",
+                        "type": "select",
+                        "label": "Search",
+                        "validate": {
+                            "enum": [
+                                "title",
+                                "fulltext",
+                                "custom"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "type": "uinteger",
+                        "label": "Limit"
+                    },
+                    {
+                        "name": "destination",
+                        "type": "select",
+                        "label": "Choose a Drive",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "drive",
+                                "share",
+                                "team"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "searchScope",
+                        "type": "select",
+                        "label": "Search Scope",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "everywhere",
+                                "limit"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "folderId",
+                        "type": "folder",
+                        "label": "Choose a Folder"
+                    },
+                    {
+                        "name": "query",
+                        "type": "text",
+                        "label": "Query",
+                        "required": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 10,
+            "module": "builtin:BasicRouter",
+            "version": 1,
+            "mapper": null,
+            "metadata": {
+                "designer": {
+                    "x": 900,
+                    "y": 600
+                }
+            },
+            "routes": [
+                {
+                    "flow": [
+                        {
+                            "id": 11,
+                            "module": "util:SetVariable2",
+                            "version": 1,
+                            "parameters": {},
+                            "filter": {
+                                "name": "Folder bestaat al",
+                                "conditions": [
+                                    [
+                                        {
+                                            "a": "{{9.id}}",
+                                            "b": "",
+                                            "o": "text:notequal"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "mapper": {
+                                "name": "folderId",
+                                "scope": "execution",
+                                "value": "{{9.id}}"
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 1200,
+                                    "y": 150
+                                },
+                                "restore": {
+                                    "expect": {
+                                        "scope": {
+                                            "label": "One execution"
+                                        }
+                                    }
+                                },
+                                "expect": [
+                                    {
+                                        "name": "name",
+                                        "type": "text",
+                                        "label": "Variable name",
+                                        "required": true
+                                    },
+                                    {
+                                        "name": "scope",
+                                        "type": "select",
+                                        "label": "Variable lifetime",
+                                        "required": true,
+                                        "validate": {
+                                            "enum": [
+                                                "roundtrip",
+                                                "execution"
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "name": "value",
+                                        "type": "any",
+                                        "label": "Variable value"
+                                    }
+                                ],
+                                "interface": [
+                                    {
+                                        "name": "folderId",
+                                        "type": "any",
+                                        "label": "folderId"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "id": 38,
+                            "module": "google-drive:searchForFilesFolders",
+                            "version": 4,
+                            "parameters": {
+                                "__IMTCONN__": 13802777
+                            },
+                            "mapper": {
+                                "limit": "1",
+                                "query": "name = '{{2.recipient}}' and trashed = false",
+                                "select": "map",
+                                "folderId": "{{11.folderId}}",
+                                "retrieve": "folder",
+                                "searchType": "custom"
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 1500,
+                                    "y": 150
+                                },
+                                "restore": {
+                                    "expect": {
+                                        "select": {
+                                            "label": "Enter manually"
+                                        },
+                                        "retrieve": {
+                                            "label": "Folders"
+                                        },
+                                        "searchType": {
+                                            "label": "Enter custom search query"
+                                        }
+                                    },
+                                    "parameters": {
+                                        "__IMTCONN__": {
+                                            "data": {
+                                                "scoped": "true",
+                                                "connection": "google-restricted"
+                                            },
+                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                        }
+                                    }
+                                },
+                                "parameters": [
+                                    {
+                                        "name": "__IMTCONN__",
+                                        "type": "account:google-restricted",
+                                        "label": "Connection",
+                                        "required": true
+                                    }
+                                ],
+                                "expect": [
+                                    {
+                                        "name": "select",
+                                        "type": "select",
+                                        "label": "Select the Method",
+                                        "required": true,
+                                        "validate": {
+                                            "enum": [
+                                                "map",
+                                                "list"
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "name": "retrieve",
+                                        "type": "select",
+                                        "label": "Retrieve",
+                                        "required": true,
+                                        "validate": {
+                                            "enum": [
+                                                "file",
+                                                "folder",
+                                                "file_folder"
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "name": "searchType",
+                                        "type": "select",
+                                        "label": "Search",
+                                        "validate": {
+                                            "enum": [
+                                                "title",
+                                                "fulltext",
+                                                "custom"
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "name": "limit",
+                                        "type": "uinteger",
+                                        "label": "Limit"
+                                    },
+                                    {
+                                        "name": "folderId",
+                                        "type": "text",
+                                        "label": "Folder ID"
+                                    },
+                                    {
+                                        "name": "sharedDrive",
+                                        "type": "text",
+                                        "label": "Shared Drive ID"
+                                    },
+                                    {
+                                        "name": "query",
+                                        "type": "text",
+                                        "label": "Query",
+                                        "required": true
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "id": 40,
+                            "module": "builtin:BasicRouter",
+                            "version": 1,
+                            "mapper": null,
+                            "metadata": {
+                                "designer": {
+                                    "x": 1800,
+                                    "y": 150
+                                }
+                            },
+                            "routes": [
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 41,
+                                            "module": "util:SetVariable2",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "filter": {
+                                                "name": "Submap bestaat al",
+                                                "conditions": [
+                                                    [
+                                                        {
+                                                            "a": "{{38.id}}",
+                                                            "b": "",
+                                                            "o": "text:notequal"
+                                                        }
+                                                    ]
+                                                ]
+                                            },
+                                            "mapper": {
+                                                "name": "subFolderId",
+                                                "scope": "roundtrip",
+                                                "value": "{{38.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2100,
+                                                    "y": 0
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "scope": {
+                                                            "label": "One cycle"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "name",
+                                                        "type": "text",
+                                                        "label": "Variable name",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "scope",
+                                                        "type": "select",
+                                                        "label": "Variable lifetime",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "enum": [
+                                                                "roundtrip",
+                                                                "execution"
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "any",
+                                                        "label": "Variable value"
+                                                    }
+                                                ],
+                                                "interface": [
+                                                    {
+                                                        "name": "subFolderId",
+                                                        "type": "any",
+                                                        "label": "subFolderId"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 93,
+                                            "module": "util:SetVariable2",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "name": "subLink_{{2.entry_number}}",
+                                                "scope": "execution",
+                                                "value": "https://drive.google.com/drive/folders/{{38.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2400,
+                                                    "y": 0
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "scope": {
+                                                            "label": "One execution"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "name",
+                                                        "type": "text",
+                                                        "label": "Variable name",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "scope",
+                                                        "type": "select",
+                                                        "label": "Variable lifetime",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "any",
+                                                        "label": "Variable value"
+                                                    }
+                                                ],
+                                                "interface": [
+                                                    {
+                                                        "name": "subLink_{{2.entry_number}}",
+                                                        "type": "any",
+                                                        "label": "subLink_{{2.entry_number}}"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 15,
+                                            "module": "builtin:BasicFeeder",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "array": "{{2.photos}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2700,
+                                                    "y": 0
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "array": {
+                                                            "mode": "edit"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "array",
+                                                        "spec": [],
+                                                        "type": "array",
+                                                        "label": "Array"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 46,
+                                            "module": "google-drive:uploadAFile",
+                                            "version": 4,
+                                            "parameters": {
+                                                "__IMTCONN__": 13802777
+                                            },
+                                            "mapper": {
+                                                "data": "{{toBinary(replace(replace(replace(15.base64; \"data:image/jpeg;base64,\"; \"\"); \"data:image/png;base64,\"; \"\"); \"data:image/heic;base64,\"; \"\"); \"base64\")}}",
+                                                "select": "map",
+                                                "convert": false,
+                                                "filename": "{{if(15.spoed; \"SPOED - \"; \"\")}}{{15.recipient}} - Aangemeld door {{1.sender_name}} op {{formatDate(1.submitted_at; \"DD-MM-YYYY\")}} - {{15.`__IMTINDEX__`}}.jpg",
+                                                "folderId": "{{41.subFolderId}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3000,
+                                                    "y": 0
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "select": {
+                                                            "label": "Enter manually"
+                                                        }
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {
+                                                                "scoped": "true",
+                                                                "connection": "google-restricted"
+                                                            },
+                                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {
+                                                        "name": "__IMTCONN__",
+                                                        "type": "account:google-restricted",
+                                                        "label": "Connection",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "expect": [
+                                                    {
+                                                        "name": "select",
+                                                        "type": "select",
+                                                        "label": "Enter a Folder ID",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "enum": [
+                                                                "map",
+                                                                "value"
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "title",
+                                                        "type": "text",
+                                                        "label": "New File Name"
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "text",
+                                                        "label": "File Name",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "convert",
+                                                        "type": "boolean",
+                                                        "label": "Convert a File",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "folderId",
+                                                        "type": "text",
+                                                        "label": "Folder ID",
+                                                        "required": true
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 70,
+                                            "module": "util:TextAggregator",
+                                            "version": 1,
+                                            "parameters": {
+                                                "feeder": 15,
+                                                "rowSeparator": "other",
+                                                "otherRowSeparator": " | "
+                                            },
+                                            "mapper": {
+                                                "value": "<{{46.webViewLink}}|Foto {{15.`__IMTINDEX__`}}>"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3300,
+                                                    "y": 0
+                                                },
+                                                "restore": {
+                                                    "extra": {
+                                                        "feeder": {
+                                                            "label": "Iterator [15]"
+                                                        }
+                                                    },
+                                                    "parameters": {
+                                                        "rowSeparator": {
+                                                            "label": "Other"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {
+                                                        "name": "rowSeparator",
+                                                        "type": "select",
+                                                        "label": "Row separator",
+                                                        "validate": {
+                                                            "enum": [
+                                                                "\n",
+                                                                "\t",
+                                                                "other"
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "otherRowSeparator",
+                                                        "type": "text",
+                                                        "label": "Separator"
+                                                    }
+                                                ],
+                                                "expect": [
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Text"
+                                                    }
+                                                ],
+                                                "advanced": true
+                                            }
+                                        },
+                                        {
+                                            "id": 71,
+                                            "module": "slack:CreateMessage",
+                                            "version": 4,
+                                            "parameters": {
+                                                "__IMTCONN__": 13813336
+                                            },
+                                            "mapper": {
+                                                "text": "> {{if(2.spoed; \"\uD83D\uDEA8 \"; \":arrow_forward: \")}}*Post aanmelding voor {{2.recipient}}*\r\n> *Aangemeld om:* {{formatDate(1.submitted_at; \"DD-MM-YYYY HH:mm\")}}\r\n> *Aangemeld door:* {{1.sender_name}}\r\n> *Ligt op:* {{2.shelf}}\r\n> *Aantal colli:* {{2.colli}}\r\n> *Soort colli:*\r\n>  \u203a {{join(2.colli_omschrijvingen; \"\r\n>  \u203a \")}}\r\n> *Telefoonnummer:* {{if(1.sender_phone; 1.sender_phone; \"-\")}}\r\n> *Emailadres:* {{if(1.sender_email; 1.sender_email; \"-\")}}\r\n> *CC Emailadres:* {{if(1.cc_email; 1.cc_email; \"-\")}}\r\n>\r\n> *Spoed:* {{if(2.spoed; \"\uD83D\uDEA8 JA\"; \"Nee\")}}\r\n>\r\n> *Foto's:* {{70.text}}\r\n",
+                                                "parse": false,
+                                                "mrkdwn": true,
+                                                "channel": "C0APCG8TAA0",
+                                                "channelType": "private",
+                                                "channelWType": "list"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3600,
+                                                    "y": 0
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "parse": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "mrkdwn": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "channel": {
+                                                            "mode": "chose",
+                                                            "label": "test-eurofins-mest-aanmeldingen"
+                                                        },
+                                                        "link_names": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "channelType": {
+                                                            "label": "Private channel"
+                                                        },
+                                                        "channelWType": {
+                                                            "label": "Select from the list"
+                                                        },
+                                                        "unfurl_links": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "unfurl_media": {
+                                                            "mode": "chose"
+                                                        },
+                                                        "reply_broadcast": {
+                                                            "mode": "chose"
+                                                        }
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {
+                                                                "scoped": "true",
+                                                                "connection": "slack3"
+                                                            },
+                                                            "label": "My Slack (bot) connection (miedema-ophaaldienst.slack.com - make)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {
+                                                        "name": "__IMTCONN__",
+                                                        "type": "account:slack2,slack3",
+                                                        "label": "Connection",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "expect": [
+                                                    {
+                                                        "name": "channelWType",
+                                                        "type": "select",
+                                                        "label": "Enter a channel ID or name",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "enum": [
+                                                                "manualy",
+                                                                "list"
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "text",
+                                                        "type": "text",
+                                                        "label": "Text"
+                                                    },
+                                                    {
+                                                        "name": "channelType",
+                                                        "type": "select",
+                                                        "label": "Channel type",
+                                                        "required": true,
+                                                        "validate": {
+                                                            "enum": [
+                                                                "public",
+                                                                "private",
+                                                                "im",
+                                                                "mpim"
+                                                            ]
+                                                        }
+                                                    },
+                                                    {
+                                                        "name": "channel",
+                                                        "type": "select",
+                                                        "label": "Private channel",
+                                                        "required": true
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 42,
+                                            "module": "google-drive:createAFolder",
+                                            "version": 4,
+                                            "parameters": {
+                                                "__IMTCONN__": 13802777
+                                            },
+                                            "filter": {
+                                                "name": "Submap bestaat niet",
+                                                "conditions": [
+                                                    [
+                                                        {
+                                                            "a": "{{38.id}}",
+                                                            "b": "",
+                                                            "o": "text:equal"
+                                                        }
+                                                    ]
+                                                ]
+                                            },
+                                            "mapper": {
+                                                "name": "{{2.recipient}}",
+                                                "shared": false,
+                                                "folderId": "{{11.folderId}}",
+                                                "destination": "drive"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2100,
+                                                    "y": 300
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "folderId": {
+                                                            "mode": "edit",
+                                                            "path": []
+                                                        },
+                                                        "destination": {
+                                                            "label": "My Drive"
+                                                        }
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {
+                                                                "scoped": "true",
+                                                                "connection": "google-restricted"
+                                                            },
+                                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {
+                                                        "name": "__IMTCONN__",
+                                                        "type": "account:google-restricted",
+                                                        "label": "Connection",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "expect": [
+                                                    {
+                                                        "name": "destination",
+                                                        "type": "select",
+                                                        "label": "New Drive Location",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "folderId",
+                                                        "type": "folder",
+                                                        "label": "New Folder Location",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "name",
+                                                        "type": "text",
+                                                        "label": "New Folder's Name"
+                                                    },
+                                                    {
+                                                        "name": "shared",
+                                                        "type": "boolean",
+                                                        "label": "Share Folder",
+                                                        "required": true
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 94,
+                                            "module": "util:SetVariable2",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "name": "subLink_{{2.entry_number}}",
+                                                "scope": "execution",
+                                                "value": "https://drive.google.com/drive/folders/{{42.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2400,
+                                                    "y": 300
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "scope": {
+                                                            "label": "One execution"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "name": "name",
+                                                        "type": "text",
+                                                        "label": "Variable name",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "scope",
+                                                        "type": "select",
+                                                        "label": "Variable lifetime",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "value",
+                                                        "type": "any",
+                                                        "label": "Variable value"
+                                                    }
+                                                ],
+                                                "interface": [
+                                                    {
+                                                        "name": "subLink_{{2.entry_number}}",
+                                                        "type": "any",
+                                                        "label": "subLink_{{2.entry_number}}"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 50,
+                                            "module": "builtin:BasicFeeder",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "array": "{{2.photos}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 2700,
+                                                    "y": 300
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "array": {
+                                                            "mode": "edit"
+                                                        }
+                                                    }
+                                                },
+                                                "expect": [
+                                                    {
+                                                        "mode": "edit",
+                                                        "name": "array",
+                                                        "spec": [],
+                                                        "type": "array",
+                                                        "label": "Array"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 51,
+                                            "module": "google-drive:uploadAFile",
+                                            "version": 4,
+                                            "parameters": {
+                                                "__IMTCONN__": 13802777
+                                            },
+                                            "mapper": {
+                                                "data": "{{toBinary(replace(replace(replace(50.base64; \"data:image/jpeg;base64,\"; \"\"); \"data:image/png;base64,\"; \"\"); \"data:image/heic;base64,\"; \"\"); \"base64\")}}",
+                                                "select": "map",
+                                                "convert": false,
+                                                "filename": "{{if(50.spoed; \"SPOED - \"; \"\")}}{{50.recipient}} - Aangemeld door {{1.sender_name}} op {{formatDate(1.submitted_at; \"DD-MM-YYYY\")}} - {{50.`__IMTINDEX__`}}.jpg",
+                                                "folderId": "{{42.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3000,
+                                                    "y": 300
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "select": {
+                                                            "label": "Enter manually"
+                                                        }
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {
+                                                                "scoped": "true",
+                                                                "connection": "google-restricted"
+                                                            },
+                                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {
+                                                        "name": "__IMTCONN__",
+                                                        "type": "account:google-restricted",
+                                                        "label": "Connection",
+                                                        "required": true
+                                                    }
+                                                ],
+                                                "expect": [
+                                                    {
+                                                        "name": "select",
+                                                        "type": "select",
+                                                        "label": "Enter a Folder ID",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "filename",
+                                                        "type": "text",
+                                                        "label": "File Name",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "data",
+                                                        "type": "buffer",
+                                                        "label": "Data",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "convert",
+                                                        "type": "boolean",
+                                                        "label": "Convert a File",
+                                                        "required": true
+                                                    },
+                                                    {
+                                                        "name": "folderId",
+                                                        "type": "text",
+                                                        "label": "Folder ID",
+                                                        "required": true
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 72,
+                                            "module": "util:TextAggregator",
+                                            "version": 1,
+                                            "parameters": {
+                                                "feeder": 50,
+                                                "rowSeparator": "other",
+                                                "otherRowSeparator": " | "
+                                            },
+                                            "mapper": {
+                                                "value": "<{{51.webViewLink}}|Foto {{50.`__IMTINDEX__`}}>"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3300,
+                                                    "y": 300
+                                                },
+                                                "restore": {
+                                                    "extra": {
+                                                        "feeder": {
+                                                            "label": "Iterator [50]"
+                                                        }
+                                                    },
+                                                    "parameters": {
+                                                        "rowSeparator": {
+                                                            "label": "Other"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {
+                                                        "name": "rowSeparator",
+                                                        "type": "select",
+                                                        "label": "Row separator"
+                                                    },
+                                                    {
+                                                        "name": "otherRowSeparator",
+                                                        "type": "text",
+                                                        "label": "Separator"
+                                                    }
+                                                ],
+                                                "expect": [
+                                                    {
+                                                        "name": "value",
+                                                        "type": "text",
+                                                        "label": "Text"
+                                                    }
+                                                ],
+                                                "advanced": true
+                                            }
+                                        },
+                                        {
+                                            "id": 73,
+                                            "module": "slack:CreateMessage",
+                                            "version": 4,
+                                            "parameters": {
+                                                "__IMTCONN__": 13813336
+                                            },
+                                            "mapper": {
+                                                "text": "> {{if(2.spoed; \"\uD83D\uDEA8 \"; \":arrow_forward: \")}}*Post aanmelding voor {{2.recipient}}*\r\n> *Aangemeld om:* {{formatDate(1.submitted_at; \"DD-MM-YYYY HH:mm\")}}\r\n> *Aangemeld door:* {{1.sender_name}}\r\n> *Ligt op:* {{2.shelf}}\r\n> *Aantal colli:* {{2.colli}}\r\n> *Soort colli:*\r\n>  \u203a {{join(2.colli_omschrijvingen; \"\r\n>  \u203a \")}}\r\n> *Telefoonnummer:* {{if(1.sender_phone; 1.sender_phone; \"-\")}}\r\n> *Emailadres:* {{if(1.sender_email; 1.sender_email; \"-\")}}\r\n> *CC Emailadres:* {{if(1.cc_email; 1.cc_email; \"-\")}}\r\n>\r\n> *Spoed:* {{if(2.spoed; \"\uD83D\uDEA8 JA\"; \"Nee\")}}\r\n>\r\n> *Foto's:* {{72.text}}",
+                                                "parse": false,
+                                                "mrkdwn": true,
+                                                "channel": "C0APCG8TAA0",
+                                                "channelType": "private",
+                                                "channelWType": "list"
+                                            },
+                                            "metadata": {
+                                                "designer": {
+                                                    "x": 3600,
+                                                    "y": 300
+                                                },
+                                                "restore": {
+                                                    "expect": {
+                                                        "parse": {"mode": "chose"},
+                                                        "mrkdwn": {"mode": "chose"},
+                                                        "channel": {"mode": "chose", "label": "test-eurofins-mest-aanmeldingen"},
+                                                        "channelType": {"label": "Private channel"},
+                                                        "channelWType": {"label": "Select from the list"}
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {"scoped": "true", "connection": "slack3"},
+                                                            "label": "My Slack (bot) connection (miedema-ophaaldienst.slack.com - make)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [
+                                                    {"name": "__IMTCONN__", "type": "account:slack2,slack3", "label": "Connection", "required": true}
+                                                ],
+                                                "expect": [
+                                                    {"name": "channelWType", "type": "select", "label": "Enter a channel ID or name", "required": true},
+                                                    {"name": "text", "type": "text", "label": "Text"},
+                                                    {"name": "channelType", "type": "select", "label": "Channel type", "required": true},
+                                                    {"name": "channel", "type": "select", "label": "Private channel", "required": true}
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "flow": [
+                        {
+                            "id": 13,
+                            "module": "google-drive:createAFolder",
+                            "version": 4,
+                            "parameters": {
+                                "__IMTCONN__": 13802777
+                            },
+                            "filter": {
+                                "name": "Folder bestaat niet",
+                                "conditions": [
+                                    [
+                                        {
+                                            "a": "{{9.id}}",
+                                            "b": "",
+                                            "o": "text:equal"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "mapper": {
+                                "name": "{{formatDate(1.submitted_at; \"DD-MM-YYYY\")}}",
+                                "shared": false,
+                                "folderId": "/16KSDC8US6LaMvHIYDKC_L-zvMpLcyKzG/1ynF7g9OpH0gRB5MbScv_EbiFTpv0khcs",
+                                "destination": "drive"
+                            },
+                            "metadata": {
+                                "designer": {
+                                    "x": 1200,
+                                    "y": 750
+                                },
+                                "restore": {
+                                    "expect": {
+                                        "folderId": {
+                                            "mode": "chose",
+                                            "path": ["Eurofins", "Post aanmeldingen Wageningen DEVELOPMENT"]
+                                        },
+                                        "destination": {"label": "My Drive"}
+                                    },
+                                    "parameters": {
+                                        "__IMTCONN__": {
+                                            "data": {"scoped": "true", "connection": "google-restricted"},
+                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                        }
+                                    }
+                                },
+                                "parameters": [
+                                    {"name": "__IMTCONN__", "type": "account:google-restricted", "label": "Connection", "required": true}
+                                ],
+                                "expect": [
+                                    {"name": "destination", "type": "select", "label": "New Drive Location", "required": true},
+                                    {"name": "folderId", "type": "folder", "label": "New Folder Location", "required": true},
+                                    {"name": "name", "type": "text", "label": "New Folder's Name"},
+                                    {"name": "shared", "type": "boolean", "label": "Share Folder", "required": true}
+                                ]
+                            }
+                        },
+                        {
+                            "id": 92,
+                            "module": "util:SetVariable2",
+                            "version": 1,
+                            "parameters": {},
+                            "mapper": {
+                                "name": "folderId",
+                                "scope": "execution",
+                                "value": "{{13.id}}"
+                            },
+                            "metadata": {
+                                "designer": {"x": 1500, "y": 750},
+                                "restore": {"expect": {"scope": {"label": "One execution"}}},
+                                "expect": [
+                                    {"name": "name", "type": "text", "label": "Variable name", "required": true},
+                                    {"name": "scope", "type": "select", "label": "Variable lifetime", "required": true},
+                                    {"name": "value", "type": "any", "label": "Variable value"}
+                                ],
+                                "interface": [{"name": "folderId", "type": "any", "label": "folderId"}],
+                                "advanced": true
+                            }
+                        },
+                        {
+                            "id": 32,
+                            "module": "google-drive:searchForFilesFolders",
+                            "version": 4,
+                            "parameters": {"__IMTCONN__": 13802777},
+                            "mapper": {
+                                "limit": "1",
+                                "query": "name = '{{2.recipient}}' and trashed = false",
+                                "select": "map",
+                                "folderId": "{{13.id}}",
+                                "retrieve": "folder",
+                                "searchType": "custom"
+                            },
+                            "metadata": {
+                                "designer": {"x": 1800, "y": 750},
+                                "restore": {
+                                    "expect": {
+                                        "select": {"label": "Enter manually"},
+                                        "retrieve": {"label": "Folders"},
+                                        "searchType": {"label": "Enter custom search query"}
+                                    },
+                                    "parameters": {
+                                        "__IMTCONN__": {
+                                            "data": {"scoped": "true", "connection": "google-restricted"},
+                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                        }
+                                    }
+                                },
+                                "parameters": [
+                                    {"name": "__IMTCONN__", "type": "account:google-restricted", "label": "Connection", "required": true}
+                                ],
+                                "expect": [
+                                    {"name": "select", "type": "select", "label": "Select the Method", "required": true},
+                                    {"name": "retrieve", "type": "select", "label": "Retrieve", "required": true},
+                                    {"name": "searchType", "type": "select", "label": "Search"},
+                                    {"name": "limit", "type": "uinteger", "label": "Limit"},
+                                    {"name": "folderId", "type": "text", "label": "Folder ID"},
+                                    {"name": "query", "type": "text", "label": "Query", "required": true}
+                                ]
+                            }
+                        },
+                        {
+                            "id": 33,
+                            "module": "builtin:BasicRouter",
+                            "version": 1,
+                            "mapper": null,
+                            "metadata": {"designer": {"x": 2100, "y": 750}},
+                            "routes": [
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 34,
+                                            "module": "util:SetVariable2",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "filter": {
+                                                "name": "Submap bestaat al",
+                                                "conditions": [[{"a": "{{32.id}}", "b": "", "o": "text:notequal"}]]
+                                            },
+                                            "mapper": {"name": "subFolderId", "scope": "roundtrip", "value": "{{32.id}}"},
+                                            "metadata": {
+                                                "designer": {"x": 2401, "y": 521},
+                                                "restore": {"expect": {"scope": {"label": "One cycle"}}},
+                                                "expect": [
+                                                    {"name": "name", "type": "text", "label": "Variable name", "required": true},
+                                                    {"name": "scope", "type": "select", "label": "Variable lifetime", "required": true},
+                                                    {"name": "value", "type": "any", "label": "Variable value"}
+                                                ],
+                                                "interface": [{"name": "subFolderId", "type": "any", "label": "subFolderId"}]
+                                            }
+                                        },
+                                        {
+                                            "id": 95,
+                                            "module": "util:SetVariable2",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "name": "subLink_{{2.entry_number}}",
+                                                "scope": "execution",
+                                                "value": "https://drive.google.com/drive/folders/{{32.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 2700, "y": 600},
+                                                "restore": {"expect": {"scope": {"label": "One execution"}}},
+                                                "expect": [
+                                                    {"name": "name", "type": "text", "label": "Variable name", "required": true},
+                                                    {"name": "scope", "type": "select", "label": "Variable lifetime", "required": true},
+                                                    {"name": "value", "type": "any", "label": "Variable value"}
+                                                ],
+                                                "interface": [{"name": "subLink_{{2.entry_number}}", "type": "any", "label": "subLink_{{2.entry_number}}"}]
+                                            }
+                                        },
+                                        {
+                                            "id": 31,
+                                            "module": "builtin:BasicFeeder",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {"array": "{{2.photos}}"},
+                                            "metadata": {
+                                                "designer": {"x": 3000, "y": 600},
+                                                "restore": {"expect": {"array": {"mode": "edit"}}},
+                                                "expect": [{"mode": "edit", "name": "array", "spec": [], "type": "array", "label": "Array"}]
+                                            }
+                                        },
+                                        {
+                                            "id": 52,
+                                            "module": "google-drive:uploadAFile",
+                                            "version": 4,
+                                            "parameters": {"__IMTCONN__": 13802777},
+                                            "mapper": {
+                                                "data": "{{toBinary(replace(replace(replace(31.base64; \"data:image/jpeg;base64,\"; \"\"); \"data:image/png;base64,\"; \"\"); \"data:image/heic;base64,\"; \"\"); \"base64\")}}",
+                                                "select": "map",
+                                                "convert": false,
+                                                "filename": "{{if(31.spoed; \"SPOED - \"; \"\")}}{{31.recipient}} - Aangemeld door {{1.sender_name}} op {{formatDate(1.submitted_at; \"DD-MM-YYYY\")}} - {{31.`__IMTINDEX__`}}.jpg",
+                                                "folderId": "{{34.subFolderId}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 3300, "y": 600},
+                                                "restore": {
+                                                    "expect": {"select": {"label": "Enter manually"}},
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {"scoped": "true", "connection": "google-restricted"},
+                                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [{"name": "__IMTCONN__", "type": "account:google-restricted", "label": "Connection", "required": true}],
+                                                "expect": [
+                                                    {"name": "select", "type": "select", "label": "Enter a Folder ID", "required": true},
+                                                    {"name": "filename", "type": "text", "label": "File Name", "required": true},
+                                                    {"name": "data", "type": "buffer", "label": "Data", "required": true},
+                                                    {"name": "convert", "type": "boolean", "label": "Convert a File", "required": true},
+                                                    {"name": "folderId", "type": "text", "label": "Folder ID", "required": true}
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 74,
+                                            "module": "util:TextAggregator",
+                                            "version": 1,
+                                            "parameters": {"feeder": 31, "rowSeparator": "other", "otherRowSeparator": " | "},
+                                            "mapper": {"value": "<{{52.webViewLink}}|Foto {{31.`__IMTINDEX__`}}>"},
+                                            "metadata": {
+                                                "designer": {"x": 3600, "y": 600},
+                                                "restore": {"extra": {"feeder": {"label": "Iterator [31]"}}, "parameters": {"rowSeparator": {"label": "Other"}}},
+                                                "parameters": [{"name": "rowSeparator", "type": "select", "label": "Row separator"}, {"name": "otherRowSeparator", "type": "text", "label": "Separator"}],
+                                                "expect": [{"name": "value", "type": "text", "label": "Text"}],
+                                                "advanced": true
+                                            }
+                                        },
+                                        {
+                                            "id": 75,
+                                            "module": "slack:CreateMessage",
+                                            "version": 4,
+                                            "parameters": {"__IMTCONN__": 13813336},
+                                            "mapper": {
+                                                "text": "> {{if(2.spoed; \"\uD83D\uDEA8 \"; \":arrow_forward: \")}}*Post aanmelding voor {{2.recipient}}*\r\n> *Aangemeld om:* {{formatDate(1.submitted_at; \"DD-MM-YYYY HH:mm\")}}\r\n> *Aangemeld door:* {{1.sender_name}}\r\n> *Ligt op:* {{2.shelf}}\r\n> *Aantal colli:* {{2.colli}}\r\n> *Soort colli:*\r\n>  \u203a {{join(2.colli_omschrijvingen; \"\r\n>  \u203a \")}}\r\n> *Telefoonnummer:* {{if(1.sender_phone; 1.sender_phone; \"-\")}}\r\n> *Emailadres:* {{if(1.sender_email; 1.sender_email; \"-\")}}\r\n> *CC Emailadres:* {{if(1.cc_email; 1.cc_email; \"-\")}}\r\n>\r\n> *Spoed:* {{if(2.spoed; \"\uD83D\uDEA8 JA\"; \"Nee\")}}\r\n>\r\n> *Foto's:* {{74.text}}",
+                                                "parse": false,
+                                                "mrkdwn": true,
+                                                "channel": "C0APCG8TAA0",
+                                                "channelType": "private",
+                                                "channelWType": "list"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 3900, "y": 600},
+                                                "restore": {
+                                                    "expect": {
+                                                        "parse": {"mode": "chose"},
+                                                        "mrkdwn": {"mode": "chose"},
+                                                        "channel": {"mode": "chose", "label": "test-eurofins-mest-aanmeldingen"},
+                                                        "channelType": {"label": "Private channel"},
+                                                        "channelWType": {"label": "Select from the list"}
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {"scoped": "true", "connection": "slack3"},
+                                                            "label": "My Slack (bot) connection (miedema-ophaaldienst.slack.com - make)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [{"name": "__IMTCONN__", "type": "account:slack2,slack3", "label": "Connection", "required": true}],
+                                                "expect": [
+                                                    {"name": "channelWType", "type": "select", "label": "Enter a channel ID or name", "required": true},
+                                                    {"name": "text", "type": "text", "label": "Text"},
+                                                    {"name": "channelType", "type": "select", "label": "Channel type", "required": true},
+                                                    {"name": "channel", "type": "select", "label": "Private channel", "required": true}
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 35,
+                                            "module": "google-drive:createAFolder",
+                                            "version": 4,
+                                            "parameters": {"__IMTCONN__": 13802777},
+                                            "filter": {
+                                                "name": "Submap bestaat niet",
+                                                "conditions": [[{"a": "{{32.id}}", "b": "", "o": "text:equal"}]]
+                                            },
+                                            "mapper": {
+                                                "name": "{{2.recipient}}",
+                                                "shared": false,
+                                                "folderId": "{{13.id}}",
+                                                "destination": "drive"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 2400, "y": 750},
+                                                "restore": {
+                                                    "expect": {"folderId": {"mode": "edit", "path": []}, "destination": {"label": "My Drive"}},
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {"scoped": "true", "connection": "google-restricted"},
+                                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [{"name": "__IMTCONN__", "type": "account:google-restricted", "label": "Connection", "required": true}],
+                                                "expect": [
+                                                    {"name": "destination", "type": "select", "label": "New Drive Location", "required": true},
+                                                    {"name": "folderId", "type": "folder", "label": "New Folder Location", "required": true},
+                                                    {"name": "name", "type": "text", "label": "New Folder's Name"},
+                                                    {"name": "shared", "type": "boolean", "label": "Share Folder", "required": true}
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 96,
+                                            "module": "util:SetVariable2",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {
+                                                "name": "subLink_{{2.entry_number}}",
+                                                "scope": "execution",
+                                                "value": "https://drive.google.com/drive/folders/{{35.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 2700, "y": 900},
+                                                "restore": {"expect": {"scope": {"label": "One execution"}}},
+                                                "expect": [
+                                                    {"name": "name", "type": "text", "label": "Variable name", "required": true},
+                                                    {"name": "scope", "type": "select", "label": "Variable lifetime", "required": true},
+                                                    {"name": "value", "type": "any", "label": "Variable value"}
+                                                ],
+                                                "interface": [{"name": "subLink_{{2.entry_number}}", "type": "any", "label": "subLink_{{2.entry_number}}"}]
+                                            }
+                                        },
+                                        {
+                                            "id": 36,
+                                            "module": "builtin:BasicFeeder",
+                                            "version": 1,
+                                            "parameters": {},
+                                            "mapper": {"array": "{{2.photos}}"},
+                                            "metadata": {
+                                                "designer": {"x": 3000, "y": 900},
+                                                "restore": {"expect": {"array": {"mode": "edit"}}},
+                                                "expect": [{"mode": "edit", "name": "array", "spec": [], "type": "array", "label": "Array"}]
+                                            }
+                                        },
+                                        {
+                                            "id": 37,
+                                            "module": "google-drive:uploadAFile",
+                                            "version": 4,
+                                            "parameters": {"__IMTCONN__": 13802777},
+                                            "mapper": {
+                                                "data": "{{toBinary(replace(replace(replace(36.base64; \"data:image/jpeg;base64,\"; \"\"); \"data:image/png;base64,\"; \"\"); \"data:image/heic;base64,\"; \"\"); \"base64\")}}",
+                                                "select": "map",
+                                                "convert": false,
+                                                "filename": "{{if(36.spoed; \"SPOED - \"; \"\")}}{{36.recipient}} - Aangemeld door {{1.sender_name}} op {{formatDate(1.submitted_at; \"DD-MM-YYYY\")}} - {{36.`__IMTINDEX__`}}.jpg",
+                                                "folderId": "{{35.id}}"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 3300, "y": 900},
+                                                "restore": {
+                                                    "expect": {"select": {"label": "Enter manually"}},
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {"scoped": "true", "connection": "google-restricted"},
+                                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [{"name": "__IMTCONN__", "type": "account:google-restricted", "label": "Connection", "required": true}],
+                                                "expect": [
+                                                    {"name": "select", "type": "select", "label": "Enter a Folder ID", "required": true},
+                                                    {"name": "filename", "type": "text", "label": "File Name", "required": true},
+                                                    {"name": "data", "type": "buffer", "label": "Data", "required": true},
+                                                    {"name": "convert", "type": "boolean", "label": "Convert a File", "required": true},
+                                                    {"name": "folderId", "type": "text", "label": "Folder ID", "required": true}
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "id": 76,
+                                            "module": "util:TextAggregator",
+                                            "version": 1,
+                                            "parameters": {"feeder": 36, "rowSeparator": "other", "otherRowSeparator": " | "},
+                                            "mapper": {"value": "<{{37.webViewLink}}|Foto {{36.`__IMTINDEX__`}}>"},
+                                            "metadata": {
+                                                "designer": {"x": 3600, "y": 900},
+                                                "restore": {"extra": {"feeder": {"label": "Iterator [36]"}}, "parameters": {"rowSeparator": {"label": "Other"}}},
+                                                "parameters": [{"name": "rowSeparator", "type": "select", "label": "Row separator"}, {"name": "otherRowSeparator", "type": "text", "label": "Separator"}],
+                                                "expect": [{"name": "value", "type": "text", "label": "Text"}],
+                                                "advanced": true
+                                            }
+                                        },
+                                        {
+                                            "id": 77,
+                                            "module": "slack:CreateMessage",
+                                            "version": 4,
+                                            "parameters": {"__IMTCONN__": 13813336},
+                                            "mapper": {
+                                                "text": "> {{if(2.spoed; \"\uD83D\uDEA8 \"; \":arrow_forward: \")}}*Post aanmelding voor {{2.recipient}}*\r\n> *Aangemeld om:* {{formatDate(1.submitted_at; \"DD-MM-YYYY HH:mm\")}}\r\n> *Aangemeld door:* {{1.sender_name}}\r\n> *Ligt op:* {{2.shelf}}\r\n> *Aantal colli:* {{2.colli}}\r\n> *Soort colli:*\r\n>  \u203a {{join(2.colli_omschrijvingen; \"\r\n>  \u203a \")}}\r\n> *Telefoonnummer:* {{if(1.sender_phone; 1.sender_phone; \"-\")}}\r\n> *Emailadres:* {{if(1.sender_email; 1.sender_email; \"-\")}}\r\n> *CC Emailadres:* {{if(1.cc_email; 1.cc_email; \"-\")}}\r\n>\r\n> *Spoed:* {{if(2.spoed; \"\uD83D\uDEA8 JA\"; \"Nee\")}}\r\n>\r\n> *Foto's:* {{76.text}}",
+                                                "parse": false,
+                                                "mrkdwn": true,
+                                                "channel": "C0APCG8TAA0",
+                                                "channelType": "private",
+                                                "channelWType": "list"
+                                            },
+                                            "metadata": {
+                                                "designer": {"x": 3900, "y": 900},
+                                                "restore": {
+                                                    "expect": {
+                                                        "parse": {"mode": "chose"},
+                                                        "mrkdwn": {"mode": "chose"},
+                                                        "channel": {"mode": "chose", "label": "test-eurofins-mest-aanmeldingen"},
+                                                        "channelType": {"label": "Private channel"},
+                                                        "channelWType": {"label": "Select from the list"}
+                                                    },
+                                                    "parameters": {
+                                                        "__IMTCONN__": {
+                                                            "data": {"scoped": "true", "connection": "slack3"},
+                                                            "label": "My Slack (bot) connection (miedema-ophaaldienst.slack.com - make)"
+                                                        }
+                                                    }
+                                                },
+                                                "parameters": [{"name": "__IMTCONN__", "type": "account:slack2,slack3", "label": "Connection", "required": true}],
+                                                "expect": [
+                                                    {"name": "channelWType", "type": "select", "label": "Enter a channel ID or name", "required": true},
+                                                    {"name": "text", "type": "text", "label": "Text"},
+                                                    {"name": "channelType", "type": "select", "label": "Channel type", "required": true},
+                                                    {"name": "channel", "type": "select", "label": "Private channel", "required": true}
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "flow": [
+                                        {
+                                            "id": 104,
+                                            "module": "placeholder:Placeholder",
+                                            "filter": null,
+                                            "metadata": {"designer": {"x": 2400, "y": 1050}}
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "flow": [
+                        {
+                            "id": 97,
+                            "module": "google-drive:searchForFilesFolders",
+                            "version": 4,
+                            "parameters": {"__IMTCONN__": 13802777},
+                            "mapper": {
+                                "limit": "1",
+                                "query": "name = '{{formatDate(1.submitted_at; \"DD-MM-YYYY\")}}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+                                "select": "list",
+                                "folderId": "/16KSDC8US6LaMvHIYDKC_L-zvMpLcyKzG/1ynF7g9OpH0gRB5MbScv_EbiFTpv0khcs",
+                                "retrieve": "folder",
+                                "searchType": "custom",
+                                "destination": "drive",
+                                "searchScope": "limit"
+                            },
+                            "metadata": {
+                                "designer": {"x": 923, "y": 948},
+                                "restore": {
+                                    "expect": {
+                                        "select": {"label": "Select from the list"},
+                                        "folderId": {"mode": "chose", "path": ["Eurofins", "Post aanmeldingen Wageningen DEVELOPMENT"]},
+                                        "retrieve": {"label": "Folders"},
+                                        "searchType": {"label": "Enter custom search query"},
+                                        "destination": {"label": "My Drive"},
+                                        "searchScope": {"label": "Limit to the chosen folder"}
+                                    },
+                                    "parameters": {
+                                        "__IMTCONN__": {
+                                            "data": {"scoped": "true", "connection": "google-restricted"},
+                                            "label": "Eurofins Drive (miedema.eurofins.01@gmail.com)"
+                                        }
+                                    }
+                                },
+                                "parameters": [{"name": "__IMTCONN__", "type": "account:google-restricted", "label": "Connection", "required": true}],
+                                "expect": [
+                                    {"name": "select", "type": "select", "label": "Select the Method", "required": true},
+                                    {"name": "retrieve", "type": "select", "label": "Retrieve", "required": true},
+                                    {"name": "searchType", "type": "select", "label": "Search"},
+                                    {"name": "limit", "type": "uinteger", "label": "Limit"},
+                                    {"name": "destination", "type": "select", "label": "Choose a Drive", "required": true},
+                                    {"name": "searchScope", "type": "select", "label": "Search Scope", "required": true},
+                                    {"name": "folderId", "type": "folder", "label": "Choose a Folder"},
+                                    {"name": "query", "type": "text", "label": "Query", "required": true}
+                                ]
+                            }
+                        },
+                        {
+                            "id": 80,
+                            "module": "builtin:BasicFeeder",
+                            "version": 1,
+                            "parameters": {},
+                            "mapper": {"array": "{{1.entries}}"},
+                            "metadata": {
+                                "designer": {"x": 1200, "y": 1200},
+                                "restore": {"expect": {"array": {"mode": "edit"}}},
+                                "expect": [{"mode": "edit", "name": "array", "spec": [], "type": "array", "label": "Array"}]
+                            }
+                        },
+                        {
+                            "id": 81,
+                            "module": "util:TextAggregator",
+                            "version": 1,
+                            "parameters": {"feeder": 80, "rowSeparator": ""},
+                            "mapper": {
+                                "value": "<p style=\"margin-bottom:4px;\"><strong style=\"font-size:16px;\">{{80.`__IMTINDEX__`}}. {{80.recipient}}</strong></p><ul style=\"margin-top:4px;\"><li>Aantal colli: {{80.colli}}</li><li>Soort colli:<ul style=\"margin:2px 0 2px 16px;padding:0\"><li>{{join(80.colli_omschrijvingen; \"</li><li>\")}}</li></ul></li><li>Ligt op: {{80.shelf}}</li>{{if(80.spoed; \"<li><strong style='color:red'>SPOED</strong></li>\"; \"\")}}</ul>"
+                            },
+                            "metadata": {
+                                "designer": {"x": 1500, "y": 1200},
+                                "restore": {
+                                    "extra": {"feeder": {"label": "Iterator [80]"}},
+                                    "parameters": {"rowSeparator": {"label": "Empty"}}
+                                },
+                                "parameters": [{"name": "rowSeparator", "type": "select", "label": "Row separator"}],
+                                "expect": [{"name": "value", "type": "text", "label": "Text"}],
+                                "advanced": true
+                            },
+                            "flags": {"groupBy": "{{1.submitted_at}}"}
+                        },
+                        {
+                            "id": 82,
+                            "module": "google-email:sendAnEmail",
+                            "version": 4,
+                            "parameters": {"__IMTCONN__": 13813892},
+                            "filter": {
+                                "name": "Alleen als emailadres ingevuld en eerste bundle",
+                                "conditions": [
+                                    [
+                                        {
+                                            "a": "{{1.sender_email}}",
+                                            "b": "",
+                                            "o": "text:notequal"
+                                        },
+                                        {
+                                            "a": "{{2.`__IMTINDEX__`}}",
+                                            "b": "1",
+                                            "o": "text:equal"
+                                        }
+                                    ]
+                                ]
+                            },
+                            "mapper": {
+                                "to": [
+                                    "{{1.sender_email}}"
+                                ],
+                                "from": "\"Miedema Ophaaldienst B.V.\" <miedema.eurofins.01@gmail.com>",
+                                "cc": [
+                                    "{{if(1.cc_email; 1.cc_email; \"\")}}"
+                                ],
+                                "content": "<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#333;\"><p>Beste {{1.sender_name}},</p><p>Bedankt voor het aanmelden van de volgende post:</p>{{81.text}}<p>De aanmelding is bij ons binnengekomen op <strong>{{formatDate(1.submitted_at; \"D\")}} {{switch(formatDate(1.submitted_at; \"M\"); 1; \"januari\"; 2; \"februari\"; 3; \"maart\"; 4; \"april\"; 5; \"mei\"; 6; \"juni\"; 7; \"juli\"; 8; \"augustus\"; 9; \"september\"; 10; \"oktober\"; 11; \"november\"; 12; \"december\")}} {{formatDate(1.submitted_at; \"YYYY [om] HH:mm [uur]\")}}</strong>.</p><p>De foto's van alle post welke vandaag zijn aangemeld kunt u <a href=\"https://drive.google.com/drive/folders/{{97.id}}\">hier bekijken</a>.</p><p>De verzendlabels kunt u <a href=\"{{1.print_url}}\">hier printen</a>.</p>\r\n\r\n<hr style=\"border:none;border-top:1px solid #eee;margin:20px 0;\"><p style=\"color:#888;font-size:12px;\">Gelieve niet op deze e-mail te reageren, deze wordt niet gelezen.<br>Voor vragen of opmerkingen zijn wij telefonisch of via WhatsApp bereikbaar op <strong>085 369 5003</strong>.</p><p>Met vriendelijke groet,<br><strong>Miedema Ophaaldienst B.V.</strong></p></div>",
+                                "subject": "TEST - Nieuwe post aangemeld!",
+                                "bodyType": "rawHtml"
+                            },
+                            "metadata": {
+                                "designer": {"x": 1800, "y": 1200},
+                                "restore": {
+                                    "expect": {
+                                        "cc": {
+                                            "mode": "chose",
+                                            "items": [null]
+                                        },
+                                        "to": {
+                                            "mode": "chose",
+                                            "items": [null]
+                                        },
+                                        "bcc": {
+                                            "mode": "chose"
+                                        },
+                                        "from": {
+                                            "mode": "edit"
+                                        },
+                                        "bodyType": {
+                                            "label": "Raw HTML"
+                                        },
+                                        "attachments": {
+                                            "mode": "chose"
+                                        },
+                                        "emailHeaders": {
+                                            "mode": "chose"
+                                        }
+                                    },
+                                    "parameters": {
+                                        "__IMTCONN__": {
+                                            "data": {
+                                                "scoped": "true",
+                                                "connection": "google-email"
+                                            },
+                                            "label": "miedema.eurofins.01@gmail.com email (miedema.eurofins.01@gmail.com)"
+                                        }
+                                    }
+                                },
+                                "parameters": [
+                                    {
+                                        "name": "__IMTCONN__",
+                                        "type": "account:google-email",
+                                        "label": "Connection",
+                                        "required": true
+                                    }
+                                ],
+                                "expect": [
+                                    {
+                                        "name": "to",
+                                        "spec": {
+                                            "name": "value",
+                                            "type": "email",
+                                            "label": "Recipient email address",
+                                            "required": true,
+                                            "validate": true
+                                        },
+                                        "type": "array",
+                                        "label": "To",
+                                        "required": true
+                                    },
+                                    {
+                                        "name": "subject",
+                                        "type": "text",
+                                        "label": "Subject"
+                                    },
+                                    {
+                                        "name": "bodyType",
+                                        "type": "select",
+                                        "label": "Body type",
+                                        "required": true,
+                                        "validate": {
+                                            "enum": ["rawHtml", "collection"]
+                                        }
+                                    },
+                                    {
+                                        "name": "attachments",
+                                        "spec": {
+                                            "name": "value",
+                                            "spec": [
+                                                {"name": "filename", "type": "filename", "label": "File name", "required": true, "semantic": "file:name"},
+                                                {"name": "data", "type": "buffer", "label": "Data", "required": true, "semantic": "file:data"}
+                                            ],
+                                            "type": "collection",
+                                            "label": "Attachment"
+                                        },
+                                        "type": "array",
+                                        "label": "Attachments"
+                                    },
+                                    {
+                                        "name": "from",
+                                        "type": "select",
+                                        "label": "From"
+                                    },
+                                    {
+                                        "name": "cc",
+                                        "spec": {
+                                            "name": "value",
+                                            "type": "email",
+                                            "label": "Recipient email address"
+                                        },
+                                        "type": "array",
+                                        "label": "CC recipients"
+                                    },
+                                    {
+                                        "name": "bcc",
+                                        "spec": {
+                                            "name": "value",
+                                            "type": "email",
+                                            "label": "Recipient email address"
+                                        },
+                                        "type": "array",
+                                        "label": "BCC recipients"
+                                    },
+                                    {
+                                        "name": "emailHeaders",
+                                        "spec": {
+                                            "name": "value",
+                                            "spec": [
+                                                {"name": "key", "type": "text", "label": "Key", "required": true},
+                                                {"name": "value", "type": "text", "label": "Value"}
+                                            ],
+                                            "type": "collection",
+                                            "label": "Email header"
+                                        },
+                                        "type": "array",
+                                        "label": "Additional email headers"
+                                    },
+                                    {
+                                        "name": "content",
+                                        "type": "text",
+                                        "label": "Content"
+                                    }
+                                ],
+                                "advanced": true
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "metadata": {
+        "instant": true,
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": true,
+            "autoCommitTriggerLast": true,
+            "sequential": false,
+            "slots": null,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false,
+            "freshVariables": false
+        },
+        "designer": {
+            "orphans": []
+        },
+        "zone": "eu2.make.com",
+        "notes": []
+    }
+}
