@@ -29,6 +29,7 @@ interface PersistedState {
   senderName: string;
   senderPhone: string;
   senderEmail: string;
+  senderCcEmail: string;
 }
 
 function loadDraft(): PersistedState | null {
@@ -86,6 +87,8 @@ export interface Store {
   setSenderPhone: (v: string) => void;
   senderEmail: string;
   setSenderEmail: (v: string) => void;
+  senderCcEmail: string;
+  setSenderCcEmail: (v: string) => void;
   reset: () => void;
 }
 
@@ -95,9 +98,10 @@ export function useStore(): Store {
   const [senderName, setSenderName] = useState(draft?.senderName ?? "");
   const [senderPhone, setSenderPhone] = useState(draft?.senderPhone ?? "");
   const [senderEmail, setSenderEmail] = useState(draft?.senderEmail ?? "");
+  const [senderCcEmail, setSenderCcEmail] = useState(draft?.senderCcEmail ?? "");
   useEffect(() => {
-    saveDraft({ entries, senderName, senderPhone, senderEmail });
-  }, [entries, senderName, senderPhone, senderEmail]);
+    saveDraft({ entries, senderName, senderPhone, senderEmail, senderCcEmail });
+  }, [entries, senderName, senderPhone, senderEmail, senderCcEmail]);
 
   const addEntry = useCallback(
     () => setEntries((prev) => [...prev, newEntry()]),
@@ -121,6 +125,7 @@ export function useStore(): Store {
     setSenderName("");
     setSenderPhone("");
     setSenderEmail("");
+    setSenderCcEmail("");
   }, []);
 
   return {
@@ -134,6 +139,8 @@ export function useStore(): Store {
     setSenderPhone,
     senderEmail,
     setSenderEmail,
+    senderCcEmail,
+    setSenderCcEmail,
     reset,
   };
 }

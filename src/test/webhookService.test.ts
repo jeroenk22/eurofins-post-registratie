@@ -44,7 +44,7 @@ describe("submitToWebhook", () => {
 
   it("throws when webhook URL is not configured", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "");
-    await expect(submitToWebhook([], "Sophie", "", "")).rejects.toThrow(
+    await expect(submitToWebhook([], "Sophie", "", "", "")).rejects.toThrow(
       "VITE_WEBHOOK_URL is niet ingesteld",
     );
   });
@@ -74,7 +74,7 @@ describe("submitToWebhook", () => {
       }),
     ];
 
-    await submitToWebhook(entries, "Sophie", "", "sophie@example.com");
+    await submitToWebhook(entries, "Sophie", "", "sophie@example.com", "");
 
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -84,6 +84,7 @@ describe("submitToWebhook", () => {
     expect(body.entries[1].shelf).toBe("Schap 5");
     expect(body.entries[0].spoed).toBe(true);
     expect(body.sender_email).toBe("sophie@example.com");
+    expect(body.cc_email).toBeNull();
     expect(body.sender_phone).toBeNull();
     expect(typeof body.print_url).toBe("string");
     expect(body.print_url).toContain("printData=");
@@ -122,14 +123,33 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].shelf).toBe("Overig: Ligt op kar naast de stelling");
   });
 
-  it("maps empty phone/email to null", async () => {
+  it("maps empty phone/email/cc to null", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
-    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    await submitToWebhook([makeEntry()], "Sophie", "", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
     );
     expect(body.sender_phone).toBeNull();
     expect(body.sender_email).toBeNull();
+    expect(body.cc_email).toBeNull();
+  });
+
+  it("stuurt cc_email mee in de payload", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    await submitToWebhook([makeEntry()], "Sophie", "", "", "cc@example.com");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.cc_email).toBe("cc@example.com");
+  });
+
+  it("trimt whitespace van cc_email en mapt lege string naar null", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    await submitToWebhook([makeEntry()], "Sophie", "", "", "  cc@example.com  ");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.cc_email).toBe("cc@example.com");
   });
 
   it("trims whitespace from sender fields", async () => {

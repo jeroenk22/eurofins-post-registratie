@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { Photo, SubmitState } from "./types";
 import { useStore } from "./useStore";
 import { submitToWebhook, isWebhookConfigured } from "./webhookService";
-import { validateForm } from "./validation";
+import { validateForm, isValidEmail, isValidPhone } from "./validation";
 import { useRecipientData } from "./hooks/useRecipientData";
 import Header from "./components/Header";
 import PostCard from "./components/PostCard";
@@ -42,6 +42,7 @@ export default function App() {
   );
   const [errorMsg, setErrorMsg] = useState("");
   const [showErrors, setShowErrors] = useState(false);
+  const [showCc, setShowCc] = useState(() => !!sessionStorage.getItem("show_cc") || store.senderCcEmail !== "");
   const [sessionId] = useState(getSessionId);
   const [sessionReady, setSessionReady] = useState(false);
 
@@ -65,8 +66,12 @@ export default function App() {
     sessionReady && (submitState === "idle" || submitState === "error"),
   );
 
+  const senderPhoneInvalid = showErrors && store.senderPhone.trim() !== '' && !isValidPhone(store.senderPhone.trim())
+  const senderEmailInvalid = showErrors && store.senderEmail.trim() !== '' && !isValidEmail(store.senderEmail.trim())
+  const ccEmailInvalid = showErrors && store.senderCcEmail.trim() !== '' && !isValidEmail(store.senderCcEmail.trim())
+
   const handleSubmit = async () => {
-    const err = validateForm(store.entries, store.senderName, store.senderEmail);
+    const err = validateForm(store.entries, store.senderName, store.senderEmail, store.senderCcEmail, store.senderPhone);
     if (err) {
       setErrorMsg(err);
       setShowErrors(true);
@@ -83,6 +88,7 @@ export default function App() {
         store.senderName,
         store.senderPhone,
         store.senderEmail,
+        store.senderCcEmail,
       );
       setSubmitState("success");
       sessionStorage.setItem("submit_state", "success");
@@ -97,9 +103,11 @@ export default function App() {
   const handleReset = () => {
     store.reset();
     sessionStorage.removeItem("submit_state");
+    sessionStorage.removeItem("show_cc");
     setSubmitState("idle");
     setErrorMsg("");
     setShowErrors(false);
+    setShowCc(false);
   };
 
   if (!isWebhookConfigured()) {
@@ -177,32 +185,110 @@ export default function App() {
                     autoComplete="name"
                     className={showErrors && !store.senderName.trim() ? '!border-red-400' : ''}
                   />
-                  <FormField
-                    id="sender-phone"
-                    label="Telefoonnummer"
-                    hint="(optioneel)"
-                    type="tel"
-                    placeholder="06 12345678"
-                    value={store.senderPhone}
-                    onChange={(e) =>
-                      store.setSenderPhone(e.currentTarget.value)
-                    }
-                    inputMode="tel"
-                    autoComplete="tel"
-                  />
-                  <FormField
-                    id="sender-email"
-                    label="E-mailadres"
-                    hint="(optioneel — voor bevestiging)"
-                    type="email"
-                    placeholder="jouw@emailadres.nl"
-                    value={store.senderEmail}
-                    onChange={(e) =>
-                      store.setSenderEmail(e.currentTarget.value)
-                    }
-                    inputMode="email"
-                    autoComplete="email"
-                  />
+                  <div>
+                    <label htmlFor="sender-phone" className="label-base">
+                      Telefoonnummer
+                      <span className="normal-case font-normal text-gray-400 ml-1">(optioneel)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="sender-phone"
+                        type="tel"
+                        className={`input-base !pr-7${senderPhoneInvalid ? ' !border-red-400' : ''}`}
+                        placeholder="06 12345678"
+                        value={store.senderPhone}
+                        onChange={(e) => store.setSenderPhone(e.currentTarget.value)}
+                        inputMode="tel"
+                        autoComplete="tel"
+                      />
+                      {store.senderPhone && (
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onMouseDown={(e) => { e.preventDefault(); store.setSenderPhone('') }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          aria-label="Veld leegmaken"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="sender-email" className="label-base">
+                      E-mailadres
+                      <span className="normal-case font-normal text-gray-400 ml-1">(optioneel — voor bevestiging)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="sender-email"
+                        type="email"
+                        className={`input-base !pr-7${senderEmailInvalid ? ' !border-red-400' : ''}`}
+                        placeholder="jouw@emailadres.nl"
+                        value={store.senderEmail}
+                        onChange={(e) => store.setSenderEmail(e.currentTarget.value)}
+                        inputMode="email"
+                        autoComplete="email"
+                      />
+                      {store.senderEmail && (
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onMouseDown={(e) => { e.preventDefault(); store.setSenderEmail('') }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          aria-label="Veld leegmaken"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {!showCc && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCc(true);
+                        sessionStorage.setItem("show_cc", "1");
+                      }}
+                      className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 self-start py-2 pr-2"
+                    >
+                      + CC
+                    </button>
+                  )}
+                  {showCc && (
+                    <div>
+                      <label htmlFor="sender-cc-email" className="label-base">
+                        CC e-mailadres
+                        <span className="normal-case font-normal text-gray-400 ml-1">(optioneel)</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="sender-cc-email"
+                          type="email"
+                          className={`input-base !pr-7${ccEmailInvalid ? ' !border-red-400' : ''}`}
+                          placeholder="cc@emailadres.nl"
+                          value={store.senderCcEmail}
+                          onChange={(e) => store.setSenderCcEmail(e.currentTarget.value)}
+                          inputMode="email"
+                          autoComplete="email"
+                        />
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            store.setSenderCcEmail('');
+                            setShowCc(false);
+                            sessionStorage.removeItem('show_cc');
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          aria-label="CC verwijderen"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
