@@ -17,6 +17,7 @@ export async function submitToWebhook(
   senderName: string,
   senderPhone: string,
   senderEmail: string,
+  senderCcEmail: string = '',
 ): Promise<void> {
   const url = getWebhookUrl();
   if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
@@ -58,6 +59,7 @@ export async function submitToWebhook(
     sender_name: senderName.trim(),
     sender_phone: senderPhone.trim() || null,
     sender_email: senderEmail.trim() || null,
+    cc_email: senderCcEmail.trim() || null,
     total_entries: entries.length,
     print_url: printUrl,
     // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator

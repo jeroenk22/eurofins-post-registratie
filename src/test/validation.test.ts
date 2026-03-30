@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { PostEntry } from '../types'
-import { validateForm, isValidEmail } from '../validation'
+import { validateForm, isValidEmail, isValidPhone } from '../validation'
 
 const mockPhoto = { id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }
 
@@ -85,6 +85,30 @@ describe('validateForm', () => {
   it('trims email before validating', () => {
     expect(validateForm([validEntry()], 'Sophie', '  sophie@example.com  ')).toBeNull()
   })
+
+  it('passes when cc email is empty (optional)', () => {
+    expect(validateForm([validEntry()], 'Sophie', 'sophie@example.com', '')).toBeNull()
+  })
+
+  it('passes when cc email is valid', () => {
+    expect(validateForm([validEntry()], 'Sophie', 'sophie@example.com', 'cc@example.com')).toBeNull()
+  })
+
+  it('fails when cc email is filled but invalid', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', 'geen-email')).toMatch(/CC e-mailadres/)
+  })
+
+  it('fails when cc email has no domain', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', 'cc@')).toMatch(/CC e-mailadres/)
+  })
+
+  it('trims cc email before validating', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '  cc@example.com  ')).toBeNull()
+  })
+
+  it('sender email error takes priority over cc email error', () => {
+    expect(validateForm([validEntry()], 'Sophie', 'geen-email', 'ook-geen-email')).toMatch(/^Vul een geldig e-mailadres/)
+  })
 })
 
 describe('validateForm — colli omschrijvingen verplicht', () => {
@@ -159,6 +183,45 @@ describe('validateForm — colli omschrijvingen verplicht', () => {
     ]
     expect(validateForm(entries, 'Sophie', '')).toMatch(/omschrijving/)
   })
+})
+
+describe('validateForm — telefoonnummer validatie', () => {
+  it('passes when phone is empty (optional)', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', '')).toBeNull()
+  })
+
+  it('passes when phone contains only digits', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', '0612345678')).toBeNull()
+  })
+
+  it('passes when phone contains digits and spaces', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', '06 12 34 56 78')).toBeNull()
+  })
+
+  it('passes when phone contains dashes', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', '06-12345678')).toBeNull()
+  })
+
+  it('passes when phone starts with +', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', '+31612345678')).toBeNull()
+  })
+
+  it('fails when phone contains letters', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', '5865987fdf')).toMatch(/geldig telefoonnummer/)
+  })
+
+  it('fails when phone is only letters', () => {
+    expect(validateForm([validEntry()], 'Sophie', '', '', 'abcdef')).toMatch(/geldig telefoonnummer/)
+  })
+})
+
+describe('isValidPhone', () => {
+  it('accepts digits only', () => expect(isValidPhone('0612345678')).toBe(true))
+  it('accepts digits with spaces', () => expect(isValidPhone('06 12 34 56 78')).toBe(true))
+  it('accepts digits with dashes', () => expect(isValidPhone('06-12-34-56-78')).toBe(true))
+  it('accepts leading +', () => expect(isValidPhone('+31612345678')).toBe(true))
+  it('rejects letters mixed with digits', () => expect(isValidPhone('5865987fdf')).toBe(false))
+  it('rejects letters only', () => expect(isValidPhone('abcdef')).toBe(false))
 })
 
 describe('isValidEmail', () => {
