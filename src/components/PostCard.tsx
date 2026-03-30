@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
 import RecipientAutocomplete from './RecipientAutocomplete'
 import type { RecipientOption } from '../services/googleSheetsService'
-import { MESTKLANT_OPTIONS } from '../mestklantOptions'
+
+import MestklantSelect from './MestklantSelect'
+import { getSelectedFormat, setSelectedFormat, printLabels } from '../services/printService'
+import LabelFormatSelect from './LabelFormatSelect'
 
 const SHELVES = [1, 2, 3, 4, 5, 6, 7, 8] as const
 
@@ -26,8 +29,41 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
   const updatePhotos = (fn: (prev: Photo[]) => Photo[]) =>
     onUpdate(entry.id, { photos: fn(entry.photos) })
 
+  const allDescriptionsFilled =
+    entry.colli > 0 &&
+    Array.from({ length: entry.colli }, (_, i) => entry.colliOmschrijvingen[i] ?? '').every(d => d.trim() !== '')
+  const showPrintLink = !!entry.name.trim() && allDescriptionsFilled
+
+  const [printPopupOpen, setPrintPopupOpen] = useState(false)
+  const [formatId, setFormatId] = useState(() => getSelectedFormat().id)
+  const printBtnRef = useRef<HTMLButtonElement>(null)
+  const printPopupRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!printPopupOpen) return
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (printBtnRef.current?.contains(t) || printPopupRef.current?.contains(t)) return
+      setPrintPopupOpen(false)
+    }
+    const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') setPrintPopupOpen(false) }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', keyHandler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', keyHandler)
+    }
+  }, [printPopupOpen])
+
+  const handlePrint = () => {
+    const format = getSelectedFormat()
+    const route = entry.shelf === 'overig' ? '' : entry.shelf ? `Route ${entry.shelf}` : ''
+    printLabels([{ name: entry.name.trim(), adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route, colli: entry.colli, colliOmschrijvingen: entry.colliOmschrijvingen, spoed: entry.spoed }], format)
+    setPrintPopupOpen(false)
+  }
+
   return (
-    <div className={`card p-4 mb-3 transition-all ${entry.spoed ? 'border-l-4 border-l-ef-orange' : ''}`}>
+    <div className={`relative card p-4 mb-3 transition-all ${entry.spoed ? 'border-l-4 border-l-ef-orange' : ''}`}>
 
       {/* Card header */}
       <div className="flex items-center gap-2.5 mb-3.5">
@@ -42,11 +78,22 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             </span>
           )}
           {entry.spoed && (
-            <span className="flex-shrink-0 text-[10px] font-bold text-ef-orange border border-ef-orange/40 bg-ef-orange-light rounded px-1.5 py-0.5">
+            <span className="flex-shrink-0 h-6 flex items-center text-[10px] font-bold text-ef-orange border border-ef-orange/40 bg-ef-orange-light rounded px-1.5">
               SPOED
             </span>
           )}
         </div>
+        {showPrintLink && (
+          <button
+            ref={printBtnRef}
+            type="button"
+            onClick={() => setPrintPopupOpen(o => !o)}
+            aria-label="Print label voor deze zending"
+            className="h-6 rounded bg-ef-blue/10 border border-ef-blue/20 text-ef-blue hover:bg-ef-blue/20 text-[10px] font-semibold hidden md:flex items-center gap-1 px-1.5 transition-colors flex-shrink-0"
+          >
+            🖨 Print
+          </button>
+        )}
         {showRemove && (
           <button
             type="button"
@@ -59,12 +106,43 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         )}
       </div>
 
+      {/* Print popup — absoluut over de kaart, volledige breedte */}
+      {printPopupOpen && (
+        <div ref={printPopupRef} className="absolute right-0 top-14 z-50 w-[340px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 hidden md:flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-gray-600">Labelformaat</p>
+            <button
+              type="button"
+              onClick={() => setPrintPopupOpen(false)}
+              aria-label="Sluit"
+              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              ×
+            </button>
+          </div>
+          <LabelFormatSelect
+            value={formatId}
+            onChange={id => { setSelectedFormat(id); setFormatId(id) }}
+          />
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="w-full py-2 rounded-lg bg-ef-blue text-white text-xs font-semibold hover:bg-ef-blue/90 transition-colors"
+          >
+            Print {entry.colli} {entry.colli === 1 ? 'label' : 'labels'}
+          </button>
+        </div>
+      )}
+
       {/* Naam */}
       <div className="mb-3">
         <RecipientAutocomplete
           id={`name-${entry.id}`}
           value={entry.name}
-          onChange={v => { set('name', v); if (!v) { set('shelf', null); set('spoed', false); set('colli', 1); set('recipientType', undefined); setAndersIndices(new Set()) } }}
+          onChange={v => {
+            onUpdate(entry.id, { name: v, adres: '', postcode: '', plaats: '', land: '' })
+            if (!v) { set('shelf', null); set('spoed', false); set('colli', 1); set('recipientType', undefined); setAndersIndices(new Set()) }
+          }}
           onSelect={option => {
             const n = Number(option.route)
             const shelf = Number.isInteger(n) && n >= 1 && n <= 8 ? n : null
@@ -184,43 +262,15 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             <div key={i} className="relative">
               {entry.recipientType === 'Mestklanten' ? (
                 <div className="space-y-1">
-                  <div className="relative">
-                    <select
-                      className={`input-base appearance-none !pr-7${colloError ? ' !border-red-400' : ''}`}
-                      value={andersIndices.has(i) ? '__anders__' : omschrijving}
-                      onChange={e => {
-                        if (e.currentTarget.value === '__anders__') {
-                          setAndersIndices(prev => new Set(prev).add(i))
-                          updateOmschrijving('')
-                        } else {
-                          setAndersIndices(prev => { const s = new Set(prev); s.delete(i); return s })
-                          updateOmschrijving(e.currentTarget.value)
-                        }
-                      }}
-                      aria-label={placeholder}
-                    >
-                      <option value="" disabled>{placeholder}</option>
-                      {MESTKLANT_OPTIONS.map(o => (
-                        <option key={o.label} value={o.label}>{o.label}</option>
-                      ))}
-                      <option value="__anders__">Anders...</option>
-                    </select>
-                    {(omschrijving || andersIndices.has(i)) && (
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        onMouseDown={e => {
-                          e.preventDefault()
-                          setAndersIndices(prev => { const s = new Set(prev); s.delete(i); return s })
-                          updateOmschrijving('')
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        aria-label="Veld leegmaken"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
+                  <MestklantSelect
+                    value={omschrijving}
+                    isAnders={andersIndices.has(i)}
+                    onChange={val => { setAndersIndices(prev => { const s = new Set(prev); s.delete(i); return s }); updateOmschrijving(val) }}
+                    onClear={() => { setAndersIndices(prev => { const s = new Set(prev); s.delete(i); return s }); updateOmschrijving('') }}
+                    onSelectAnders={() => { setAndersIndices(prev => new Set(prev).add(i)); updateOmschrijving('') }}
+                    placeholder={placeholder}
+                    invalid={colloError}
+                  />
                   {andersIndices.has(i) && (
                     <div className="relative">
                       <input
