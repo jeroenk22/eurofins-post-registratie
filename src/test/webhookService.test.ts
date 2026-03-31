@@ -217,4 +217,30 @@ describe("submitToWebhook", () => {
     );
     expect(body.entries[0].recipient_type).toBeNull();
   });
+
+  it("stuurt adresgegevens mee per entry", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({ adres: 'Kerkstraat 1a', postcode: '1234AB', plaats: 'Zevenbergen', land: 'Nederland' });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].adres).toBe('Kerkstraat 1a');
+    expect(body.entries[0].postcode).toBe('1234AB');
+    expect(body.entries[0].plaats).toBe('Zevenbergen');
+    expect(body.entries[0].land).toBe('Nederland');
+  });
+
+  it("stuurt adresgegevens als null bij lege velden", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({ adres: '', postcode: '', plaats: '', land: '' });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].adres).toBeNull();
+    expect(body.entries[0].postcode).toBeNull();
+    expect(body.entries[0].plaats).toBeNull();
+    expect(body.entries[0].land).toBeNull();
+  });
 });
