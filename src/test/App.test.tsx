@@ -40,6 +40,32 @@ const draftWithEntry = JSON.stringify({
 })
 
 
+describe('App — validatie: nieuwe entry toont geen rode velden', () => {
+  beforeEach(() => sessionStorage.clear())
+  afterEach(() => vi.restoreAllMocks())
+
+  it('nieuwe entry na mislukte submit heeft geen rode velden', async () => {
+    render(<App />)
+
+    // Probeer te verzenden zonder iets in te vullen → validatiefout
+    await act(async () => {
+      fireEvent.click(screen.getByText('📤 Versturen'))
+    })
+
+    // Er moeten nu rode velden zijn in de eerste (lege) entry
+    const nameInputsBefore = screen.getAllByPlaceholderText(/bijv\. jan de vries/i)
+    expect(nameInputsBefore[0].className).toContain('border-red-400')
+
+    // Voeg een nieuwe zending toe
+    fireEvent.click(screen.getByText('Nog een zending toevoegen'))
+
+    // De tweede (nieuwe) entry mag geen rode velden hebben
+    const nameInputsAfter = screen.getAllByPlaceholderText(/bijv\. jan de vries/i)
+    expect(nameInputsAfter).toHaveLength(2)
+    expect(nameInputsAfter[1].className).not.toContain('border-red-400')
+  })
+})
+
 describe('App — submit_state persistentie', () => {
   beforeEach(() => sessionStorage.clear())
   afterEach(() => vi.restoreAllMocks())
