@@ -193,4 +193,28 @@ describe("submitToWebhook", () => {
     );
     expect(body.entries[0].colli_omschrijvingen).toEqual(['Eijkelkamp deksels']);
   });
+
+  it.each([
+    ['Monsternemers', 'monsternemer'],
+    ['AP06', 'ap06'],
+    ['Mestklanten', 'mestklant'],
+  ])("mapt recipientType '%s' naar '%s' in recipient_type", async (raw, expected) => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({ recipientType: raw as PostEntry['recipientType'] });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].recipient_type).toBe(expected);
+  });
+
+  it("stuurt recipient_type als null als recipientType niet ingesteld is", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({ recipientType: undefined });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].recipient_type).toBeNull();
+  });
 });
