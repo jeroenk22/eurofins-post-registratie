@@ -39,6 +39,10 @@ export async function submitToWebhook(
       shelf,
       recipient: e.name.trim(),
       recipient_type: e.recipientType ? (RECIPIENT_TYPE_LABEL[e.recipientType] ?? e.recipientType) : null,
+      adres: e.adres.trim() || null,
+      postcode: e.postcode.trim() || null,
+      plaats: e.plaats.trim() || null,
+      land: e.land.trim() || null,
       colli: e.colli,
       colli_omschrijvingen: (e.colliOmschrijvingen ?? []).slice(0, e.colli).map(v =>
         e.recipientType === 'Mestklanten' ? (MESTKLANT_TMS_BY_LABEL[v] ?? v) : v
