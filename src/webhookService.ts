@@ -2,6 +2,12 @@ import type { PostEntry, SubmitPayload } from "./types";
 import { encodePrintData, type PrintEntry } from "./services/printService";
 import { MESTKLANT_TMS_BY_LABEL } from "./mestklantOptions";
 
+const RECIPIENT_TYPE_LABEL: Record<string, string> = {
+  Monsternemers: 'monsternemer',
+  AP06: 'ap06',
+  Mestklanten: 'mestklant',
+}
+
 // Functie i.p.v. constante — zodat tests de env kunnen overschrijven
 function getWebhookUrl(): string | undefined {
   return import.meta.env.VITE_WEBHOOK_URL;
@@ -32,6 +38,7 @@ export async function submitToWebhook(
       entry_number: i + 1,
       shelf,
       recipient: e.name.trim(),
+      recipient_type: e.recipientType ? (RECIPIENT_TYPE_LABEL[e.recipientType] ?? e.recipientType) : null,
       colli: e.colli,
       colli_omschrijvingen: (e.colliOmschrijvingen ?? []).slice(0, e.colli).map(v =>
         e.recipientType === 'Mestklanten' ? (MESTKLANT_TMS_BY_LABEL[v] ?? v) : v
