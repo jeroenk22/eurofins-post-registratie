@@ -42,6 +42,7 @@ export default function App() {
   );
   const [errorMsg, setErrorMsg] = useState("");
   const [showErrors, setShowErrors] = useState(false);
+  const [errorEntryIds, setErrorEntryIds] = useState<Set<string>>(new Set());
   const [showCc, setShowCc] = useState(() => !!sessionStorage.getItem("show_cc") || store.senderCcEmail !== "");
   const [sessionId] = useState(getSessionId);
   const [sessionReady, setSessionReady] = useState(false);
@@ -75,9 +76,11 @@ export default function App() {
     if (err) {
       setErrorMsg(err);
       setShowErrors(true);
+      setErrorEntryIds(new Set(store.entries.map(e => e.id)));
       return;
     }
     setShowErrors(false);
+    setErrorEntryIds(new Set());
 
     setSubmitState("sending");
     setErrorMsg("");
@@ -107,6 +110,7 @@ export default function App() {
     setSubmitState("idle");
     setErrorMsg("");
     setShowErrors(false);
+    setErrorEntryIds(new Set());
     setShowCc(false);
   };
 
@@ -157,7 +161,7 @@ export default function App() {
                   onRemove={store.removeEntry}
                   showRemove={store.entries.length > 1}
                   recipients={recipients}
-                  showErrors={showErrors}
+                  showErrors={errorEntryIds.has(entry.id)}
                 />
               ))}
 
