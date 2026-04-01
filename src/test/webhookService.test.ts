@@ -231,6 +231,24 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].land).toBe('Nederland');
   });
 
+  it("roept forward-webhook proxy aan naast Make.com webhook", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => url as string);
+    expect(urls).toContain("/.netlify/functions/forward-webhook");
+  });
+
+  it("stuurt dezelfde payload naar Make.com en de forward-webhook proxy", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const calls = vi.mocked(fetch).mock.calls;
+    const makeBody = (calls.find(([url]) => (url as string).includes("make.com"))?.[1] as RequestInit)?.body;
+    const proxyBody = (calls.find(([url]) => (url as string).includes("forward-webhook"))?.[1] as RequestInit)?.body;
+    expect(makeBody).toBeDefined();
+    expect(proxyBody).toBeDefined();
+    expect(proxyBody).toBe(makeBody);
+  });
+
   it("stuurt adresgegevens als null bij lege velden", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ adres: '', postcode: '', plaats: '', land: '' });

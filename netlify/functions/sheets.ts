@@ -18,7 +18,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(`'${tab}'`)}?key=${apiKey}`
 
   const response = await fetch(url)
-  const data = await response.json()
+  const data = response.ok
+    ? await response.json()
+    : { error: await response.text() }
 
   return {
     statusCode: response.status,

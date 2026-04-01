@@ -13,6 +13,7 @@ function getWebhookUrl(): string | undefined {
   return import.meta.env.VITE_WEBHOOK_URL;
 }
 
+
 export function isWebhookConfigured(): boolean {
   const url = getWebhookUrl();
   return !!url && url.length > 0;
@@ -81,11 +82,18 @@ export async function submitToWebhook(
     entries: submitEntries,
   };
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const [res] = await Promise.all([
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+    fetch("/.netlify/functions/forward-webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => null),
+  ]);
 
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 }
