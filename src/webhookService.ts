@@ -52,7 +52,7 @@ export async function submitToWebhook(
       photo_count: e.photos.length,
       photos: e.photos.map((p) => ({
         filename: p.name,
-        base64: p.data,
+        base64: p.data.replace(/^.*?(data:)/, '$1'),
         recipient: e.name.trim(),
         spoed: e.spoed,
       })),
