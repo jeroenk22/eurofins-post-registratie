@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "bash scripts/build.sh"
   publish = "dist"
 
 [build.environment]
@@ -10,6 +10,11 @@
   targetPort = 5173
   port = 8888
   startTimeout = 60
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
 
 [[edge_functions]]
   path     = "/*"

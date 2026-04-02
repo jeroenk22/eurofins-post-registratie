@@ -40,6 +40,15 @@ const draftWithEntry = JSON.stringify({
 })
 
 
+describe('App — versienummer', () => {
+  beforeEach(() => sessionStorage.clear())
+
+  it('toont een versienummer onder de verstuurknop', () => {
+    render(<App />)
+    expect(screen.getByText(/^v.+/)).toBeInTheDocument()
+  })
+})
+
 describe('App — validatie: nieuwe entry toont geen rode velden', () => {
   beforeEach(() => sessionStorage.clear())
   afterEach(() => vi.restoreAllMocks())
