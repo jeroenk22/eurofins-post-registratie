@@ -23,6 +23,7 @@ export interface PostEntry {
 export interface SubmitPayload {
   submitted_at: string;
   datetime_nl: string;
+  app_version: string;
   sender_name: string;
   sender_phone: string | null;
   sender_email: string | null;
