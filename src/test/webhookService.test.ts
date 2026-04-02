@@ -97,6 +97,54 @@ describe("submitToWebhook", () => {
     expect(foto.recipient).toBe("Jan de Vries");
     expect(foto.spoed).toBe(true);
     expect(foto.filename).toBe("foto_1.jpg");
+    expect(foto.base64).toBe("data:image/jpeg;base64,abc123");
+  });
+
+  it("strips IMTString prefix from photo base64 data", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({
+      photos: [
+        { id: "p1", name: "foto.jpg", data: "IMTString(477367): data:image/jpeg;base64,/9j/abc" },
+      ],
+    });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].photos[0].base64).toBe("data:image/jpeg;base64,/9j/abc");
+  });
+
+  it("laat schone base64 data ongewijzigd", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({
+      photos: [
+        { id: "p1", name: "foto.jpg", data: "data:image/jpeg;base64,/9j/clean" },
+      ],
+    });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.entries[0].photos[0].base64).toBe("data:image/jpeg;base64,/9j/clean");
+  });
+
+  it("verwerkt speciale tekens zoals ë in velden correct", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const entry = makeEntry({
+      name: "Müller GmbH",
+      adres: "Rue de l'Église 12",
+      plaats: "Liège",
+      land: "België",
+    });
+    await submitToWebhook([entry], "Søren", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.sender_name).toBe("Søren");
+    expect(body.entries[0].recipient).toBe("Müller GmbH");
+    expect(body.entries[0].adres).toBe("Rue de l'Église 12");
+    expect(body.entries[0].plaats).toBe("Liège");
+    expect(body.entries[0].land).toBe("België");
   });
 
   it("stuurt colli_omschrijvingen mee in de payload", async () => {
