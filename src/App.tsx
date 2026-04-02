@@ -13,6 +13,7 @@ import FormField from "./components/FormField";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import QrCodeFloat from "./components/QrCodeFloat";
 import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
+import { useSwUpdateCheck } from "./hooks/useSwUpdateCheck";
 import { decodePrintData } from "./services/printService";
 
 // Generate a stable session ID for this browser session
@@ -46,6 +47,7 @@ export default function App() {
   const [showCc, setShowCc] = useState(() => !!sessionStorage.getItem("show_cc") || store.senderCcEmail !== "");
   const [sessionId] = useState(getSessionId);
   const [sessionReady, setSessionReady] = useState(false);
+  useSwUpdateCheck();
 
   // Stable ref so the sync callback never causes re-renders
   const storeRef = useRef(store);
@@ -319,6 +321,7 @@ export default function App() {
                   ? "⏳ Bezig met verzenden…"
                   : "📤 Versturen"}
               </button>
+              <p className="text-center text-xs text-gray-300 mt-2">v{__APP_VERSION__}</p>
             </div>
           )}
         </div>
