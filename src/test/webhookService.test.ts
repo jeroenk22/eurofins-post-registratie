@@ -309,4 +309,29 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].plaats).toBeNull();
     expect(body.entries[0].land).toBeNull();
   });
+
+  it("stuurt app_version mee in de payload", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(typeof body.app_version).toBe("string");
+    expect(body.app_version.length).toBeGreaterThan(0);
+  });
+
+  it("gooit een fout bij een niet-ok HTTP-response van de hoofdwebhook", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "Internal Server Error" }));
+    await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).rejects.toThrow("HTTP 500");
+  });
+
+  it("gooit geen fout als alleen de forward-webhook proxy mislukt", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true })   // hoofdwebhook slaagt
+      .mockRejectedValueOnce(new Error("proxy down")) // proxy faalt
+    );
+    await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).resolves.toBeUndefined();
+  });
 });

@@ -68,6 +68,7 @@ export async function submitToWebhook(
   const payload: SubmitPayload = {
     submitted_at: now.toISOString(),
     datetime_nl: now.toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }),
+    app_version: __APP_VERSION__,
     sender_name: senderName.trim(),
     sender_phone: senderPhone.trim() || null,
     sender_email: senderEmail.trim() || null,
