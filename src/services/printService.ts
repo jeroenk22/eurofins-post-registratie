@@ -102,6 +102,15 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     fontColli = '9pt'
     fontSpoed = '8pt'
     fontDatum = '6pt'
+  } else if (shortMm < 34) {
+    // Tussenformaat (o.a. DYMO 11354, 57×32mm): te klein voor het middelgrote
+    // lettertype — daarmee liep de inhoud over de onderrand.
+    fontName  = '12pt'
+    fontAddr  = '9pt'
+    fontRoute = '11pt'
+    fontColli = '11pt'
+    fontSpoed = '9pt'
+    fontDatum = '6.5pt'
   } else if (shortMm <= 40) {
     fontName  = '15pt'
     fontAddr  = '11pt'
@@ -118,9 +127,9 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     fontDatum = '8pt'
   }
 
-  // Op de kleinste etiketten is de hoogte krap: compactere marges maken ruimte
+  // Op de kleinere etiketten is de hoogte krap: compactere marges maken ruimte
   // vrij voor de datumregel zonder dat de bovenste regels wegvallen.
-  const tight     = shortMm < 30
+  const tight     = shortMm < 34
   const padY      = tight ? '2mm'   : '3mm'
   const gapContent = tight ? '0.5mm' : '1mm'
   const gapDatum  = tight ? '0.3mm' : '0.8mm'

@@ -119,6 +119,15 @@ describe("printLabels — order datum/tijd op het label", () => {
     expect(writtenHtml).not.toContain('class="datum"')
   })
 
+  it("gebruikt kleinere letters op het tussenformaat 57×32, zodat de datumregel binnen de rand valt", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'dymo_11354')! // 57×32mm
+    printLabels([makeEntry({ orderedAt: "2026-08-31T12:07:00.000Z" })], format)
+    // Het middelgrote lettertype (15pt naam) liep op dit formaat over de onderrand
+    expect(writtenHtml).toContain('font-size: 12pt')
+    expect(writtenHtml).not.toContain('font-size: 15pt')
+    expect(writtenHtml).toContain('padding: 2mm 4mm')
+  })
+
   it("kapt een lange naam af zonder de datum te verdringen", () => {
     const format = LABEL_FORMATS.find(f => f.id === 'dymo_11352')! // krapste formaat
     printLabels([makeEntry({
