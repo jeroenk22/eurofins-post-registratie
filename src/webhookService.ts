@@ -1,5 +1,6 @@
 import type { PostEntry, SubmitPayload } from "./types";
 import { encodePrintData, type PrintEntry } from "./services/printService";
+import { serverNow } from "./services/serverTime";
 import { MESTKLANT_TMS_BY_LABEL } from "./mestklantOptions";
 
 const RECIPIENT_TYPE_LABEL: Record<string, string> = {
@@ -29,7 +30,9 @@ export async function submitToWebhook(
   const url = getWebhookUrl();
   if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
 
-  const now = new Date();
+  // Servertijd, niet de klok van de werkplek — die kan verkeerd lopen en zou
+  // een verkeerd tijdstip op het verzendlabel en in de payload zetten.
+  const now = serverNow();
 
   const base = `${window.location.origin}${window.location.pathname}`;
 
