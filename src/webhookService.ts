@@ -25,7 +25,7 @@ export async function submitToWebhook(
   senderPhone: string,
   senderEmail: string,
   senderCcEmail: string = '',
-): Promise<void> {
+): Promise<string> {
   const url = getWebhookUrl();
   if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
 
@@ -61,7 +61,7 @@ export async function submitToWebhook(
 
   const allPrintEntries: PrintEntry[] = entries.map((e) => {
     const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
-    return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, colliOmschrijvingen: e.colliOmschrijvingen, spoed: e.spoed };
+    return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, colliOmschrijvingen: e.colliOmschrijvingen, spoed: e.spoed, orderedAt: now.toISOString() };
   });
   const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
 
@@ -97,4 +97,8 @@ export async function submitToWebhook(
   ]);
 
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+  // Het verzendtijdstip wordt teruggegeven zodat de labels exact dezelfde
+  // datum/tijd tonen als de payload en de print-link.
+  return payload.submitted_at;
 }

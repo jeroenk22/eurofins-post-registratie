@@ -58,7 +58,9 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
   const handlePrint = () => {
     const format = getSelectedFormat()
     const route = entry.shelf === 'overig' ? '' : entry.shelf ? `Route ${entry.shelf}` : ''
-    printLabels([{ name: entry.name.trim(), adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route, colli: entry.colli, colliOmschrijvingen: entry.colliOmschrijvingen, spoed: entry.spoed }], format)
+    // Deze labels worden vóór het versturen geprint; de order bestaat dan nog niet.
+    // We tonen het huidige tijdstip, dat in de praktijk vlak voor het versturen ligt.
+    printLabels([{ name: entry.name.trim(), adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route, colli: entry.colli, colliOmschrijvingen: entry.colliOmschrijvingen, spoed: entry.spoed, orderedAt: new Date().toISOString() }], format)
     setPrintPopupOpen(false)
   }
 
