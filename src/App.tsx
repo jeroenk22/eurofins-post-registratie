@@ -41,6 +41,9 @@ export default function App() {
   const [submitState, setSubmitState] = useState<SubmitState>(() =>
     sessionStorage.getItem("submit_state") === "success" ? "success" : "idle"
   );
+  const [submittedAt, setSubmittedAt] = useState<string>(
+    () => sessionStorage.getItem("submit_time") ?? "",
+  );
   const [errorMsg, setErrorMsg] = useState("");
   const [showErrors, setShowErrors] = useState(false);
   const [errorEntryIds, setErrorEntryIds] = useState<Set<string>>(new Set());
@@ -88,13 +91,15 @@ export default function App() {
     setErrorMsg("");
 
     try {
-      await submitToWebhook(
+      const sentAt = await submitToWebhook(
         store.entries,
         store.senderName,
         store.senderPhone,
         store.senderEmail,
         store.senderCcEmail,
       );
+      setSubmittedAt(sentAt);
+      sessionStorage.setItem("submit_time", sentAt);
       setSubmitState("success");
       sessionStorage.setItem("submit_state", "success");
     } catch (e) {
@@ -108,7 +113,9 @@ export default function App() {
   const handleReset = () => {
     store.reset();
     sessionStorage.removeItem("submit_state");
+    sessionStorage.removeItem("submit_time");
     sessionStorage.removeItem("show_cc");
+    setSubmittedAt("");
     setSubmitState("idle");
     setErrorMsg("");
     setShowErrors(false);
@@ -146,6 +153,7 @@ export default function App() {
             <SuccessScreen
               entries={store.entries}
               senderEmail={store.senderEmail}
+              submittedAt={submittedAt}
               onReset={handleReset}
             />
           ) : (

@@ -43,6 +43,23 @@ export interface PrintEntry {
   colliOmschrijvingen: string[]
   spoed: boolean
   land: string
+  orderedAt?: string  // ISO-tijdstip waarop de order is aangemaakt (moment van versturen)
+}
+
+/** Formatteert een ISO-tijdstip als "dd-mm-jjjj uu:mm" in Nederlandse tijd. */
+export function formatOrderDateTime(iso: string | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const parts = new Intl.DateTimeFormat('nl-NL', {
+    timeZone: 'Europe/Amsterdam',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
+  const [day, month, year, hour, minute] = ['day', 'month', 'year', 'hour', 'minute'].map(get)
+  if (!day || !month || !year || !hour || !minute) return ''
+  return `${day}-${month}-${year} ${hour}:${minute}`
 }
 
 export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
@@ -54,19 +71,20 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   const useShortLabel = shortMm < 38
 
   // Flatten to individual labels
-  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean; omschrijving: string }> = []
+  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean; omschrijving: string; datum: string }> = []
   for (const entry of entries) {
     // Strip the "(plaats)" suffix added by autocomplete value formatting, but only if it matches exactly
     const suffix = entry.plaats ? ` (${entry.plaats})` : ''
     const cleanName = suffix && entry.name.endsWith(suffix)
       ? entry.name.slice(0, -suffix.length)
       : entry.name
+    const datum = formatOrderDateTime(entry.orderedAt)
     for (let i = 1; i <= entry.colli; i++) {
       const rawOmschrijving = entry.colliOmschrijvingen[i - 1] ?? ''
       const omschrijving = useShortLabel
         ? (MESTKLANT_SHORT_BY_LABEL[rawOmschrijving] ?? rawOmschrijving)
         : rawOmschrijving
-      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving })
+      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving, datum })
     }
   }
 
@@ -76,25 +94,36 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   let fontRoute: string
   let fontColli: string
   let fontSpoed: string
+  let fontDatum: string
   if (shortMm < 30) {
     fontName  = '9pt'
     fontAddr  = '7pt'
     fontRoute = '9pt'
     fontColli = '9pt'
     fontSpoed = '8pt'
+    fontDatum = '6pt'
   } else if (shortMm <= 40) {
     fontName  = '15pt'
     fontAddr  = '11pt'
     fontRoute = '13pt'
     fontColli = '14pt'
     fontSpoed = '11pt'
+    fontDatum = '7pt'
   } else {
     fontName  = '16pt'
     fontAddr  = '12pt'
     fontRoute = '13pt'
     fontColli = '14pt'
     fontSpoed = '12pt'
+    fontDatum = '8pt'
   }
+
+  // Op de kleinste etiketten is de hoogte krap: compactere marges maken ruimte
+  // vrij voor de datumregel zonder dat de bovenste regels wegvallen.
+  const tight     = shortMm < 30
+  const padY      = tight ? '2mm'   : '3mm'
+  const gapContent = tight ? '0.5mm' : '1mm'
+  const gapDatum  = tight ? '0.3mm' : '0.8mm'
 
   const labelHtml = labels.map((l, i) => {
     const isLast = i === labels.length - 1
@@ -113,6 +142,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     </div>
     <div class="colli">${l.index}/${l.total}</div>
   </div>
+  ${l.datum ? `<div class="datum">${escapeHtml(l.datum)}</div>` : ''}
 </div>`
   }).join('\n')
 
@@ -135,7 +165,7 @@ body {
 .label {
   width: ${widthMm}mm;
   height: ${heightMm}mm;
-  padding: 3mm 4mm;
+  padding: ${padY} 4mm;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -144,7 +174,7 @@ body {
 .content {
   display: flex;
   flex-direction: column;
-  gap: 1mm;
+  gap: ${gapContent};
 }
 .top {
   display: flex;
@@ -208,6 +238,15 @@ body {
 .colli {
   font-size: ${fontColli};
   font-weight: bold;
+}
+.datum {
+  font-size: ${fontDatum};
+  color: #555;
+  line-height: 1.1;
+  text-align: right;
+  white-space: nowrap;
+  margin-top: ${gapDatum};
+  flex-shrink: 0;
 }
 .omschrijving {
   font-size: ${fontAddr};

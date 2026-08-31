@@ -6,6 +6,7 @@ import {
   encodePrintData,
   decodePrintData,
   printLabels,
+  formatOrderDateTime,
   type PrintEntry,
 } from "../services/printService";
 
@@ -58,6 +59,75 @@ describe("printLabels — colli omschrijving op label", () => {
     printLabels(entries, format)
     expect(writtenHtml).not.toContain("<script>")
     expect(writtenHtml).toContain("&lt;script&gt;")
+  })
+})
+
+describe("formatOrderDateTime", () => {
+  it("formatteert een ISO-tijdstip als dd-mm-jjjj uu:mm in Nederlandse tijd", () => {
+    // 12:07 UTC in de zomer = 14:07 in Nederland (CEST)
+    expect(formatOrderDateTime("2026-08-31T12:07:00.000Z")).toBe("31-08-2026 14:07")
+  })
+
+  it("gebruikt wintertijd buiten de zomertijd", () => {
+    // 12:07 UTC in de winter = 13:07 in Nederland (CET)
+    expect(formatOrderDateTime("2026-01-15T12:07:00.000Z")).toBe("15-01-2026 13:07")
+  })
+
+  it("toont middernacht als 00:xx en niet als 24:xx", () => {
+    expect(formatOrderDateTime("2026-01-14T23:05:00.000Z")).toBe("15-01-2026 00:05")
+  })
+
+  it("geeft een lege string bij een ontbrekende of ongeldige waarde", () => {
+    expect(formatOrderDateTime(undefined)).toBe("")
+    expect(formatOrderDateTime("")).toBe("")
+    expect(formatOrderDateTime("geen datum")).toBe("")
+  })
+})
+
+describe("printLabels — order datum/tijd op het label", () => {
+  let writtenHtml: string
+
+  beforeEach(() => {
+    const mockDoc = { write: vi.fn((html: string) => { writtenHtml = html }), close: vi.fn() }
+    const mockWin = { document: mockDoc, focus: vi.fn(), print: vi.fn(), close: vi.fn() }
+    vi.stubGlobal('open', vi.fn().mockReturnValue(mockWin))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const makeEntry = (overrides: Partial<PrintEntry> = {}): PrintEntry => ({
+    name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "", colli: 1,
+    colliOmschrijvingen: [""], spoed: false, ...overrides,
+  })
+
+  it("toont de datum/tijd op elk labelformaat", () => {
+    for (const format of LABEL_FORMATS) {
+      printLabels([makeEntry({ orderedAt: "2026-08-31T12:07:00.000Z" })], format)
+      expect(writtenHtml, `formaat ${format.id}`).toContain('class="datum"')
+      expect(writtenHtml, `formaat ${format.id}`).toContain("31-08-2026 14:07")
+    }
+  })
+
+  it("toont dezelfde datum op elk collo-label", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!
+    printLabels([makeEntry({ colli: 3, colliOmschrijvingen: ["a", "b", "c"], orderedAt: "2026-08-31T12:07:00.000Z" })], format)
+    expect(writtenHtml.match(/31-08-2026 14:07/g)).toHaveLength(3)
+  })
+
+  it("laat de datumregel weg als er geen tijdstip bekend is", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!
+    printLabels([makeEntry()], format)
+    expect(writtenHtml).not.toContain('class="datum"')
+  })
+
+  it("kapt een lange naam af zonder de datum te verdringen", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'dymo_11352')! // krapste formaat
+    printLabels([makeEntry({
+      name: "Loonbedrijf Van der Meer en Zonen Vennootschap",
+      plaats: "Sint Nicolaasga bij Langweer",
+      orderedAt: "2026-08-31T12:07:00.000Z",
+    })], format)
+    expect(writtenHtml).toContain("31-08-2026 14:07")
+    expect(writtenHtml).toContain("text-overflow: ellipsis")
   })
 })
 

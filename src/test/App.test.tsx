@@ -4,7 +4,7 @@ import App from '../App'
 
 vi.mock('../webhookService', () => ({
   isWebhookConfigured: vi.fn(() => true),
-  submitToWebhook: vi.fn(() => Promise.resolve()),
+  submitToWebhook: vi.fn(() => Promise.resolve('2026-08-31T12:07:00.000Z')),
 }))
 
 vi.mock('../hooks/useRecipientData', () => ({

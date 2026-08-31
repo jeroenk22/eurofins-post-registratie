@@ -11,6 +11,7 @@ import LabelFormatSelect from "./LabelFormatSelect";
 interface SuccessScreenProps {
   entries: PostEntry[];
   senderEmail: string;
+  submittedAt: string;
   onReset: () => void;
 }
 
@@ -20,7 +21,7 @@ function formatRoute(entry: PostEntry): string {
   return "";
 }
 
-function toPrintEntry(e: PostEntry): PrintEntry {
+function toPrintEntry(e: PostEntry, submittedAt: string): PrintEntry {
   return {
     name: e.name,
     adres: e.adres,
@@ -31,12 +32,14 @@ function toPrintEntry(e: PostEntry): PrintEntry {
     colli: e.colli,
     colliOmschrijvingen: e.colliOmschrijvingen,
     spoed: e.spoed,
+    orderedAt: submittedAt,
   };
 }
 
 export default function SuccessScreen({
   entries,
   senderEmail,
+  submittedAt,
   onReset,
 }: SuccessScreenProps) {
   const [formatId, setFormatId] = useState(() => getSelectedFormat().id);
@@ -49,11 +52,11 @@ export default function SuccessScreen({
   const totalColli = entries.reduce((sum, e) => sum + e.colli, 0);
 
   const handlePrintAll = () => {
-    printLabels(entries.map(toPrintEntry), getSelectedFormat());
+    printLabels(entries.map((e) => toPrintEntry(e, submittedAt)), getSelectedFormat());
   };
 
   const handlePrintEntry = (e: PostEntry) => {
-    printLabels([toPrintEntry(e)], getSelectedFormat());
+    printLabels([toPrintEntry(e, submittedAt)], getSelectedFormat());
   };
 
   return (

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { isWebhookConfigured, submitToWebhook } from "../webhookService";
+import { decodePrintData } from "../services/printService";
 import type { PostEntry } from "../types";
 
 const makeEntry = (overrides: Partial<PostEntry> = {}): PostEntry => ({
@@ -332,6 +333,26 @@ describe("submitToWebhook", () => {
       .mockResolvedValueOnce({ ok: true })   // hoofdwebhook slaagt
       .mockRejectedValueOnce(new Error("proxy down")) // proxy faalt
     );
-    await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).resolves.toBeUndefined();
+    await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).resolves.toEqual(expect.any(String));
+  });
+
+  it("geeft het verzendtijdstip terug dat ook in de payload staat", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const sentAt = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(sentAt).toBe(body.submitted_at);
+  });
+
+  it("zet het verzendtijdstip in de print-link zodat het op de labels komt", async () => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    const sentAt = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const body = JSON.parse(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
+    );
+    const encoded = new URL(body.print_url).searchParams.get("printData")!;
+    const printEntries = decodePrintData(encoded)!;
+    expect(printEntries[0].orderedAt).toBe(sentAt);
   });
 });
