@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo, SubmitState } from "./types";
 import { useStore } from "./useStore";
 import { submitToWebhook, isWebhookConfigured } from "./webhookService";
@@ -15,6 +15,7 @@ import QrCodeFloat from "./components/QrCodeFloat";
 import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
 import { useSwUpdateCheck } from "./hooks/useSwUpdateCheck";
 import { decodePrintData } from "./services/printService";
+import { syncServerTime } from "./services/serverTime";
 
 // Generate a stable session ID for this browser session
 function getSessionId(): string {
@@ -51,6 +52,10 @@ export default function App() {
   const [sessionId] = useState(getSessionId);
   const [sessionReady, setSessionReady] = useState(false);
   useSwUpdateCheck();
+
+  // Haal eenmalig de servertijd op, zodat een verkeerd lopende werkplekklok
+  // geen verkeerd tijdstip op het verzendlabel of in de payload zet.
+  useEffect(() => { void syncServerTime(); }, []);
 
   // Stable ref so the sync callback never causes re-renders
   const storeRef = useRef(store);

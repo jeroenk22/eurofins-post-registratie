@@ -3,6 +3,12 @@ import { isWebhookConfigured, submitToWebhook } from "../webhookService";
 import { decodePrintData } from "../services/printService";
 import type { PostEntry } from "../types";
 
+// De payload gebruikt de servertijd, niet de klok van de werkplek.
+const klok = vi.hoisted(() => ({ now: "2026-08-31T11:14:00.000Z" }));
+vi.mock("../services/serverTime", () => ({
+  serverNow: () => new Date(klok.now),
+}));
+
 const makeEntry = (overrides: Partial<PostEntry> = {}): PostEntry => ({
   id: "test-1",
   shelf: 3,
@@ -354,5 +360,50 @@ describe("submitToWebhook", () => {
     const encoded = new URL(body.print_url).searchParams.get("printData")!;
     const printEntries = decodePrintData(encoded)!;
     expect(printEntries[0].orderedAt).toBe(sentAt);
+  });
+});
+
+describe("submitToWebhook — tijdstip komt van de server, in Nederlandse tijd", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    klok.now = "2026-08-31T11:14:00.000Z";
+  });
+
+  const payload = () =>
+    JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+
+  it("gebruikt de servertijd voor submitted_at, datetime_nl en de sticker", async () => {
+    // Werkplekklok loopt 9 minuten voor; de server zegt 11:14 UTC
+    klok.now = "2026-08-31T11:14:00.000Z";
+    vi.setSystemTime(new Date("2026-08-31T11:23:00.000Z"));
+
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const body = payload();
+
+    expect(body.submitted_at).toBe("2026-08-31T11:14:00.000Z");
+    expect(body.datetime_nl).toContain("13:14");
+    expect(body.datetime_nl).not.toContain("13:23");
+
+    const encoded = new URL(body.print_url).searchParams.get("printData")!;
+    expect(decodePrintData(encoded)![0].orderedAt).toBe("2026-08-31T11:14:00.000Z");
+
+    vi.useRealTimers();
+  });
+
+  it("rekent datetime_nl om naar Nederlandse zomertijd (CEST, UTC+2)", async () => {
+    klok.now = "2026-08-31T11:14:00.000Z";
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect(payload().datetime_nl).toContain("13:14");
+  });
+
+  it("rekent datetime_nl om naar Nederlandse wintertijd (CET, UTC+1)", async () => {
+    klok.now = "2026-01-15T11:14:00.000Z";
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect(payload().datetime_nl).toContain("12:14");
   });
 });

@@ -6,6 +6,7 @@ import type { RecipientOption } from '../services/googleSheetsService'
 
 import MestklantSelect from './MestklantSelect'
 import { getSelectedFormat, setSelectedFormat, printLabels } from '../services/printService'
+import { serverNow } from '../services/serverTime'
 import LabelFormatSelect from './LabelFormatSelect'
 
 const SHELVES = [1, 2, 3, 4, 5, 6, 7, 8] as const
@@ -60,7 +61,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
     const route = entry.shelf === 'overig' ? '' : entry.shelf ? `Route ${entry.shelf}` : ''
     // Deze labels worden vóór het versturen geprint; de order bestaat dan nog niet.
     // We tonen het huidige tijdstip, dat in de praktijk vlak voor het versturen ligt.
-    printLabels([{ name: entry.name.trim(), adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route, colli: entry.colli, colliOmschrijvingen: entry.colliOmschrijvingen, spoed: entry.spoed, orderedAt: new Date().toISOString() }], format)
+    printLabels([{ name: entry.name.trim(), adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route, colli: entry.colli, colliOmschrijvingen: entry.colliOmschrijvingen, spoed: entry.spoed, orderedAt: serverNow().toISOString() }], format)
     setPrintPopupOpen(false)
   }
 
