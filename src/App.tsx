@@ -34,7 +34,7 @@ export default function App() {
   const printDataParam = params.get("printData");
   if (printDataParam) {
     const printEntries = decodePrintData(printDataParam);
-    if (printEntries) return <PrintLinkScreen entries={printEntries} />;
+    if (printEntries) return <PrintLinkScreen entries={printEntries} submissionId={params.get("s")} />;
   }
 
   const store = useStore();

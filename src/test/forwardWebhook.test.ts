@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+const blobs = vi.hoisted(() => ({ setJSON: vi.fn(), storeName: '' }))
+vi.mock('@netlify/blobs', () => ({
+  getStore: (name: string) => { blobs.storeName = name; return { setJSON: blobs.setJSON } },
+}))
+
 import handler from '../../netlify/functions/forward-webhook'
 
 describe('forward-webhook', () => {
@@ -134,6 +140,47 @@ describe('forward-webhook', () => {
       const res = await post()
       expect(res.status).toBe(502)
       expect((await res.json()).orderIds).toEqual([])
+    })
+  })
+
+  describe("order-ID's bewaren voor de print-link uit de mail", () => {
+    const code = 'abcdEFGH1234_-xy'
+    const post = (payload: unknown) => handler(new Request('https://site.com/.netlify/functions/forward-webhook', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }))
+    const createOrderAntwoord = (resultaten: unknown[]) =>
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ resultaten }) }))
+
+    beforeEach(() => { blobs.setJSON.mockReset().mockResolvedValue(undefined) })
+
+    it('bewaart de order-ID\'s onder de aanmeldingscode', async () => {
+      createOrderAntwoord([{ succes: true, orderId: '1234567' }, { succes: false }])
+      await post({ submission_id: code, entries: [] })
+      expect(blobs.storeName).toBe('order-ids')
+      expect(blobs.setJSON).toHaveBeenCalledWith(code, { orderIds: ['1234567', null], createdAt: expect.any(Number) })
+    })
+
+    it('bewaart niets zonder (geldige) aanmeldingscode', async () => {
+      createOrderAntwoord([{ succes: true, orderId: '1234567' }])
+      await post({ entries: [] })
+      await post({ submission_id: '../../geheim', entries: [] })
+      expect(blobs.setJSON).not.toHaveBeenCalled()
+    })
+
+    it('bewaart niets als er geen enkele order is aangemaakt', async () => {
+      createOrderAntwoord([{ succes: false, fout: 'SOAP fout' }])
+      await post({ submission_id: code, entries: [] })
+      expect(blobs.setJSON).not.toHaveBeenCalled()
+    })
+
+    it('geeft de ID\'s gewoon aan de app als het bewaren mislukt', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      blobs.setJSON.mockImplementation(async () => { throw new Error('blobs down') })
+      createOrderAntwoord([{ succes: true, orderId: '1234567' }])
+      const res = await post({ submission_id: code, entries: [] })
+      expect(res.status).toBe(200)
+      expect((await res.json()).orderIds).toEqual(['1234567'])
     })
   })
 })

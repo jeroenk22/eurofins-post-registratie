@@ -2,6 +2,7 @@ import type { PostEntry, SubmitPayload } from "./types";
 import { encodePrintData, type PrintEntry } from "./services/printService";
 import { serverNow } from "./services/serverTime";
 import { MESTKLANT_TMS_BY_LABEL } from "./mestklantOptions";
+import { newSubmissionId, parseOrderIds } from "./services/orderIds";
 
 const RECIPIENT_TYPE_LABEL: Record<string, string> = {
   Monsternemers: 'monsternemer',
@@ -34,9 +35,7 @@ export interface SubmitResult {
 async function readOrderIds(res: Response | null): Promise<(string | null)[]> {
   if (!res?.ok) return [];
   try {
-    const data = (await res.json()) as { orderIds?: unknown };
-    if (!Array.isArray(data.orderIds)) return [];
-    return data.orderIds.map((id) => (typeof id === 'string' && id ? id : null));
+    return parseOrderIds(await res.json());
   } catch {
     return [];
   }
@@ -88,7 +87,10 @@ export async function submitToWebhook(
     const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
     return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, colliOmschrijvingen: e.colliOmschrijvingen, spoed: e.spoed, orderedAt: now.toISOString() };
   });
-  const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
+  // De orders bestaan nog niet als de print-link wordt gemaakt; met deze code
+  // haalt de link de order-ID's (voor de QR-code) later op via de functie order-ids.
+  const submissionId = newSubmissionId();
+  const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}&s=${submissionId}`;
 
   const payload: SubmitPayload = {
     submitted_at: now.toISOString(),
@@ -100,6 +102,7 @@ export async function submitToWebhook(
     cc_email: senderCcEmail.trim() || null,
     total_entries: entries.length,
     print_url: printUrl,
+    submission_id: submissionId,
     // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
     // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
     // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,

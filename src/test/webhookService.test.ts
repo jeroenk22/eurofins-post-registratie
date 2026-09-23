@@ -399,6 +399,23 @@ describe("submitToWebhook — Mendrix order-ID's", () => {
     expect(orderIds).toEqual([]);
   });
 
+  it("zet dezelfde aanmeldingscode in de payload en in de print-link", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+    expect(body.submission_id).toMatch(/^[A-Za-z0-9_-]{16}$/);
+    expect(new URL(body.print_url).searchParams.get("s")).toBe(body.submission_id);
+    // De labelgegevens in de link blijven gewoon leesbaar
+    expect(decodePrintData(new URL(body.print_url).searchParams.get("printData")!)).toHaveLength(1);
+  });
+
+  it("stuurt dezelfde payload (met code) naar Make en naar forward-webhook", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const [make, forward] = vi.mocked(fetch).mock.calls.map((c) => (c[1] as RequestInit).body);
+    expect(forward).toBe(make);
+  });
+
   it("maakt van onverwachte waarden null", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: true })
