@@ -1,6 +1,7 @@
 import { getStore } from '@netlify/blobs';
 import type { Context } from '@netlify/functions';
 import { isIP } from 'node:net';
+import { CLIENT_IP_HEADER } from '../client-ip';
 
 /** Zelfde vorm als newSubmissionId() in de app: 16 tekens base64url. */
 const SUBMISSION_ID_PATTERN = /^[A-Za-z0-9_-]{16}$/;
@@ -61,13 +62,15 @@ export default async (request: Request, context?: Context): Promise<Response> =>
 };
 
 /**
- * Het IP van de gebruiker: context.ip, en anders de header die Netlify zelf zet.
- * In productie bleek context.ip niet bruikbaar (create-order logde nog het
- * AWS-adres); de log laat zien welke bron het werd, voor de whitelist.
+ * Het IP van de gebruiker. De edge function ip-guard draait vóór deze functie,
+ * waardoor context.ip en x-nf-client-connection-ip het adres van de edge zijn.
+ * ip-guard geeft het echte IP daarom als header door (en overschrijft een
+ * meegestuurde waarde). Zonder die header (geen edge) is context.ip wél juist.
  * Bewust niet x-forwarded-for: het eerste adres daarin kan de browser zelf meesturen.
  */
 function resolveClientIp(request: Request, context: Context | undefined): string | undefined {
   const bronnen: [string, string | undefined][] = [
+    [CLIENT_IP_HEADER, request.headers.get(CLIENT_IP_HEADER) ?? undefined],
     ['context.ip', context?.ip],
     ['x-nf-client-connection-ip', request.headers.get('x-nf-client-connection-ip') ?? undefined],
   ];

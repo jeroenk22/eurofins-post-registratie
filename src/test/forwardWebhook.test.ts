@@ -88,6 +88,10 @@ describe('forward-webhook', () => {
       expect(await clientIpNa({ 'x-nf-client-connection-ip': '195.222.119.185' }, { ip: 'onbekend' })).toBe('195.222.119.185')
     })
 
+    it('de header van ip-guard gaat voor op context.ip (dat is dan het adres van de edge)', async () => {
+      expect(await clientIpNa({ 'x-postapp-client-ip': '86.95.240.163', 'x-nf-client-connection-ip': '18.197.32.167' }, { ip: '18.197.32.167' })).toBe('86.95.240.163')
+    })
+
     it('context.ip gaat voor als die geldig is', async () => {
       expect(await clientIpNa({ 'x-nf-client-connection-ip': '1.1.1.1' }, { ip: '195.222.119.185' })).toBe('195.222.119.185')
     })
