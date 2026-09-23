@@ -67,7 +67,9 @@ export async function submitToWebhook(
       adres: e.adres.trim() || null,
       postcode: e.postcode.trim() || null,
       plaats: e.plaats.trim() || null,
-      land: e.land.trim() || null,
+      // Een lege land-kolom in de ontvangerslijst liet create-order crashen
+      // (en daarmee de hele aanmelding); zonder land is het Nederland.
+      land: e.land.trim() || 'Nederland',
       colli: e.colli,
       colli_omschrijvingen: (e.colliOmschrijvingen ?? []).slice(0, e.colli).map(v =>
         e.recipientType === 'Mestklanten' ? (MESTKLANT_TMS_BY_LABEL[v] ?? v) : v

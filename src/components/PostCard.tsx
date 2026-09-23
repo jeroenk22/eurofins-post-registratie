@@ -27,6 +27,15 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
 
   const [andersIndices, setAndersIndices] = useState<Set<number>>(new Set())
 
+  // Gekozen uit de lijst, maar de rij in de sheet is onvolledig: wel verzenden,
+  // maar laten zien zodat de sheet aangevuld wordt (Mendrix krijgt dan geen volledig adres;
+  // een leeg land wordt Nederland, wat voor DE/BE de verkeerde klant in Mendrix geeft).
+  const ontbrekendeAdresvelden = entry.recipientType
+    ? ([['adres', entry.adres], ['postcode', entry.postcode], ['plaats', entry.plaats], ['land', entry.land]] as const)
+        .filter(([, v]) => !v.trim())
+        .map(([veld]) => veld)
+    : []
+
   const updatePhotos = (fn: (prev: Photo[]) => Photo[]) =>
     onUpdate(entry.id, { photos: fn(entry.photos) })
 
@@ -143,8 +152,9 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           id={`name-${entry.id}`}
           value={entry.name}
           onChange={v => {
-            onUpdate(entry.id, { name: v, adres: '', postcode: '', plaats: '', land: '' })
-            if (!v) { set('shelf', null); set('spoed', false); set('colli', 1); set('recipientType', undefined); setAndersIndices(new Set()) }
+            // Typen = niet (meer) uit de lijst gekozen; onSelect zet het type en adres daarna terug.
+            onUpdate(entry.id, { name: v, adres: '', postcode: '', plaats: '', land: '', recipientType: undefined })
+            if (!v) { set('shelf', null); set('spoed', false); set('colli', 1); setAndersIndices(new Set()) }
           }}
           onSelect={option => {
             const n = Number(option.route)
@@ -162,8 +172,13 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             setAndersIndices(new Set())
           }}
           recipients={recipients}
-          invalid={showErrors && !entry.name.trim()}
+          invalid={showErrors && (!entry.name.trim() || !entry.recipientType)}
         />
+        {ontbrekendeAdresvelden.length > 0 && (
+          <p className="mt-1 text-xs text-amber-700">
+            ⚠️ Adres onvolledig in de ontvangerslijst ({ontbrekendeAdresvelden.join(', ')} ontbreekt). Verzenden kan wel.
+          </p>
+        )}
       </div>
 
       {/* Schap selector */}

@@ -24,6 +24,9 @@ export function validateForm(
     return 'Beschrijf waar de zending klaar ligt bij "Overig".'
   if (entries.some((e) => !e.name.trim()))
     return 'Vul bij elke zending een naam of bedrijf in.'
+  // Zonder keuze uit de lijst is er geen adres en kan er geen Mendrix-order worden gemaakt.
+  if (entries.some((e) => !e.recipientType))
+    return 'Kies bij elke zending de ontvanger uit de lijst.'
   if (entries.some((e) =>
     Array.from({ length: e.colli }, (_, i) => (e.colliOmschrijvingen ?? [])[i] ?? '').some(v => !v.trim())
   ))
