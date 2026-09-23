@@ -1,3 +1,8 @@
+import { getStore } from '@netlify/blobs';
+
+/** Zelfde vorm als newSubmissionId() in de app: 16 tekens base64url. */
+const SUBMISSION_ID_PATTERN = /^[A-Za-z0-9_-]{16}$/;
+
 export default async (request: Request): Promise<Response> => {
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
@@ -40,7 +45,53 @@ export default async (request: Request): Promise<Response> => {
     body,
   });
 
-  return new Response(JSON.stringify({ ok: res.ok, status: res.status }), {
+  // De Mendrix order-ID's gaan terug naar de app, voor de QR-code op het label.
+  // Alleen de ID's — de rest van het antwoord (o.a. SOAP-respons) blijft hier.
+  const orderIds = res.ok ? await readOrderIds(res) : [];
+
+  // Bewaar de ID's onder de aanmeldingscode, zodat de print-link uit de
+  // bevestigingsmail (gemaakt vóór de orders bestonden) ze later kan ophalen.
+  await saveOrderIds(readSubmissionId(body), orderIds);
+
+  return new Response(JSON.stringify({ ok: res.ok, status: res.status, orderIds }), {
     status: res.ok ? 200 : 502,
   });
 };
+
+function readSubmissionId(body: string): string | null {
+  try {
+    const id = (JSON.parse(body) as { submission_id?: unknown }).submission_id;
+    return typeof id === 'string' && SUBMISSION_ID_PATTERN.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Mislukt het opslaan, dan krijgt alleen de print-link geen QR-code — geen reden om te falen. */
+async function saveOrderIds(submissionId: string | null, orderIds: (string | null)[]): Promise<void> {
+  if (!submissionId || !orderIds.some(Boolean)) return;
+  try {
+    await getStore('order-ids').setJSON(submissionId, { orderIds, createdAt: Date.now() });
+  } catch (err) {
+    console.error("forward-webhook: order-ID's opslaan mislukt:", err instanceof Error ? err.message : err);
+  }
+}
+
+/**
+ * Leest per entry het order-ID uit het antwoord van create-order
+ * (`{ resultaten: [{ succes, orderId }] }`, in dezelfde volgorde als de entries).
+ * Een mislukte entry of een onverwacht antwoord geeft `null` / een lege lijst.
+ */
+async function readOrderIds(res: Response): Promise<(string | null)[]> {
+  try {
+    const data = (await res.json()) as { resultaten?: unknown };
+    if (!Array.isArray(data.resultaten)) return [];
+    return data.resultaten.map((r) => {
+      const { succes, orderId } = (r ?? {}) as { succes?: unknown; orderId?: unknown };
+      const id = String(orderId ?? '').trim();
+      return succes === true && /^\d+$/.test(id) ? id : null;
+    });
+  } catch {
+    return [];
+  }
+}

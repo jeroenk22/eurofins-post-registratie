@@ -4,7 +4,7 @@ import App from '../App'
 
 vi.mock('../webhookService', () => ({
   isWebhookConfigured: vi.fn(() => true),
-  submitToWebhook: vi.fn(() => Promise.resolve('2026-08-31T12:07:00.000Z')),
+  submitToWebhook: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1234567'] })),
 }))
 
 vi.mock('../hooks/useRecipientData', () => ({
@@ -113,5 +113,27 @@ describe('App — submit_state persistentie', () => {
 
     expect(sessionStorage.getItem(SUBMIT_STATE_KEY)).toBe('success')
     expect(screen.getByText('Verstuurd!')).toBeInTheDocument()
+  })
+
+  it("bewaart de Mendrix order-ID's, zodat ze na een refresh nog op het label komen", async () => {
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('📤 Versturen'))
+    })
+
+    expect(JSON.parse(sessionStorage.getItem('submit_order_ids')!)).toEqual(['1234567'])
+  })
+
+  it("verwijdert de order-ID's uit sessionStorage na reset", () => {
+    sessionStorage.setItem(SUBMIT_STATE_KEY, 'success')
+    sessionStorage.setItem('submit_order_ids', JSON.stringify(['1234567']))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+
+    fireEvent.click(screen.getByText('+ Nieuwe aanmelding'))
+
+    expect(sessionStorage.getItem('submit_order_ids')).toBeNull()
   })
 })

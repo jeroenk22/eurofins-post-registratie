@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./Header";
 import {
   getSelectedFormat,
@@ -7,13 +7,34 @@ import {
   type PrintEntry,
 } from "../services/printService";
 import LabelFormatSelect from "./LabelFormatSelect";
+import { fetchOrderIds } from "../services/orderIds";
 
 interface PrintLinkScreenProps {
   entries: PrintEntry[];
+  /** Aanmeldingscode uit de link; daarmee komen de order-ID's voor de QR-code binnen. */
+  submissionId?: string | null;
 }
 
-export default function PrintLinkScreen({ entries }: PrintLinkScreenProps) {
+export default function PrintLinkScreen({ entries, submissionId }: PrintLinkScreenProps) {
   const [formatId, setFormatId] = useState(() => getSelectedFormat().id);
+  const [orderIds, setOrderIds] = useState<(string | null)[]>([]);
+  // Printen wacht kort op de order-ID's: het printvenster moet binnen de klik
+  // openen, dus ophalen ná de klik kan niet. fetchOrderIds geeft na 4s op.
+  const [loadingIds, setLoadingIds] = useState(!!submissionId);
+
+  useEffect(() => {
+    if (!submissionId) return;
+    let cancelled = false;
+    void fetchOrderIds(submissionId).then((ids) => {
+      if (cancelled) return;
+      setOrderIds(ids);
+      setLoadingIds(false);
+    });
+    return () => { cancelled = true; };
+  }, [submissionId]);
+
+  const withOrderId = (e: PrintEntry, i: number): PrintEntry =>
+    orderIds[i] ? { ...e, orderId: orderIds[i]! } : e;
 
   const handleFormatChange = (id: string) => {
     setSelectedFormat(id);
@@ -23,11 +44,11 @@ export default function PrintLinkScreen({ entries }: PrintLinkScreenProps) {
   const totalColli = entries.reduce((sum, e) => sum + e.colli, 0);
 
   const handlePrintAll = () => {
-    printLabels(entries, getSelectedFormat());
+    printLabels(entries.map(withOrderId), getSelectedFormat());
   };
 
-  const handlePrintEntry = (e: PrintEntry) => {
-    printLabels([e], getSelectedFormat());
+  const handlePrintEntry = (e: PrintEntry, i: number) => {
+    printLabels([withOrderId(e, i)], getSelectedFormat());
   };
 
   return (
@@ -55,9 +76,10 @@ export default function PrintLinkScreen({ entries }: PrintLinkScreenProps) {
               <button
                 type="button"
                 onClick={handlePrintAll}
-                className="w-full py-2.5 rounded-lg bg-ef-blue text-white text-sm font-semibold hover:bg-ef-blue/90 active:scale-[0.98] transition-all"
+                disabled={loadingIds}
+                className="w-full py-2.5 rounded-lg bg-ef-blue text-white text-sm font-semibold hover:bg-ef-blue/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-wait"
               >
-                Print alle labels ({totalColli} colli)
+                {loadingIds ? "Labels voorbereiden…" : `Print alle labels (${totalColli} colli)`}
               </button>
             </div>
 
@@ -78,8 +100,9 @@ export default function PrintLinkScreen({ entries }: PrintLinkScreenProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => handlePrintEntry(entry)}
-                    className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.97] transition-all"
+                    onClick={() => handlePrintEntry(entry, i)}
+                    disabled={loadingIds}
+                    className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-wait"
                   >
                     Print {entry.colli} {entry.colli === 1 ? "label" : "labels"}
                   </button>

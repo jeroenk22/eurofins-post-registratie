@@ -34,7 +34,7 @@ export default function App() {
   const printDataParam = params.get("printData");
   if (printDataParam) {
     const printEntries = decodePrintData(printDataParam);
-    if (printEntries) return <PrintLinkScreen entries={printEntries} />;
+    if (printEntries) return <PrintLinkScreen entries={printEntries} submissionId={params.get("s")} />;
   }
 
   const store = useStore();
@@ -45,6 +45,14 @@ export default function App() {
   const [submittedAt, setSubmittedAt] = useState<string>(
     () => sessionStorage.getItem("submit_time") ?? "",
   );
+  const [orderIds, setOrderIds] = useState<(string | null)[]>(() => {
+    try {
+      const parsed: unknown = JSON.parse(sessionStorage.getItem("submit_order_ids") ?? "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [errorMsg, setErrorMsg] = useState("");
   const [showErrors, setShowErrors] = useState(false);
   const [errorEntryIds, setErrorEntryIds] = useState<Set<string>>(new Set());
@@ -96,7 +104,7 @@ export default function App() {
     setErrorMsg("");
 
     try {
-      const sentAt = await submitToWebhook(
+      const { submittedAt: sentAt, orderIds: ids } = await submitToWebhook(
         store.entries,
         store.senderName,
         store.senderPhone,
@@ -105,6 +113,8 @@ export default function App() {
       );
       setSubmittedAt(sentAt);
       sessionStorage.setItem("submit_time", sentAt);
+      setOrderIds(ids);
+      sessionStorage.setItem("submit_order_ids", JSON.stringify(ids));
       setSubmitState("success");
       sessionStorage.setItem("submit_state", "success");
     } catch (e) {
@@ -119,8 +129,10 @@ export default function App() {
     store.reset();
     sessionStorage.removeItem("submit_state");
     sessionStorage.removeItem("submit_time");
+    sessionStorage.removeItem("submit_order_ids");
     sessionStorage.removeItem("show_cc");
     setSubmittedAt("");
+    setOrderIds([]);
     setSubmitState("idle");
     setErrorMsg("");
     setShowErrors(false);
@@ -159,6 +171,7 @@ export default function App() {
               entries={store.entries}
               senderEmail={store.senderEmail}
               submittedAt={submittedAt}
+              orderIds={orderIds}
               onReset={handleReset}
             />
           ) : (

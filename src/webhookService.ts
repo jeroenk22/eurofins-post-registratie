@@ -2,6 +2,7 @@ import type { PostEntry, SubmitPayload } from "./types";
 import { encodePrintData, type PrintEntry } from "./services/printService";
 import { serverNow } from "./services/serverTime";
 import { MESTKLANT_TMS_BY_LABEL } from "./mestklantOptions";
+import { newSubmissionId, parseOrderIds } from "./services/orderIds";
 
 const RECIPIENT_TYPE_LABEL: Record<string, string> = {
   Monsternemers: 'monsternemer',
@@ -20,13 +21,33 @@ export function isWebhookConfigured(): boolean {
   return !!url && url.length > 0;
 }
 
+export interface SubmitResult {
+  /** Verzendtijdstip (ISO) — hetzelfde als in de payload en de print-link. */
+  submittedAt: string;
+  /**
+   * Mendrix order-ID per entry (zelfde volgorde als de entries); `null` als de
+   * order niet is aangemaakt. Leeg als de order-koppeling niet bereikbaar was.
+   */
+  orderIds: (string | null)[];
+}
+
+/** Haalt de order-ID's uit het antwoord van forward-webhook; nooit een fout. */
+async function readOrderIds(res: Response | null): Promise<(string | null)[]> {
+  if (!res?.ok) return [];
+  try {
+    return parseOrderIds(await res.json());
+  } catch {
+    return [];
+  }
+}
+
 export async function submitToWebhook(
   entries: PostEntry[],
   senderName: string,
   senderPhone: string,
   senderEmail: string,
   senderCcEmail: string = '',
-): Promise<string> {
+): Promise<SubmitResult> {
   const url = getWebhookUrl();
   if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
 
@@ -66,7 +87,10 @@ export async function submitToWebhook(
     const route = e.shelf === 'overig' ? '' : `Route ${e.shelf}`;
     return { name: e.name.trim(), adres: e.adres, postcode: e.postcode, plaats: e.plaats, land: e.land, route, colli: e.colli, colliOmschrijvingen: e.colliOmschrijvingen, spoed: e.spoed, orderedAt: now.toISOString() };
   });
-  const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}`;
+  // De orders bestaan nog niet als de print-link wordt gemaakt; met deze code
+  // haalt de link de order-ID's (voor de QR-code) later op via de functie order-ids.
+  const submissionId = newSubmissionId();
+  const printUrl = `${base}?printData=${encodePrintData(allPrintEntries)}&s=${submissionId}`;
 
   const payload: SubmitPayload = {
     submitted_at: now.toISOString(),
@@ -78,6 +102,7 @@ export async function submitToWebhook(
     cc_email: senderCcEmail.trim() || null,
     total_entries: entries.length,
     print_url: printUrl,
+    submission_id: submissionId,
     // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
     // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
     // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,
@@ -86,7 +111,7 @@ export async function submitToWebhook(
     entries: submitEntries,
   };
 
-  const [res] = await Promise.all([
+  const [res, forwardRes] = await Promise.all([
     fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,5 +128,5 @@ export async function submitToWebhook(
 
   // Het verzendtijdstip wordt teruggegeven zodat de labels exact dezelfde
   // datum/tijd tonen als de payload en de print-link.
-  return payload.submitted_at;
+  return { submittedAt: payload.submitted_at, orderIds: await readOrderIds(forwardRes) };
 }

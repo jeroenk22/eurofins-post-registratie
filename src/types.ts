@@ -31,6 +31,8 @@ export interface SubmitPayload {
   total_entries: number;
   entries: SubmitEntry[];
   print_url: string;
+  /** Willekeurige code per aanmelding; daaronder bewaart forward-webhook de order-ID's. */
+  submission_id: string;
 }
 
 export interface SubmitEntry {
