@@ -7,6 +7,7 @@ import {
   decodePrintData,
   printLabels,
   formatOrderDateTime,
+  qrSvg,
   type PrintEntry,
 } from "../services/printService";
 
@@ -125,7 +126,7 @@ describe("printLabels — order datum/tijd op het label", () => {
     // Het middelgrote lettertype (15pt naam) liep op dit formaat over de onderrand
     expect(writtenHtml).toContain('font-size: 12pt')
     expect(writtenHtml).not.toContain('font-size: 15pt')
-    expect(writtenHtml).toContain('padding: 2mm 4mm')
+    expect(writtenHtml).toContain('padding: 2mm;')
   })
 
   it("kapt een lange naam af zonder de datum te verdringen", () => {
@@ -137,6 +138,67 @@ describe("printLabels — order datum/tijd op het label", () => {
     })], format)
     expect(writtenHtml).toContain("31-08-2026 14:07")
     expect(writtenHtml).toContain("text-overflow: ellipsis")
+  })
+})
+
+describe("printLabels — Mendrix order-ID als QR-code", () => {
+  let writtenHtml: string
+
+  beforeEach(() => {
+    const mockDoc = { write: vi.fn((html: string) => { writtenHtml = html }), close: vi.fn() }
+    const mockWin = { document: mockDoc, focus: vi.fn(), print: vi.fn(), close: vi.fn() }
+    vi.stubGlobal('open', vi.fn().mockReturnValue(mockWin))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const makeEntry = (overrides: Partial<PrintEntry> = {}): PrintEntry => ({
+    name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "Route 6", colli: 1,
+    colliOmschrijvingen: [""], spoed: true, orderedAt: "2026-08-31T12:07:00.000Z", ...overrides,
+  })
+
+  it("zet een QR-code en het ordernummer op elk labelformaat", () => {
+    for (const format of LABEL_FORMATS) {
+      printLabels([makeEntry({ orderId: "1234567" })], format)
+      expect(writtenHtml, `formaat ${format.id}`).toContain('<svg class="qr"')
+      expect(writtenHtml, `formaat ${format.id}`).toContain("Order 1234567 · 31-08-2026 14:07")
+    }
+  })
+
+  it("zet de QR-code op elk collo-label", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!
+    printLabels([makeEntry({ colli: 3, colliOmschrijvingen: ["a", "b", "c"], orderId: "1234567" })], format)
+    expect(writtenHtml.match(/<svg class="qr"/g)).toHaveLength(3)
+  })
+
+  it("print het label zonder QR-code als er geen order-ID is", () => {
+    const format = LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!
+    printLabels([makeEntry()], format)
+    expect(writtenHtml).not.toContain('<svg class="qr"')
+    expect(writtenHtml).not.toContain("Order ")
+    expect(writtenHtml).toContain("31-08-2026 14:07")
+  })
+
+  it("maakt de QR-code kleiner op krappe formaten, zodat route en colli niet botsen", () => {
+    printLabels([makeEntry({ orderId: "1234567" })], LABEL_FORMATS.find(f => f.id === 'dymo_11354')!)
+    expect(writtenHtml).toMatch(/\.qr \{[^}]*width: 7mm/)
+    printLabels([makeEntry({ orderId: "1234567" })], LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!)
+    expect(writtenHtml).toMatch(/\.qr \{[^}]*width: 9mm/)
+  })
+})
+
+describe("qrSvg", () => {
+  it("maakt voor een ordernummer de kleinste QR-versie (21×21)", () => {
+    expect(qrSvg("1234567")).toContain('viewBox="0 0 21 21"')
+  })
+
+  it("tekent alleen vierkantjes, zonder de tekst zelf in de SVG", () => {
+    const svg = qrSvg("1234567")
+    expect(svg).toMatch(/<path d="(M\d+ \d+h1v1h-1z)+"\/>/)
+    expect(svg).not.toContain("1234567")
+  })
+
+  it("geeft verschillende codes voor verschillende ordernummers", () => {
+    expect(qrSvg("1234567")).not.toBe(qrSvg("1234568"))
   })
 })
 

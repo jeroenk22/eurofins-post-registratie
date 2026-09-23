@@ -20,13 +20,35 @@ export function isWebhookConfigured(): boolean {
   return !!url && url.length > 0;
 }
 
+export interface SubmitResult {
+  /** Verzendtijdstip (ISO) — hetzelfde als in de payload en de print-link. */
+  submittedAt: string;
+  /**
+   * Mendrix order-ID per entry (zelfde volgorde als de entries); `null` als de
+   * order niet is aangemaakt. Leeg als de order-koppeling niet bereikbaar was.
+   */
+  orderIds: (string | null)[];
+}
+
+/** Haalt de order-ID's uit het antwoord van forward-webhook; nooit een fout. */
+async function readOrderIds(res: Response | null): Promise<(string | null)[]> {
+  if (!res?.ok) return [];
+  try {
+    const data = (await res.json()) as { orderIds?: unknown };
+    if (!Array.isArray(data.orderIds)) return [];
+    return data.orderIds.map((id) => (typeof id === 'string' && id ? id : null));
+  } catch {
+    return [];
+  }
+}
+
 export async function submitToWebhook(
   entries: PostEntry[],
   senderName: string,
   senderPhone: string,
   senderEmail: string,
   senderCcEmail: string = '',
-): Promise<string> {
+): Promise<SubmitResult> {
   const url = getWebhookUrl();
   if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
 
@@ -86,7 +108,7 @@ export async function submitToWebhook(
     entries: submitEntries,
   };
 
-  const [res] = await Promise.all([
+  const [res, forwardRes] = await Promise.all([
     fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,5 +125,5 @@ export async function submitToWebhook(
 
   // Het verzendtijdstip wordt teruggegeven zodat de labels exact dezelfde
   // datum/tijd tonen als de payload en de print-link.
-  return payload.submitted_at;
+  return { submittedAt: payload.submitted_at, orderIds: await readOrderIds(forwardRes) };
 }

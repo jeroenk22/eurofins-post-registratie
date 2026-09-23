@@ -12,6 +12,8 @@ interface SuccessScreenProps {
   entries: PostEntry[];
   senderEmail: string;
   submittedAt: string;
+  /** Mendrix order-ID per entry (zelfde volgorde); komt als QR-code op het label. */
+  orderIds: (string | null)[];
   onReset: () => void;
 }
 
@@ -21,7 +23,7 @@ function formatRoute(entry: PostEntry): string {
   return "";
 }
 
-function toPrintEntry(e: PostEntry, submittedAt: string): PrintEntry {
+function toPrintEntry(e: PostEntry, submittedAt: string, orderId: string | null | undefined): PrintEntry {
   return {
     name: e.name,
     adres: e.adres,
@@ -33,6 +35,7 @@ function toPrintEntry(e: PostEntry, submittedAt: string): PrintEntry {
     colliOmschrijvingen: e.colliOmschrijvingen,
     spoed: e.spoed,
     orderedAt: submittedAt,
+    ...(orderId && { orderId }),
   };
 }
 
@@ -40,6 +43,7 @@ export default function SuccessScreen({
   entries,
   senderEmail,
   submittedAt,
+  orderIds,
   onReset,
 }: SuccessScreenProps) {
   const [formatId, setFormatId] = useState(() => getSelectedFormat().id);
@@ -52,11 +56,11 @@ export default function SuccessScreen({
   const totalColli = entries.reduce((sum, e) => sum + e.colli, 0);
 
   const handlePrintAll = () => {
-    printLabels(entries.map((e) => toPrintEntry(e, submittedAt)), getSelectedFormat());
+    printLabels(entries.map((e, i) => toPrintEntry(e, submittedAt, orderIds[i])), getSelectedFormat());
   };
 
-  const handlePrintEntry = (e: PostEntry) => {
-    printLabels([toPrintEntry(e, submittedAt)], getSelectedFormat());
+  const handlePrintEntry = (e: PostEntry, i: number) => {
+    printLabels([toPrintEntry(e, submittedAt, orderIds[i])], getSelectedFormat());
   };
 
   return (
@@ -112,7 +116,7 @@ export default function SuccessScreen({
               </div>
               <button
                 type="button"
-                onClick={() => handlePrintEntry(entry)}
+                onClick={() => handlePrintEntry(entry, i)}
                 className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-[0.97] transition-all"
               >
                 Print {entry.colli} {entry.colli === 1 ? "label" : "labels"}

@@ -1,3 +1,4 @@
+import QRCode from 'qrcode'
 import { MESTKLANT_SHORT_BY_LABEL } from '../mestklantOptions'
 
 export interface LabelFormat {
@@ -13,7 +14,8 @@ export const LABEL_FORMATS: LabelFormat[] = [
   { id: 'dymo_99012',      name: 'DYMO 99012 – groot adres (89×36mm)',  widthMm: 89,  heightMm: 36  },
   { id: 'dymo_11354',      name: 'DYMO 11354 – multipurpose (57×32mm)', widthMm: 57,  heightMm: 32  },
   { id: 'dymo_11352',      name: 'DYMO 11352 – klein (54×25mm)',         widthMm: 54,  heightMm: 25  },
-  { id: 'dymo_s0904980',   name: 'DYMO 99014 – verzending (54×101mm)',  widthMm: 54,  heightMm: 101 },
+  // 99014: rol van 54mm breed, liggend bedrukt — net als de andere rolformaten
+  { id: 'dymo_s0904980',   name: 'DYMO 99014 – verzending (101×54mm)',  widthMm: 101, heightMm: 54  },
   // Brother QL — DK-serie (landscape: rol is de korte kant, lengte is de brede kant)
   { id: 'brother_dk11201', name: 'Brother DK-11201 – adres (29×90mm)',       widthMm: 90, heightMm: 29  },
   { id: 'brother_dk11209', name: 'Brother DK-11209 – klein adres (29×62mm)', widthMm: 62, heightMm: 29  },
@@ -44,6 +46,26 @@ export interface PrintEntry {
   spoed: boolean
   land: string
   orderedAt?: string  // ISO-tijdstip waarop de order is aangemaakt (moment van versturen)
+  orderId?: string    // Mendrix order-ID; komt als QR-code op het label
+}
+
+/**
+ * Tekent een QR-code als SVG zonder witrand — de witruimte eromheen komt van
+ * de etiketmarges. Synchroon, zodat het printvenster direct binnen de klik
+ * geopend kan worden (anders grijpt de popup-blocker in).
+ */
+export function qrSvg(text: string): string {
+  // Hoogste foutcorrectie: een kort ordernummer past daarmee nog steeds in de
+  // kleinste QR-versie (21×21), en een vlek of kras op het etiket kan geen kwaad.
+  const { modules } = QRCode.create(text, { errorCorrectionLevel: 'H' })
+  const n = modules.size
+  let d = ''
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      if (modules.get(row, col)) d += `M${col} ${row}h1v1h-1z`
+    }
+  }
+  return `<svg class="qr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><path d="${d}"/></svg>`
 }
 
 /** Formatteert een ISO-tijdstip als "dd-mm-jjjj uu:mm" in Nederlandse tijd. */
@@ -71,7 +93,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   const useShortLabel = shortMm < 38
 
   // Flatten to individual labels
-  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean; omschrijving: string; datum: string }> = []
+  const labels: Array<{ name: string; adres: string; postcode: string; plaats: string; land: string; route: string; index: number; total: number; spoed: boolean; omschrijving: string; datum: string; orderId: string; qr: string }> = []
   for (const entry of entries) {
     // Strip the "(plaats)" suffix added by autocomplete value formatting, but only if it matches exactly
     const suffix = entry.plaats ? ` (${entry.plaats})` : ''
@@ -79,12 +101,14 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
       ? entry.name.slice(0, -suffix.length)
       : entry.name
     const datum = formatOrderDateTime(entry.orderedAt)
+    const orderId = entry.orderId?.trim() ?? ''
+    const qr = orderId ? qrSvg(orderId) : ''
     for (let i = 1; i <= entry.colli; i++) {
       const rawOmschrijving = entry.colliOmschrijvingen[i - 1] ?? ''
       const omschrijving = useShortLabel
         ? (MESTKLANT_SHORT_BY_LABEL[rawOmschrijving] ?? rawOmschrijving)
         : rawOmschrijving
-      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving, datum })
+      labels.push({ name: cleanName, adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route: entry.route, index: i, total: entry.colli, spoed: entry.spoed, omschrijving, datum, orderId, qr })
     }
   }
 
@@ -101,7 +125,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     fontRoute = '9pt'
     fontColli = '9pt'
     fontSpoed = '8pt'
-    fontDatum = '6pt'
+    fontDatum = '5.5pt'
   } else if (shortMm < 34) {
     // Tussenformaat (o.a. DYMO 11354, 57×32mm): te klein voor het middelgrote
     // lettertype — daarmee liep de inhoud over de onderrand.
@@ -110,33 +134,48 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     fontRoute = '11pt'
     fontColli = '11pt'
     fontSpoed = '9pt'
-    fontDatum = '6.5pt'
+    fontDatum = '6pt'
   } else if (shortMm <= 40) {
     fontName  = '15pt'
     fontAddr  = '11pt'
     fontRoute = '13pt'
     fontColli = '14pt'
     fontSpoed = '11pt'
-    fontDatum = '7pt'
+    fontDatum = '6.5pt'
   } else {
     fontName  = '16pt'
     fontAddr  = '12pt'
     fontRoute = '13pt'
     fontColli = '14pt'
     fontSpoed = '12pt'
-    fontDatum = '8pt'
+    fontDatum = '7.5pt'
   }
 
   // Op de kleinere etiketten is de hoogte krap: compactere marges maken ruimte
-  // vrij voor de datumregel zonder dat de bovenste regels wegvallen.
-  const tight     = shortMm < 34
-  const padY      = tight ? '2mm'   : '3mm'
+  // vrij voor de datumregel zonder dat de bovenste regels wegvallen. Ook DYMO
+  // 99012 (36mm) valt hieronder: die krijgt de letters van 38mm, en liep met de
+  // ruime marges tot op de onderrand.
+  const tight     = shortMm < 37
+  // Rondom dezelfde witrand. Niet onder de 2mm: links/rechts is de doorvoerrichting
+  // van de rol, en daar kan de printer het etiket iets verschoven bedrukken.
+  const pad       = tight ? '2mm'   : '3mm'
   const gapContent = tight ? '0.5mm' : '1mm'
   const gapDatum  = tight ? '0.3mm' : '0.8mm'
+  // Het SPOED-blok is het hoogste in de onderste regel; op de kleinste formaten
+  // (o.a. DYMO 11352, 54×25) liep de datumregel daardoor over de ondermarge.
+  const spoedPadY = shortMm < 30 ? '0.5mm' : '1mm'
+
+  // QR-code met het Mendrix order-ID, rechts naast de onderste regel en de datumregel.
+  // Op de smalle formaten (o.a. 57×32) botste "Route 6" anders tegen "1/1"; onder
+  // de 30mm is de onderste regel zo laag dat een grotere code het label oprekt.
+  const smallQr = shortMm < 34
+  const qrSize = shortMm < 30 ? '6.5mm' : smallQr ? '7mm' : '9mm'
+  const gapQr  = smallQr ? '1.5mm' : '2mm'
 
   const labelHtml = labels.map((l, i) => {
     const isLast = i === labels.length - 1
     const postcodeplaats = [l.postcode, l.plaats].filter(Boolean).join('  ')
+    const datumRegel = [l.orderId && `Order ${l.orderId}`, l.datum].filter(Boolean).join(' · ')
     return `<div class="label" style="break-after:${isLast ? 'avoid' : 'page'}">
   <div class="content">
     <div class="name">${escapeHtml(l.name)}</div>
@@ -144,14 +183,19 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     ${postcodeplaats ? `<div class="addr">${escapeHtml(postcodeplaats)}</div>` : ''}
     ${(l.land || l.omschrijving) ? `<div class="land-row"><span class="addr">${escapeHtml(l.land)}</span>${l.omschrijving ? `<span class="omschrijving">${escapeHtml(l.omschrijving)}</span>` : ''}</div>` : ''}
   </div>
-  <div class="bottom">
-    <div class="bottom-left">
-      ${l.spoed ? `<div class="spoed">SPOED</div>` : ''}
-      ${l.route ? `<div class="route">${escapeHtml(l.route)}</div>` : ''}
+  <div class="footer">
+    <div class="footer-main">
+      <div class="bottom">
+        <div class="bottom-left">
+          ${l.spoed ? `<div class="spoed">SPOED</div>` : ''}
+          ${l.route ? `<div class="route">${escapeHtml(l.route)}</div>` : ''}
+        </div>
+        <div class="colli">${l.index}/${l.total}</div>
+      </div>
+      ${datumRegel ? `<div class="datum">${escapeHtml(datumRegel)}</div>` : ''}
     </div>
-    <div class="colli">${l.index}/${l.total}</div>
+    ${l.qr}
   </div>
-  ${l.datum ? `<div class="datum">${escapeHtml(l.datum)}</div>` : ''}
 </div>`
   }).join('\n')
 
@@ -174,7 +218,7 @@ body {
 .label {
   width: ${widthMm}mm;
   height: ${heightMm}mm;
-  padding: ${padY} 4mm;
+  padding: ${pad};
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -195,6 +239,9 @@ body {
 .name {
   font-size: ${fontName};
   font-weight: bold;
+  /* De regelhoogte laat wit boven de hoofdletters; zonder deze correctie oogt
+     de bovenrand ruim 1mm breder dan de andere randen */
+  margin-top: -0.2em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -214,14 +261,33 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.footer {
+  display: flex;
+  align-items: flex-end;
+  gap: ${gapQr};
+}
+.footer-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.qr {
+  display: block;
+  width: ${qrSize};
+  height: ${qrSize};
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+/* SPOED, route en colli op één grondlijn, zodat "1/1" niet lager staat dan "Route 6" */
 .bottom {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: baseline;
 }
 .bottom-left {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 2mm;
 }
 .route {
@@ -234,7 +300,7 @@ body {
   font-weight: bold;
   color: #fff;
   background: red;
-  padding: 1mm 2.5mm;
+  padding: ${spoedPadY} 2.5mm;
   border-radius: 1mm;
   letter-spacing: 0.5pt;
 }
@@ -252,9 +318,12 @@ body {
   font-size: ${fontDatum};
   color: #555;
   line-height: 1.1;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
   margin-top: ${gapDatum};
+  /* De ruimte onder de grondlijn (voor letters als g en p) valt buiten de regel,
+     zodat de cijfers precies op de onderkant van de QR-code staan */
+  margin-bottom: -0.2em;
   flex-shrink: 0;
 }
 .omschrijving {

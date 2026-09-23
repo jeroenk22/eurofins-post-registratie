@@ -40,7 +40,30 @@ export default async (request: Request): Promise<Response> => {
     body,
   });
 
-  return new Response(JSON.stringify({ ok: res.ok, status: res.status }), {
+  // De Mendrix order-ID's gaan terug naar de app, voor de QR-code op het label.
+  // Alleen de ID's — de rest van het antwoord (o.a. SOAP-respons) blijft hier.
+  const orderIds = res.ok ? await readOrderIds(res) : [];
+
+  return new Response(JSON.stringify({ ok: res.ok, status: res.status, orderIds }), {
     status: res.ok ? 200 : 502,
   });
 };
+
+/**
+ * Leest per entry het order-ID uit het antwoord van create-order
+ * (`{ resultaten: [{ succes, orderId }] }`, in dezelfde volgorde als de entries).
+ * Een mislukte entry of een onverwacht antwoord geeft `null` / een lege lijst.
+ */
+async function readOrderIds(res: Response): Promise<(string | null)[]> {
+  try {
+    const data = (await res.json()) as { resultaten?: unknown };
+    if (!Array.isArray(data.resultaten)) return [];
+    return data.resultaten.map((r) => {
+      const { succes, orderId } = (r ?? {}) as { succes?: unknown; orderId?: unknown };
+      const id = String(orderId ?? '').trim();
+      return succes === true && /^\d+$/.test(id) ? id : null;
+    });
+  } catch {
+    return [];
+  }
+}

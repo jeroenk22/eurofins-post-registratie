@@ -84,4 +84,56 @@ describe('forward-webhook', () => {
     const res = await handler(req)
     expect(res.status).toBe(502)
   })
+
+  describe("Mendrix order-ID's", () => {
+    const post = () => handler(new Request('https://site.com/.netlify/functions/forward-webhook', {
+      method: 'POST',
+      body: JSON.stringify({ test: 1 }),
+    }))
+    const createOrderAntwoord = (body: unknown) =>
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(body) }))
+
+    it('geeft per entry het order-ID terug, null voor een mislukte entry', async () => {
+      createOrderAntwoord({ resultaten: [
+        { succes: true, orderId: '1234567', resultaat: 'srInserted' },
+        { succes: false, fout: 'SOAP fout: timeout' },
+      ] })
+      const body = await (await post()).json()
+      expect(body.orderIds).toEqual(['1234567', null])
+    })
+
+    it("stuurt alleen de ID's terug, niet de rest van het create-order antwoord", async () => {
+      createOrderAntwoord({ resultaten: [{ succes: true, orderId: '1', clResponse: '<geheim/>', fotos: [] }] })
+      const body = await (await post()).json()
+      expect(Object.keys(body).sort()).toEqual(['ok', 'orderIds', 'status'])
+      expect(JSON.stringify(body)).not.toContain('geheim')
+    })
+
+    it("accepteert alleen numerieke order-ID's", async () => {
+      createOrderAntwoord({ resultaten: [
+        { succes: true, orderId: 42 },
+        { succes: true, orderId: '<script>' },
+        { succes: true, orderId: '' },
+      ] })
+      const body = await (await post()).json()
+      expect(body.orderIds).toEqual(['42', null, null])
+    })
+
+    it('geeft een lege lijst bij een onverwacht of ongeldig antwoord', async () => {
+      createOrderAntwoord({ iets: 'anders' })
+      expect((await (await post()).json()).orderIds).toEqual([])
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.reject(new SyntaxError('x')) }))
+      const res = await post()
+      expect(res.status).toBe(200)
+      expect((await res.json()).orderIds).toEqual([])
+    })
+
+    it('geeft een lege lijst als create-order een fout geeft', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({ resultaten: [{ succes: true, orderId: '1' }] }) }))
+      const res = await post()
+      expect(res.status).toBe(502)
+      expect((await res.json()).orderIds).toEqual([])
+    })
+  })
 })

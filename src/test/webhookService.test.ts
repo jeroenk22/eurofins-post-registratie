@@ -339,12 +339,15 @@ describe("submitToWebhook", () => {
       .mockResolvedValueOnce({ ok: true })   // hoofdwebhook slaagt
       .mockRejectedValueOnce(new Error("proxy down")) // proxy faalt
     );
-    await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).resolves.toEqual(expect.any(String));
+    await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).resolves.toEqual({
+      submittedAt: expect.any(String),
+      orderIds: [],
+    });
   });
 
   it("geeft het verzendtijdstip terug dat ook in de payload staat", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
-    const sentAt = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const { submittedAt: sentAt } = await submitToWebhook([makeEntry()], "Sophie", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
     );
@@ -353,13 +356,55 @@ describe("submitToWebhook", () => {
 
   it("zet het verzendtijdstip in de print-link zodat het op de labels komt", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
-    const sentAt = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const { submittedAt: sentAt } = await submitToWebhook([makeEntry()], "Sophie", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
     );
     const encoded = new URL(body.print_url).searchParams.get("printData")!;
     const printEntries = decodePrintData(encoded)!;
     expect(printEntries[0].orderedAt).toBe(sentAt);
+  });
+});
+
+describe("submitToWebhook — Mendrix order-ID's", () => {
+  beforeEach(() => vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test"));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  const forwardAntwoord = (body: unknown) => ({ ok: true, json: () => Promise.resolve(body) });
+
+  it("geeft de order-ID's uit het forward-webhook antwoord terug, per entry", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce(forwardAntwoord({ ok: true, status: 200, orderIds: ["1234567", null] })));
+    const { orderIds } = await submitToWebhook([makeEntry(), makeEntry({ id: "test-2" })], "Sophie", "", "");
+    expect(orderIds).toEqual(["1234567", null]);
+  });
+
+  it("geeft een lege lijst als de forward-webhook een fout geeft", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, status: 502, json: () => Promise.resolve({ orderIds: ["1"] }) }));
+    const { orderIds } = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect(orderIds).toEqual([]);
+  });
+
+  it("geeft een lege lijst als het antwoord geen geldige JSON is", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.reject(new SyntaxError("geen JSON")) }));
+    const { orderIds } = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect(orderIds).toEqual([]);
+  });
+
+  it("maakt van onverwachte waarden null", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce(forwardAntwoord({ orderIds: [123, "", "42"] })));
+    const { orderIds } = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect(orderIds).toEqual([null, null, "42"]);
   });
 });
 
