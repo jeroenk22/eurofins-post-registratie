@@ -8,11 +8,12 @@ const mockConfig = vi.hoisted(() => ({
 vi.mock('../../netlify/allowed-ips.ts', () => mockConfig)
 
 import handler from '../../netlify/edge-functions/ip-guard'
+import { CLIENT_IP_HEADER } from '../../netlify/client-ip'
 
 function makeContext(ip: string) {
   return {
     ip,
-    next: vi.fn(() => Promise.resolve(new Response('ok'))),
+    next: vi.fn((_request?: Request) => Promise.resolve(new Response('ok'))),
   }
 }
 
@@ -59,5 +60,33 @@ describe('ip-guard', () => {
     expect(json.filterEnabled).toBe(true)
     expect(json.allowed).toBe(false)
     expect(json.allowedIps).toBeUndefined()
+  })
+
+  describe('echt IP doorgeven aan de functies', () => {
+    it('zet het IP als header op een verzoek naar een functie, ook met een body', async () => {
+      mockConfig.FILTER_ENABLED = false
+      const context = makeContext('195.222.119.185')
+      await handler(new Request('https://example.com/.netlify/functions/forward-webhook', {
+        method: 'POST', body: '{"entries":[]}',
+      }), context)
+      const doorgegeven = context.next.mock.calls[0][0]!
+      expect(doorgegeven.headers.get(CLIENT_IP_HEADER)).toBe('195.222.119.185')
+      expect(doorgegeven.method).toBe('POST')
+      expect(await doorgegeven.text()).toBe('{"entries":[]}')
+    })
+
+    it('overschrijft een header die de browser zelf meestuurt', async () => {
+      const context = makeContext('1.1.1.1')
+      await handler(new Request('https://example.com/.netlify/functions/forward-webhook', {
+        method: 'POST', headers: { [CLIENT_IP_HEADER]: '6.6.6.6' }, body: '{}',
+      }), context)
+      expect(context.next.mock.calls[0][0]!.headers.get(CLIENT_IP_HEADER)).toBe('1.1.1.1')
+    })
+
+    it('laat andere verzoeken ongemoeid', async () => {
+      const context = makeContext('1.1.1.1')
+      await handler(new Request('https://example.com/index.html'), context)
+      expect(context.next.mock.calls[0][0]).toBeUndefined()
+    })
   })
 })

@@ -66,6 +66,41 @@ describe('forward-webhook', () => {
     expect(JSON.parse((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body as string).client_ip).toBeNull()
   })
 
+  describe('bron van het IP', () => {
+    const clientIpNa = async (headers: Record<string, string>, context?: Partial<Context>) => {
+      vi.mocked(fetch).mockClear()
+      await handler(new Request('https://site.com/.netlify/functions/forward-webhook', {
+        method: 'POST', headers, body: JSON.stringify({ entries: [] }),
+      }), context as Context)
+      return JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string).client_ip
+    }
+
+    it('valt terug op x-nf-client-connection-ip als context.ip leeg is', async () => {
+      expect(await clientIpNa({ 'x-nf-client-connection-ip': '195.222.119.185' }, { ip: '' })).toBe('195.222.119.185')
+      expect(await clientIpNa({ 'x-nf-client-connection-ip': '195.222.119.185' })).toBe('195.222.119.185')
+    })
+
+    it('gebruikt x-forwarded-for niet: dat kan de browser zelf meesturen', async () => {
+      expect(await clientIpNa({ 'x-forwarded-for': '6.6.6.6' })).toBeNull()
+    })
+
+    it('slaat een ongeldige waarde over', async () => {
+      expect(await clientIpNa({ 'x-nf-client-connection-ip': '195.222.119.185' }, { ip: 'onbekend' })).toBe('195.222.119.185')
+    })
+
+    it('de header van ip-guard gaat voor op context.ip (dat is dan het adres van de edge)', async () => {
+      expect(await clientIpNa({ 'x-postapp-client-ip': '86.95.240.163', 'x-nf-client-connection-ip': '18.197.32.167' }, { ip: '18.197.32.167' })).toBe('86.95.240.163')
+    })
+
+    it('context.ip gaat voor als die geldig is', async () => {
+      expect(await clientIpNa({ 'x-nf-client-connection-ip': '1.1.1.1' }, { ip: '195.222.119.185' })).toBe('195.222.119.185')
+    })
+
+    it('ondersteunt IPv6', async () => {
+      expect(await clientIpNa({}, { ip: '2a02:a46f:ff52:0:1::1' })).toBe('2a02:a46f:ff52:0:1::1')
+    })
+  })
+
   it('ondertekent de body mét het IP, zodat create-order het kan vertrouwen', async () => {
     const { createHmac } = await import('node:crypto')
     const req = new Request('https://site.com/.netlify/functions/forward-webhook', {

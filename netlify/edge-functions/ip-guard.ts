@@ -1,8 +1,9 @@
 import { FILTER_ENABLED, ALLOWED_IPS } from '../allowed-ips.ts'
+import { CLIENT_IP_HEADER } from '../client-ip.ts'
 
 export default async function handler(
   request: Request,
-  context: { ip: string; next: () => Promise<Response> },
+  context: { ip: string; next: (request?: Request) => Promise<Response> },
 ) {
   const clientIp = context.ip ?? 'onbekend'
 
@@ -19,14 +20,24 @@ export default async function handler(
     )
   }
 
-  if (!FILTER_ENABLED) return context.next()
-
-  if (ALLOWED_IPS.includes(clientIp)) return context.next()
+  if (!FILTER_ENABLED || ALLOWED_IPS.includes(clientIp)) return context.next(withClientIpHeader(request, url, clientIp))
 
   return new Response(blockedHtml(clientIp), {
     status: 403,
     headers: { 'content-type': 'text/html; charset=utf-8' },
   })
+}
+
+/**
+ * Functies achter deze edge function zien als context.ip het adres van de edge,
+ * niet dat van de gebruiker. Daarom geven we het echte IP als header door;
+ * een meegestuurde waarde van de browser wordt overschreven.
+ */
+function withClientIpHeader(request: Request, url: URL, clientIp: string): Request | undefined {
+  if (!url.pathname.startsWith('/.netlify/functions/')) return undefined
+  const headers = new Headers(request.headers)
+  headers.set(CLIENT_IP_HEADER, clientIp)
+  return new Request(request, { headers })
 }
 
 function blockedHtml(ip: string): string {
