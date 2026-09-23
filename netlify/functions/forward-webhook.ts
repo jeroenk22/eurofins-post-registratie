@@ -1,9 +1,10 @@
 import { getStore } from '@netlify/blobs';
+import type { Context } from '@netlify/functions';
 
 /** Zelfde vorm als newSubmissionId() in de app: 16 tekens base64url. */
 const SUBMISSION_ID_PATTERN = /^[A-Za-z0-9_-]{16}$/;
 
-export default async (request: Request): Promise<Response> => {
+export default async (request: Request, context?: Context): Promise<Response> => {
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
@@ -16,7 +17,7 @@ export default async (request: Request): Promise<Response> => {
     return new Response(JSON.stringify({ error: 'Not configured' }), { status: 500 });
   }
 
-  const body = await request.text();
+  const body = withClientIp(await request.text(), context?.ip);
   const timestamp = Math.floor(Date.now() / 1000).toString();
 
   const key = await crypto.subtle.importKey(
@@ -57,6 +58,21 @@ export default async (request: Request): Promise<Response> => {
     status: res.ok ? 200 : 502,
   });
 };
+
+/**
+ * Zet het IP van de gebruiker in de body. create-order ziet zelf alleen het
+ * (wisselende) AWS-adres van deze functie. In de body valt het onder de
+ * HMAC-handtekening; een meegestuurde waarde van de browser wordt overschreven.
+ */
+function withClientIp(body: string, ip: string | undefined): string {
+  try {
+    const data: unknown = JSON.parse(body);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return body;
+    return JSON.stringify({ ...data, client_ip: ip || null });
+  } catch {
+    return body;
+  }
+}
 
 function readSubmissionId(body: string): string | null {
   try {
