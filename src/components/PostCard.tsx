@@ -28,9 +28,10 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
   const [andersIndices, setAndersIndices] = useState<Set<number>>(new Set())
 
   // Gekozen uit de lijst, maar de rij in de sheet is onvolledig: wel verzenden,
-  // maar laten zien zodat de sheet aangevuld wordt (Mendrix krijgt dan geen volledig adres).
+  // maar laten zien zodat de sheet aangevuld wordt (Mendrix krijgt dan geen volledig adres;
+  // een leeg land wordt Nederland, wat voor DE/BE de verkeerde klant in Mendrix geeft).
   const ontbrekendeAdresvelden = entry.recipientType
-    ? ([['adres', entry.adres], ['postcode', entry.postcode], ['plaats', entry.plaats]] as const)
+    ? ([['adres', entry.adres], ['postcode', entry.postcode], ['plaats', entry.plaats], ['land', entry.land]] as const)
         .filter(([, v]) => !v.trim())
         .map(([veld]) => veld)
     : []

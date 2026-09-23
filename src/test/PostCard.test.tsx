@@ -553,6 +553,11 @@ describe('PostCard — waarschuwing onvolledig adres', () => {
     expect(screen.getByText(/adres onvolledig/i)).toHaveTextContent('(postcode, plaats ontbreekt)')
   })
 
+  it('noemt ook een leeg land', () => {
+    renderEntry({ ...baseEntry, ...compleet, postcode: '', plaats: '', land: '', name: 'AB00 - Jeroen Test', recipientType: 'Monsternemers' })
+    expect(screen.getByText(/adres onvolledig/i)).toHaveTextContent('(postcode, plaats, land ontbreekt)')
+  })
+
   it('toont geen waarschuwing zolang er niet uit de lijst gekozen is', () => {
     renderEntry({ ...baseEntry, name: 'Jan' })
     expect(screen.queryByText(/adres onvolledig/i)).not.toBeInTheDocument()
