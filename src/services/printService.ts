@@ -6,16 +6,27 @@ export interface LabelFormat {
   name: string
   widthMm: number
   heightMm: number
+  /**
+   * Hoeveel mm de printer aan de rechterkant van het etiket niet bedrukt. Het
+   * printvoorbeeld van Chrome laat dat niet zien; gemeten met een meetetiket.
+   */
+  unprintableRightMm?: number
 }
+
+// DYMO LabelWriter 450 slaat de laatste 5-6mm aan de rechterkant over (gemeten op
+// 99012 met een meetetiket). De andere DYMO-rollen gaan door dezelfde driver.
+const DYMO_UNPRINTABLE_RIGHT_MM = 6
+// Speling tussen de inhoud en het onbedrukbare stuk
+const UNPRINTABLE_SAFETY_MM = 1.5
 
 export const LABEL_FORMATS: LabelFormat[] = [
   // DYMO LabelWriter
-  { id: 'dymo_99010',      name: 'DYMO 99010 – adres (89×28mm)',        widthMm: 89,  heightMm: 28  },
-  { id: 'dymo_99012',      name: 'DYMO 99012 – groot adres (89×36mm)',  widthMm: 89,  heightMm: 36  },
-  { id: 'dymo_11354',      name: 'DYMO 11354 – multipurpose (57×32mm)', widthMm: 57,  heightMm: 32  },
-  { id: 'dymo_11352',      name: 'DYMO 11352 – klein (54×25mm)',         widthMm: 54,  heightMm: 25  },
+  { id: 'dymo_99010',      name: 'DYMO 99010 – adres (89×28mm)',        widthMm: 89,  heightMm: 28,  unprintableRightMm: DYMO_UNPRINTABLE_RIGHT_MM },
+  { id: 'dymo_99012',      name: 'DYMO 99012 – groot adres (89×36mm)',  widthMm: 89,  heightMm: 36,  unprintableRightMm: DYMO_UNPRINTABLE_RIGHT_MM },
+  { id: 'dymo_11354',      name: 'DYMO 11354 – multipurpose (57×32mm)', widthMm: 57,  heightMm: 32,  unprintableRightMm: DYMO_UNPRINTABLE_RIGHT_MM },
+  { id: 'dymo_11352',      name: 'DYMO 11352 – klein (54×25mm)',         widthMm: 54,  heightMm: 25,  unprintableRightMm: DYMO_UNPRINTABLE_RIGHT_MM },
   // 99014: rol van 54mm breed, liggend bedrukt — net als de andere rolformaten
-  { id: 'dymo_s0904980',   name: 'DYMO 99014 – verzending (101×54mm)',  widthMm: 101, heightMm: 54  },
+  { id: 'dymo_s0904980',   name: 'DYMO 99014 – verzending (101×54mm)',  widthMm: 101, heightMm: 54,  unprintableRightMm: DYMO_UNPRINTABLE_RIGHT_MM },
   // Brother QL — DK-serie (landscape: rol is de korte kant, lengte is de brede kant)
   { id: 'brother_dk11201', name: 'Brother DK-11201 – adres (29×90mm)',       widthMm: 90, heightMm: 29  },
   { id: 'brother_dk11209', name: 'Brother DK-11209 – klein adres (29×62mm)', widthMm: 62, heightMm: 29  },
@@ -125,7 +136,7 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     fontRoute = '9pt'
     fontColli = '9pt'
     fontSpoed = '8pt'
-    fontDatum = '5.5pt'
+    fontDatum = '6pt'
   } else if (shortMm < 34) {
     // Tussenformaat (o.a. DYMO 11354, 57×32mm): te klein voor het middelgrote
     // lettertype — daarmee liep de inhoud over de onderrand.
@@ -134,21 +145,21 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
     fontRoute = '11pt'
     fontColli = '11pt'
     fontSpoed = '9pt'
-    fontDatum = '6pt'
+    fontDatum = '6.5pt'
   } else if (shortMm <= 40) {
     fontName  = '15pt'
     fontAddr  = '11pt'
     fontRoute = '13pt'
     fontColli = '14pt'
     fontSpoed = '11pt'
-    fontDatum = '6.5pt'
+    fontDatum = '7pt'
   } else {
     fontName  = '16pt'
     fontAddr  = '12pt'
     fontRoute = '13pt'
     fontColli = '14pt'
     fontSpoed = '12pt'
-    fontDatum = '7.5pt'
+    fontDatum = '8pt'
   }
 
   // Op de kleinere etiketten is de hoogte krap: compactere marges maken ruimte
@@ -159,11 +170,20 @@ export function printLabels(entries: PrintEntry[], format: LabelFormat): void {
   // Rondom dezelfde witrand. Niet onder de 2mm: links/rechts is de doorvoerrichting
   // van de rol, en daar kan de printer het etiket iets verschoven bedrukken.
   const pad       = tight ? '2mm'   : '3mm'
+  // Rechts nooit in het stuk dat de printer overslaat
+  const padRight  = format.unprintableRightMm
+    ? `${Math.max(parseFloat(pad), format.unprintableRightMm + UNPRINTABLE_SAFETY_MM)}mm`
+    : pad
   const gapContent = tight ? '0.5mm' : '1mm'
   const gapDatum  = tight ? '0.3mm' : '0.8mm'
   // Het SPOED-blok is het hoogste in de onderste regel; op de kleinste formaten
   // (o.a. DYMO 11352, 54×25) liep de datumregel daardoor over de ondermarge.
   const spoedPadY = shortMm < 30 ? '0.5mm' : '1mm'
+  // Smal etiket (o.a. 57×32 en 54×25 met de onbedrukbare DYMO-rand): compacter
+  // SPOED-blok en kleinere tussenruimte, anders botst "Route 6" tegen "1/1".
+  const compact   = widthMm - parseFloat(pad) - parseFloat(padRight) < 50
+  const spoedPadX = compact ? '1.5mm' : '2.5mm'
+  const gapBottom = compact ? '1.5mm' : '2mm'
 
   // QR-code met het Mendrix order-ID, rechts naast de onderste regel en de datumregel.
   // Op de smalle formaten (o.a. 57×32) botste "Route 6" anders tegen "1/1"; onder
@@ -218,7 +238,7 @@ body {
 .label {
   width: ${widthMm}mm;
   height: ${heightMm}mm;
-  padding: ${pad};
+  padding: ${pad} ${padRight} ${pad} ${pad};
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -288,7 +308,7 @@ body {
 .bottom-left {
   display: flex;
   align-items: baseline;
-  gap: 2mm;
+  gap: ${gapBottom};
 }
 .route {
   font-size: ${fontRoute};
@@ -300,7 +320,7 @@ body {
   font-weight: bold;
   color: #fff;
   background: red;
-  padding: ${spoedPadY} 2.5mm;
+  padding: ${spoedPadY} ${spoedPadX};
   border-radius: 1mm;
   letter-spacing: 0.5pt;
 }

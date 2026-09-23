@@ -126,7 +126,7 @@ describe("printLabels — order datum/tijd op het label", () => {
     // Het middelgrote lettertype (15pt naam) liep op dit formaat over de onderrand
     expect(writtenHtml).toContain('font-size: 12pt')
     expect(writtenHtml).not.toContain('font-size: 15pt')
-    expect(writtenHtml).toContain('padding: 2mm;')
+    expect(writtenHtml).toContain('padding: 2mm 7.5mm 2mm 2mm;')
   })
 
   it("kapt een lange naam af zonder de datum te verdringen", () => {
@@ -183,6 +183,43 @@ describe("printLabels — Mendrix order-ID als QR-code", () => {
     expect(writtenHtml).toMatch(/\.qr \{[^}]*width: 7mm/)
     printLabels([makeEntry({ orderId: "1234567" })], LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!)
     expect(writtenHtml).toMatch(/\.qr \{[^}]*width: 9mm/)
+  })
+})
+
+describe("printLabels — marges binnen het bedrukbare gebied", () => {
+  let writtenHtml: string
+
+  beforeEach(() => {
+    const mockDoc = { write: vi.fn((html: string) => { writtenHtml = html }), close: vi.fn() }
+    const mockWin = { document: mockDoc, focus: vi.fn(), print: vi.fn(), close: vi.fn() }
+    vi.stubGlobal('open', vi.fn().mockReturnValue(mockWin))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const entry: PrintEntry = { name: "Jan", adres: "", postcode: "", plaats: "", land: "", route: "Route 6", colli: 1, colliOmschrijvingen: [""], spoed: true }
+  const padding = (id: string) => {
+    printLabels([entry], LABEL_FORMATS.find(f => f.id === id)!)
+    return writtenHtml.match(/\.label \{[^}]*padding: ([^;]+);/)![1]
+  }
+
+  it("houdt op DYMO rechts het onbedrukbare stuk plus speling vrij", () => {
+    // DYMO LabelWriter slaat de laatste 5-6mm rechts over (gemeten met een meetetiket)
+    for (const f of LABEL_FORMATS.filter(f => f.id.startsWith('dymo_'))) {
+      expect(f.unprintableRightMm, f.id).toBe(6)
+      expect(padding(f.id), f.id).toMatch(/^\d+mm 7\.5mm \d+mm \d+mm$/)
+    }
+  })
+
+  it("gebruikt rondom dezelfde rand als er niets onbedrukbaar is", () => {
+    expect(padding('brother_dk11208')).toBe('3mm 3mm 3mm 3mm')
+    expect(padding('brother_dk11201')).toBe('2mm 2mm 2mm 2mm')
+  })
+
+  it("maakt de onderste regel compacter op smalle etiketten", () => {
+    printLabels([entry], LABEL_FORMATS.find(f => f.id === 'dymo_11354')!)
+    expect(writtenHtml).toMatch(/\.spoed \{[^}]*padding: 1mm 1\.5mm/)
+    printLabels([entry], LABEL_FORMATS.find(f => f.id === 'brother_dk11208')!)
+    expect(writtenHtml).toMatch(/\.spoed \{[^}]*padding: 1mm 2\.5mm/)
   })
 })
 
