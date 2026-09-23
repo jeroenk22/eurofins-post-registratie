@@ -304,7 +304,7 @@ describe("submitToWebhook", () => {
     expect(proxyBody).toBe(makeBody);
   });
 
-  it("stuurt adresgegevens als null bij lege velden", async () => {
+  it("stuurt adresgegevens als null bij lege velden, en land als Nederland", async () => {
     vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ adres: '', postcode: '', plaats: '', land: '' });
     await submitToWebhook([entry], "Sophie", "", "");
@@ -314,7 +314,8 @@ describe("submitToWebhook", () => {
     expect(body.entries[0].adres).toBeNull();
     expect(body.entries[0].postcode).toBeNull();
     expect(body.entries[0].plaats).toBeNull();
-    expect(body.entries[0].land).toBeNull();
+    // null liet create-order crashen en daarmee de hele aanmelding
+    expect(body.entries[0].land).toBe("Nederland");
   });
 
   it("stuurt app_version mee in de payload", async () => {
