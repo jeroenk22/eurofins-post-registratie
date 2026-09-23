@@ -61,15 +61,15 @@ export default async (request: Request, context?: Context): Promise<Response> =>
 };
 
 /**
- * Het IP van de gebruiker: context.ip, en anders de headers die Netlify zelf zet.
+ * Het IP van de gebruiker: context.ip, en anders de header die Netlify zelf zet.
  * In productie bleek context.ip niet bruikbaar (create-order logde nog het
  * AWS-adres); de log laat zien welke bron het werd, voor de whitelist.
+ * Bewust niet x-forwarded-for: het eerste adres daarin kan de browser zelf meesturen.
  */
 function resolveClientIp(request: Request, context: Context | undefined): string | undefined {
   const bronnen: [string, string | undefined][] = [
     ['context.ip', context?.ip],
     ['x-nf-client-connection-ip', request.headers.get('x-nf-client-connection-ip') ?? undefined],
-    ['x-forwarded-for', request.headers.get('x-forwarded-for')?.split(',')[0]],
   ];
   const gevonden = bronnen.find(([, v]) => v && isIP(v.trim()));
   console.log(

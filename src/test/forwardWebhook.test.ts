@@ -80,8 +80,8 @@ describe('forward-webhook', () => {
       expect(await clientIpNa({ 'x-nf-client-connection-ip': '195.222.119.185' })).toBe('195.222.119.185')
     })
 
-    it('valt daarna terug op het eerste adres uit x-forwarded-for', async () => {
-      expect(await clientIpNa({ 'x-forwarded-for': '195.222.119.185, 10.0.0.1' })).toBe('195.222.119.185')
+    it('gebruikt x-forwarded-for niet: dat kan de browser zelf meesturen', async () => {
+      expect(await clientIpNa({ 'x-forwarded-for': '6.6.6.6' })).toBeNull()
     })
 
     it('slaat een ongeldige waarde over', async () => {
