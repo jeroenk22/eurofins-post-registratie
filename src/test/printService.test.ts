@@ -126,7 +126,7 @@ describe("printLabels — order datum/tijd op het label", () => {
     // Het middelgrote lettertype (15pt naam) liep op dit formaat over de onderrand
     expect(writtenHtml).toContain('font-size: 12pt')
     expect(writtenHtml).not.toContain('font-size: 15pt')
-    expect(writtenHtml).toContain('padding: 2mm 7.5mm 2mm 2mm;')
+    expect(writtenHtml).toContain('padding: 2mm 6.5mm 2mm 2mm;')
   })
 
   it("kapt een lange naam af zonder de datum te verdringen", () => {
@@ -203,10 +203,10 @@ describe("printLabels — marges binnen het bedrukbare gebied", () => {
   }
 
   it("houdt op DYMO rechts het onbedrukbare stuk plus speling vrij", () => {
-    // DYMO LabelWriter slaat de laatste 5-6mm rechts over (gemeten met een meetetiket)
+    // DYMO LabelWriter bedrukt rechts de laatste 5-6mm niet (gemeten met een meetetiket)
     for (const f of LABEL_FORMATS.filter(f => f.id.startsWith('dymo_'))) {
       expect(f.unprintableRightMm, f.id).toBe(6)
-      expect(padding(f.id), f.id).toMatch(/^\d+mm 7\.5mm \d+mm \d+mm$/)
+      expect(padding(f.id), f.id).toMatch(/^\d+mm 6\.5mm \d+mm \d+mm$/)
     }
   })
 

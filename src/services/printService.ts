@@ -13,11 +13,14 @@ export interface LabelFormat {
   unprintableRightMm?: number
 }
 
-// DYMO LabelWriter 450 slaat de laatste 5-6mm aan de rechterkant over (gemeten op
-// 99012 met een meetetiket). De andere DYMO-rollen gaan door dezelfde driver.
+// DYMO LabelWriter 450 bedrukt een 99012 (89mm) van ~1,5mm tot ~83,5mm: links valt
+// ~1,5mm weg, rechts 5-6mm (gemeten met een meetetiket, marges op Standaard). De
+// andere DYMO-rollen gaan door dezelfde driver. Links is de gewone rand van 2mm
+// genoeg; rechts moet de inhoud vóór de lijn op 6mm blijven.
 const DYMO_UNPRINTABLE_RIGHT_MM = 6
-// Speling tussen de inhoud en het onbedrukbare stuk
-const UNPRINTABLE_SAFETY_MM = 1.5
+// Speling binnen het laatst bedrukte millimeterstreepje. Niet het etiket kleiner
+// laten maken via een extra marge in Chrome: dat krimpt alles en wint geen ruimte.
+const UNPRINTABLE_SAFETY_MM = 0.5
 
 export const LABEL_FORMATS: LabelFormat[] = [
   // DYMO LabelWriter
