@@ -1,5 +1,6 @@
 import { getStore } from '@netlify/blobs';
 import type { Context } from '@netlify/functions';
+import { isIP } from 'node:net';
 
 /** Zelfde vorm als newSubmissionId() in de app: 16 tekens base64url. */
 const SUBMISSION_ID_PATTERN = /^[A-Za-z0-9_-]{16}$/;
@@ -17,7 +18,7 @@ export default async (request: Request, context?: Context): Promise<Response> =>
     return new Response(JSON.stringify({ error: 'Not configured' }), { status: 500 });
   }
 
-  const body = withClientIp(await request.text(), context?.ip);
+  const body = withClientIp(await request.text(), resolveClientIp(request, context));
   const timestamp = Math.floor(Date.now() / 1000).toString();
 
   const key = await crypto.subtle.importKey(
@@ -58,6 +59,25 @@ export default async (request: Request, context?: Context): Promise<Response> =>
     status: res.ok ? 200 : 502,
   });
 };
+
+/**
+ * Het IP van de gebruiker: context.ip, en anders de headers die Netlify zelf zet.
+ * In productie bleek context.ip niet bruikbaar (create-order logde nog het
+ * AWS-adres); de log laat zien welke bron het werd, voor de whitelist.
+ */
+function resolveClientIp(request: Request, context: Context | undefined): string | undefined {
+  const bronnen: [string, string | undefined][] = [
+    ['context.ip', context?.ip],
+    ['x-nf-client-connection-ip', request.headers.get('x-nf-client-connection-ip') ?? undefined],
+    ['x-forwarded-for', request.headers.get('x-forwarded-for')?.split(',')[0]],
+  ];
+  const gevonden = bronnen.find(([, v]) => v && isIP(v.trim()));
+  console.log(
+    `[forward-webhook] client_ip=${gevonden?.[1]?.trim() ?? '(geen)'} via ${gevonden?.[0] ?? '-'}`,
+    `| ${bronnen.map(([naam, v]) => `${naam}=${v ?? '(leeg)'}`).join(', ')}`,
+  );
+  return gevonden?.[1]?.trim();
+}
 
 /**
  * Zet het IP van de gebruiker in de body. create-order ziet zelf alleen het
