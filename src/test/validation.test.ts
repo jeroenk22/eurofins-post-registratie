@@ -5,7 +5,7 @@ import { validateForm, isValidEmail, isValidPhone } from '../validation'
 const mockPhoto = { id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }
 
 const validEntry = (): PostEntry => ({
-  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', adres: '', postcode: '', plaats: '', land: '', colli: 1, colliOmschrijvingen: ['Test omschrijving'], spoed: false, photos: [mockPhoto],
+  id: '1', shelf: 3, shelfDescription: '', name: 'Acme', adres: '', postcode: '', plaats: '', land: '', colli: 1, colliOmschrijvingen: ['Test omschrijving'], recipientType: 'Monsternemers', spoed: false, photos: [mockPhoto],
 })
 
 describe('validateForm', () => {
@@ -25,6 +25,16 @@ describe('validateForm', () => {
 
   it('fails when entry name is only whitespace', () => {
     const entry = { ...validEntry(), name: '   ' }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/naam of bedrijf/)
+  })
+
+  it('fails when the recipient was typed instead of chosen from the list', () => {
+    const entry = { ...validEntry(), recipientType: undefined }
+    expect(validateForm([entry], 'Sophie', '')).toMatch(/uit de lijst/)
+  })
+
+  it('name validation takes priority over the list check', () => {
+    const entry = { ...validEntry(), name: '', recipientType: undefined }
     expect(validateForm([entry], 'Sophie', '')).toMatch(/naam of bedrijf/)
   })
 

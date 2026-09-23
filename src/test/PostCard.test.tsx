@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import PostCard from '../components/PostCard'
 import type { PostEntry } from '../types'
 import type { RecipientOption } from '../services/googleSheetsService'
+import { useStore } from '../useStore'
+import { validateForm } from '../validation'
 
 const baseEntry: PostEntry = {
   id: 'test-1',
@@ -372,7 +374,23 @@ describe('PostCard — mestklant colli dropdown', () => {
     // Gebruik de placeholder om specifiek de RecipientAutocomplete te targeten
     // (de mestklant-select is ook een combobox en zou getByRole('combobox') laten falen)
     await userEvent.clear(screen.getByPlaceholderText(/bijv\./i))
-    expect(onUpdate).toHaveBeenCalledWith('test-1', { recipientType: undefined })
+    expect(onUpdate).toHaveBeenCalledWith('test-1', expect.objectContaining({ name: '', recipientType: undefined }))
+  })
+
+  it('typen na een keuze uit de lijst wist recipientType en het adres', async () => {
+    const onUpdate = vi.fn()
+    render(
+      <PostCard
+        entry={{ ...mestklantEntry, name: 'Bakker (Nijmegen)', plaats: 'Nijmegen', land: 'Nederland' }}
+        index={0}
+        onUpdate={onUpdate}
+        onRemove={vi.fn()}
+        showRemove={false}
+        recipients={recipients}
+      />
+    )
+    await userEvent.type(screen.getByPlaceholderText(/bijv\./i), 'x')
+    expect(onUpdate).toHaveBeenCalledWith('test-1', { name: 'Bakker (Nijmegen)x', adres: '', postcode: '', plaats: '', land: '', recipientType: undefined })
   })
 })
 
@@ -451,9 +469,14 @@ describe('PostCard — showErrors fout-styling', () => {
     expect(screen.getByPlaceholderText(/bijv\. jan de vries/i).className).toContain('border-red-400')
   })
 
-  it('naam-input heeft geen rode rand als name ingevuld is', () => {
-    render$({ ...baseEntry, name: 'Jan' })
+  it('naam-input heeft geen rode rand als de ontvanger uit de lijst gekozen is', () => {
+    render$({ ...baseEntry, name: 'Jan', recipientType: 'Monsternemers' })
     expect(screen.getByPlaceholderText(/bijv\. jan de vries/i).className).not.toContain('border-red-400')
+  })
+
+  it('naam-input krijgt rode rand als de naam getypt is in plaats van gekozen', () => {
+    render$({ ...baseEntry, name: 'Jan' })
+    expect(screen.getByPlaceholderText(/bijv\. jan de vries/i).className).toContain('border-red-400')
   })
 
   it('schap-grid krijgt rode ring als shelf null is', () => {
@@ -512,5 +535,60 @@ describe('PostCard — showErrors fout-styling', () => {
     render$({ ...mestklantEntry, colliOmschrijvingen: [''] })
     fireEvent.change(screen.getByRole('combobox', { name: /omschrijving collo/i }), { target: { value: '__anders__' } })
     expect(screen.getByPlaceholderText(/vrije omschrijving/i).className).toContain('border-red-400')
+  })
+})
+
+describe('PostCard — waarschuwing onvolledig adres', () => {
+  const renderEntry = (entry: PostEntry) =>
+    render(<PostCard entry={entry} index={0} onUpdate={vi.fn()} onRemove={vi.fn()} showRemove={false} recipients={[]} />)
+  const compleet = { adres: 'Kerkstraat 1', postcode: '1234AB', plaats: 'Zevenbergen', land: 'Nederland' }
+
+  it('toont geen waarschuwing bij een volledig adres', () => {
+    renderEntry({ ...baseEntry, ...compleet, name: 'Jan', recipientType: 'Monsternemers' })
+    expect(screen.queryByText(/adres onvolledig/i)).not.toBeInTheDocument()
+  })
+
+  it('noemt de ontbrekende velden als de rij in de sheet onvolledig is', () => {
+    renderEntry({ ...baseEntry, ...compleet, plaats: '', postcode: ' ', name: 'Jan', recipientType: 'Monsternemers' })
+    expect(screen.getByText(/adres onvolledig/i)).toHaveTextContent('(postcode, plaats ontbreekt)')
+  })
+
+  it('toont geen waarschuwing zolang er niet uit de lijst gekozen is', () => {
+    renderEntry({ ...baseEntry, name: 'Jan' })
+    expect(screen.queryByText(/adres onvolledig/i)).not.toBeInTheDocument()
+  })
+})
+
+// Met de echte store: onChange (wist het type) en onSelect (zet het terug) lopen
+// direct na elkaar. Gaat dat mis, dan blokkeert de validatie élke verzending.
+describe('PostCard + useStore — kiezen uit de lijst', () => {
+  let latest: PostEntry | undefined
+  function Harness() {
+    const store = useStore()
+    latest = store.entries[0]
+    return <PostCard entry={store.entries[0]} index={0} onUpdate={store.updateEntry} onRemove={vi.fn()} showRemove={false} recipients={recipients} />
+  }
+  const volledig = (e: PostEntry): PostEntry => ({ ...e, colliOmschrijvingen: ['Doos'], photos: [{ id: 'p', name: 'f.jpg', data: 'x' }] })
+
+  it('onthoudt type en adres na een keuze, zodat verzenden mag', async () => {
+    sessionStorage.clear()
+    render(<Harness />)
+    await userEvent.type(screen.getByPlaceholderText(/bijv\. jan de vries/i), 'Jan')
+    fireEvent.mouseDown(screen.getByText('M001 - Jan de Vries'))
+
+    expect(latest).toMatchObject({ name: 'M001 - Jan de Vries', recipientType: 'Monsternemers', plaats: 'Amsterdam', land: 'Nederland', shelf: 3 })
+    expect(validateForm([volledig(latest!)], 'Sophie', '')).toBeNull()
+  })
+
+  it('na een keuze nog typen blokkeert het verzenden weer', async () => {
+    sessionStorage.clear()
+    render(<Harness />)
+    const input = screen.getByPlaceholderText(/bijv\. jan de vries/i)
+    await userEvent.type(input, 'Jan')
+    fireEvent.mouseDown(screen.getByText('M001 - Jan de Vries'))
+    await userEvent.type(input, 'x')
+
+    expect(latest).toMatchObject({ recipientType: undefined, plaats: '' })
+    expect(validateForm([volledig(latest!)], 'Sophie', '')).toMatch(/uit de lijst/)
   })
 })
