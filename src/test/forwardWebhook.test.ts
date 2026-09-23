@@ -5,6 +5,7 @@ vi.mock('@netlify/blobs', () => ({
   getStore: (name: string) => { blobs.storeName = name; return { setJSON: blobs.setJSON } },
 }))
 
+import type { Context } from '@netlify/functions'
 import handler from '../../netlify/functions/forward-webhook'
 
 describe('forward-webhook', () => {
@@ -36,18 +37,57 @@ describe('forward-webhook', () => {
     expect(res.status).toBe(500)
   })
 
-  it('stuurt de body ongewijzigd door naar de target URL', async () => {
+  it('stuurt de body door naar de target URL, aangevuld met het IP van de gebruiker', async () => {
     const payload = { submitted_at: '2026-01-01T00:00:00.000Z', entries: [] }
     const req = new Request('https://site.com/.netlify/functions/forward-webhook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    await handler(req)
+    await handler(req, { ip: '195.222.119.185' } as Context)
     const [targetUrl, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit]
     expect(targetUrl).toBe('https://example.com/.netlify/functions/create-order')
     expect(init.method).toBe('POST')
-    expect(init.body).toBe(JSON.stringify(payload))
+    expect(init.body).toBe(JSON.stringify({ ...payload, client_ip: '195.222.119.185' }))
+  })
+
+  it('overschrijft een client_ip dat de browser zelf meestuurt', async () => {
+    const req = new Request('https://site.com/.netlify/functions/forward-webhook', {
+      method: 'POST',
+      body: JSON.stringify({ entries: [], client_ip: '1.2.3.4' }),
+    })
+    await handler(req, { ip: '195.222.119.185' } as Context)
+    expect(JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string).client_ip).toBe('195.222.119.185')
+
+    await handler(new Request('https://site.com/.netlify/functions/forward-webhook', {
+      method: 'POST',
+      body: JSON.stringify({ entries: [], client_ip: '1.2.3.4' }),
+    }))
+    expect(JSON.parse((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body as string).client_ip).toBeNull()
+  })
+
+  it('ondertekent de body mét het IP, zodat create-order het kan vertrouwen', async () => {
+    const { createHmac } = await import('node:crypto')
+    const req = new Request('https://site.com/.netlify/functions/forward-webhook', {
+      method: 'POST',
+      body: JSON.stringify({ entries: [] }),
+    })
+    await handler(req, { ip: '195.222.119.185' } as Context)
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit
+    const headers = init.headers as Record<string, string>
+    const expected = createHmac('sha256', 'test-secret-32bytes-padding-here')
+      .update(`${headers['X-Timestamp']}.${init.body as string}`)
+      .digest('hex')
+    expect(headers['X-Signature']).toBe(expected)
+  })
+
+  it('stuurt een body die geen JSON-object is ongewijzigd door', async () => {
+    const req = new Request('https://site.com/.netlify/functions/forward-webhook', {
+      method: 'POST',
+      body: 'geen json',
+    })
+    await handler(req, { ip: '195.222.119.185' } as Context)
+    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body).toBe('geen json')
   })
 
   it('stuurt X-Timestamp en X-Signature headers mee', async () => {
