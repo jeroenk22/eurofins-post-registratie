@@ -104,4 +104,36 @@ describe('dagoverzicht — de mail', () => {
     expect(dagoverzichtSubject([item(), item()], nu)).toBe('Dagoverzicht post 24-09-2026 – 2 zendingen')
     expect(esc(`<a href="x">'&`)).toBe('&lt;a href=&quot;x&quot;&gt;&#39;&amp;')
   })
+
+  it('zet een printknop in de mail als er een printlink is', () => {
+    const html = dagoverzichtHtml({ senderName: '', items: [item(), item({ colli: 1 })], printUrl: 'https://site.nl/?printData=abc_-1' }, nu, 'https://site.nl')
+    expect(html).toContain('href="https://site.nl/?printData=abc_-1"')
+    expect(html).toContain('Alle labels printen (3)')
+  })
+
+  it('laat de printknop weg zonder printlink', () => {
+    expect(dagoverzichtHtml({ senderName: '', items: [item()] }, nu, 'https://site.nl')).not.toContain('Alle labels printen')
+  })
+})
+
+describe('dagoverzicht — printlink in de mail', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
+    vi.stubEnv('DAGOVERZICHT_WEBHOOK_URL', 'https://hook.eu2.make.com/dagoverzicht')
+  })
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
+
+  const html = () => JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string).html as string
+
+  it('maakt van printData een link naar deze eigen site', async () => {
+    await post({ to: 'a@b.nl', items: [item()], printData: 'W3sibmFtZSI6IkEifV0' })
+    expect(html()).toContain('href="https://post-aanmelden.netlify.app/?printData=W3sibmFtZSI6IkEifV0"')
+  })
+
+  it('negeert printData met vreemde tekens: geen knop, wel een mail', async () => {
+    const res = await post({ to: 'a@b.nl', items: [item()], printData: 'abc"><script>' })
+    expect(res.status).toBe(200)
+    expect(html()).not.toContain('Alle labels printen')
+    expect(html()).not.toContain('<script>')
+  })
 })

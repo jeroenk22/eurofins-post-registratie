@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import DesktopView from '../components/DesktopView'
 import { useStore } from '../useStore'
 import { submitToWebhook, resubmitToMake, SubmitError, type PendingSubmission } from '../webhookService'
-import { printLabels } from '../services/printService'
+import { printLabels, decodePrintData } from '../services/printService'
 import type { SubmitPayload } from '../types'
 
 vi.mock('../webhookService', async (importOriginal) => ({
@@ -159,6 +159,8 @@ describe('DesktopView', () => {
       expect(body.to).toBe('magazijn@eurofins.nl')
       expect(body.senderName).toBe('Sophie')
       expect(body.items).toEqual([expect.objectContaining({ orderId: '1293793', name: 'Jansen (Wageningen)', colli: 2, colliOmschrijvingen: ['Doos', 'Koelbox'] })])
+      // De printlink in de mail krijgt de labels mét order-ID (QR-code).
+      expect(decodePrintData(body.printData)).toEqual([expect.objectContaining({ name: 'Jansen (Wageningen)', orderId: '1293793', route: 'Route 3' })])
       expect(screen.getByRole('status')).toHaveTextContent('Dagoverzicht verstuurd naar magazijn@eurofins.nl')
       vi.unstubAllGlobals()
     })

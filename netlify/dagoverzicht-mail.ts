@@ -20,6 +20,8 @@ export interface DagoverzichtItem {
 export interface DagoverzichtInput {
   senderName: string
   items: DagoverzichtItem[]
+  /** Link naar de printpagina met alle labels van vandaag; zonder deze link geen printknop. */
+  printUrl?: string
 }
 
 const BLAUW = '#003883'
@@ -89,7 +91,19 @@ function zending(item: DagoverzichtItem): string {
 }
 
 /** `assetBase`: waar /email/*.png staan, bijvoorbeeld https://post-aanmelden.netlify.app */
-export function dagoverzichtHtml({ senderName, items }: DagoverzichtInput, now: Date, assetBase: string): string {
+/** Tabelknop: ziet er ook in Outlook uit als knop (dat negeert padding op links). */
+function printKnop(url: string, colli: number): string {
+  return `<tr><td align="center" style="padding:16px 24px 4px;">
+  <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+    <td align="center" bgcolor="${BLAUW}" style="border-radius:10px;">
+      <a href="${esc(url)}" target="_blank" style="display:inline-block;padding:13px 26px;${FONT}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:10px;">&#128424;&nbsp; Alle labels printen (${colli})</a>
+    </td>
+  </tr></table>
+  <div style="${FONT}font-size:12px;color:${GRIJS};margin-top:8px;">Opent de printpagina met alle labels van vandaag, met QR-code.</div>
+</td></tr>`
+}
+
+export function dagoverzichtHtml({ senderName, items, printUrl }: DagoverzichtInput, now: Date, assetBase: string): string {
   const oudsteEerst = [...items].sort((a, b) => a.sentAt.localeCompare(b.sentAt))
   const colli = items.reduce((som, i) => som + i.colli, 0)
   const spoed = items.filter(i => i.spoed).length
@@ -133,7 +147,9 @@ export function dagoverzichtHtml({ senderName, items }: DagoverzichtInput, now: 
     <tr><td style="padding:18px 24px 10px;${FONT}font-size:13px;font-weight:bold;color:${GRIJS};text-transform:uppercase;letter-spacing:.6px;">Verzonden zendingen</td></tr>
     ${oudsteEerst.map(zending).join('\n')}
 
-    ${zonderOrder ? `<tr><td style="padding:4px 24px 0;${FONT}font-size:13px;color:#b45309;">Bij ${zonderOrder} ${zonderOrder === 1 ? 'zending is' : 'zendingen is'} de order in Mendrix niet aangemaakt; die labels hebben geen QR-code.</td></tr>` : ''}
+    ${printUrl ? printKnop(printUrl, colli) : ''}
+
+    ${zonderOrder ? `<tr><td style="padding:14px 24px 0;${FONT}font-size:13px;color:#b45309;">Bij ${zonderOrder} ${zonderOrder === 1 ? 'zending is' : 'zendingen is'} de order in Mendrix niet aangemaakt; die labels hebben geen QR-code.</td></tr>` : ''}
 
     <tr><td style="padding:22px 24px 26px;${FONT}font-size:14px;color:#374151;line-height:1.6;">
       Met vriendelijke groet,<br><strong>Miedema Ophaaldienst B.V.</strong>

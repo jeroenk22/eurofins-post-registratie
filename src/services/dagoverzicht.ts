@@ -1,4 +1,5 @@
 import type { SentItem } from './sentToday'
+import { encodePrintData } from './printService'
 
 /**
  * Laat de functie `dagoverzicht` het overzicht van vandaag als opgemaakte mail
@@ -22,6 +23,9 @@ export async function mailDagoverzicht(items: SentItem[], to: string, cc: string
         colliOmschrijvingen: i.label.colliOmschrijvingen.slice(0, i.label.colli),
         spoed: i.label.spoed,
       })),
+      // Voor de knop "Alle labels printen" in de mail; de labels bevatten het
+      // order-ID, dus de printpagina zet de QR-codes er zelf op.
+      printData: encodePrintData([...items].reverse().map(i => i.label)),
     }),
   })
   if (!res.ok) {
