@@ -4,6 +4,13 @@ import type { UsePwaInstallReturn } from "../usePwaInstall";
 
 vi.mock("../usePwaInstall");
 
+const appContext = vi.hoisted(() => ({ preview: false }));
+vi.mock("../appContext", () => ({
+  get IS_DEPLOY_PREVIEW() {
+    return appContext.preview;
+  },
+}));
+
 import PwaInstallBanner from "../components/PwaInstallBanner";
 import { usePwaInstall } from "../usePwaInstall";
 
@@ -21,6 +28,15 @@ function mockHook(overrides: Partial<UsePwaInstallReturn> = {}) {
 describe("PwaInstallBanner", () => {
   beforeEach(() => {
     mockHook();
+    appContext.preview = false;
+  });
+
+  it("renders nothing on a deploy preview, even when installable", () => {
+    appContext.preview = true;
+    mockHook({ canInstall: true });
+
+    const { container } = render(<PwaInstallBanner />);
+    expect(container.firstChild).toBeNull();
   });
 
   it("renders nothing when canInstall is false", () => {

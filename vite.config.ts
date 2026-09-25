@@ -2,20 +2,51 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Netlify zet CONTEXT: production, deploy-preview, branch-deploy of dev (netlify dev).
+const APP_CONTEXT = process.env.CONTEXT ?? "lokaal";
+
+/**
+ * Een PWA die vanaf een deploy preview geïnstalleerd is, is een eigen origin en
+ * staat dus naast de gewone app. Met dezelfde naam weet niemand meer welke hij
+ * opent; daarom draagt alles buiten productie het PR-nummer of de context in de naam.
+ * short_name staat onder het icoon en wordt rond de twaalf tekens afgekapt.
+ */
+function appNamen(): { name: string; short_name: string; iosTitle: string } {
+  if (APP_CONTEXT === "production") {
+    return { name: "Post aanmelden app", short_name: "Post aanmelden", iosTitle: "Post" };
+  }
+  if (APP_CONTEXT === "deploy-preview") {
+    const pr = process.env.REVIEW_ID ?? "?";
+    return { name: `Post aanmelden preview #${pr}`, short_name: `Preview #${pr}`, iosTitle: `Preview #${pr}` };
+  }
+  return { name: `Post aanmelden ${APP_CONTEXT}`, short_name: `Post ${APP_CONTEXT}`, iosTitle: `Post ${APP_CONTEXT}` };
+}
+
+const namen = appNamen();
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(
       process.env.VITE_APP_VERSION ?? process.env.npm_package_version ?? 'dev'
     ),
+    __APP_CONTEXT__: JSON.stringify(APP_CONTEXT),
   },
   plugins: [
     react(),
+    {
+      name: "ios-app-titel",
+      transformIndexHtml: (html: string) =>
+        html.replace(
+          '<meta name="apple-mobile-web-app-title" content="Post" />',
+          `<meta name="apple-mobile-web-app-title" content="${namen.iosTitle}" />`,
+        ),
+    },
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["eurofins_agro.svg", "miedema_logo.svg"],
       manifest: {
-        name: "Post aanmelden app",
-        short_name: "Post aanmelden",
+        name: namen.name,
+        short_name: namen.short_name,
         description: "Post aanmelden",
         theme_color: "#003883",
         background_color: "#ffffff",
