@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import type { Photo } from '../types'
 import { validateImageFiles, resizeAndEncode } from '../photoUtils'
+import { useIsDesktop } from '../hooks/useIsDesktop'
+import PhotoLightbox from './PhotoLightbox'
 
 interface PhotoUploadProps {
   photos: Photo[]
@@ -11,6 +13,9 @@ interface PhotoUploadProps {
 export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploadError, setUploadError] = useState('')
+  // Desktop: klik op een thumbnail opent de foto groot. Op de telefoon niet.
+  const isDesktop = useIsDesktop()
+  const [viewIndex, setViewIndex] = useState<number | null>(null)
 
   const handleFileArray = async (files: File[]) => {
     setUploadError('')
@@ -92,10 +97,21 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
 
       {/* Op desktop kleine thumbnails, en alleen dit deel scrolt: Verzenden blijft in beeld. */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] md:max-h-[8rem] md:overflow-y-auto gap-1.5 mt-2">
-          {photos.map(p => (
+        <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(4.25rem,1fr))] md:max-h-[9.5rem] md:overflow-y-auto gap-1.5 mt-2">
+          {photos.map((p, i) => (
             <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-              <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+              {isDesktop ? (
+                <button
+                  type="button"
+                  onClick={() => setViewIndex(i)}
+                  aria-label={`Foto ${i + 1} groot bekijken`}
+                  className="w-full h-full cursor-zoom-in"
+                >
+                  <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+                </button>
+              ) : (
+                <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+              )}
               <button
                 type="button"
                 onClick={() => remove(p.id)}
@@ -107,6 +123,19 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
             </div>
           ))}
         </div>
+      )}
+
+      {viewIndex !== null && (
+        <PhotoLightbox
+          photos={photos}
+          index={Math.min(viewIndex, photos.length - 1)}
+          onIndexChange={setViewIndex}
+          onClose={() => setViewIndex(null)}
+          onRemove={id => {
+            remove(id)
+            if (photos.length <= 1) setViewIndex(null)
+          }}
+        />
       )}
     </div>
   )
