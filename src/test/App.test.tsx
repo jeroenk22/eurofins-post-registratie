@@ -203,3 +203,30 @@ describe('App — geen tweede Mendrix-order bij opnieuw versturen', () => {
     expect(resubmitToMake).not.toHaveBeenCalled()
   })
 })
+
+describe('App — desktop of telefoon', () => {
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const schermBreed = (breed: boolean) =>
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: breed, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })))
+
+  it('toont op een breed scherm per zending verzenden en "Vandaag verzonden"', () => {
+    schermBreed(true)
+    render(<App />)
+    expect(screen.getByRole('complementary', { name: 'Vandaag verzonden' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Verzenden/ })).toBeInTheDocument()
+    expect(screen.queryByText('📤 Versturen')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nog een zending toevoegen')).not.toBeInTheDocument()
+  })
+
+  it('houdt op een telefoon het formulier zoals het was', () => {
+    schermBreed(false)
+    render(<App />)
+    expect(screen.getByText('📤 Versturen')).toBeInTheDocument()
+    expect(screen.getByText('Nog een zending toevoegen')).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Vandaag verzonden' })).not.toBeInTheDocument()
+  })
+})

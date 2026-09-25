@@ -4,7 +4,8 @@ import {
   getSelectedFormat,
   setSelectedFormat,
   printLabels,
-  type PrintEntry,
+  toPrintEntry,
+  formatRoute,
 } from "../services/printService";
 import LabelFormatSelect from "./LabelFormatSelect";
 
@@ -15,28 +16,6 @@ interface SuccessScreenProps {
   /** Mendrix order-ID per entry (zelfde volgorde); komt als QR-code op het label. */
   orderIds: (string | null)[];
   onReset: () => void;
-}
-
-function formatRoute(entry: PostEntry): string {
-  if (entry.shelf === "overig") return "";
-  if (entry.shelf) return `Route ${entry.shelf}`;
-  return "";
-}
-
-function toPrintEntry(e: PostEntry, submittedAt: string, orderId: string | null | undefined): PrintEntry {
-  return {
-    name: e.name,
-    adres: e.adres,
-    postcode: e.postcode,
-    plaats: e.plaats,
-    land: e.land,
-    route: formatRoute(e),
-    colli: e.colli,
-    colliOmschrijvingen: e.colliOmschrijvingen,
-    spoed: e.spoed,
-    orderedAt: submittedAt,
-    ...(orderId && { orderId }),
-  };
 }
 
 export default function SuccessScreen({

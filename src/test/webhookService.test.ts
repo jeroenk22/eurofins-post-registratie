@@ -530,3 +530,26 @@ describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging",
     expect((again as SubmitError).pending).toBe(err.pending);
   });
 });
+
+describe("submitToWebhook — mail per zending (desktop)", () => {
+  beforeEach(() => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  const body = () => JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+
+  it("stuurt mail_versturen mee als de desktop het kiest", async () => {
+    await submitToWebhook([makeEntry()], "Sophie", "", "", "", { mailVersturen: false });
+    expect(body().mail_versturen).toBe(false);
+  });
+
+  it("laat het veld weg als niemand het kiest (telefoon), zodat Make mailt zoals altijd", async () => {
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect("mail_versturen" in body()).toBe(false);
+  });
+});

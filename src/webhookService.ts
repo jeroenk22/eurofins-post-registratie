@@ -31,6 +31,11 @@ export interface SubmitResult {
   orderIds: (string | null)[];
 }
 
+export interface SubmitOptions {
+  /** Bevestigingsmail van Make voor deze aanmelding (filter op module 82). */
+  mailVersturen?: boolean;
+}
+
 /**
  * Een aanmelding waarvan de Mendrix-orders al bestaan, maar die Make niet
  * bereikte. Opnieuw proberen gaat alleen nog naar Make, met dezelfde payload:
@@ -76,6 +81,7 @@ export async function submitToWebhook(
   senderPhone: string,
   senderEmail: string,
   senderCcEmail: string = '',
+  options: SubmitOptions = {},
 ): Promise<SubmitResult> {
   const url = getWebhookUrl();
   if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
@@ -134,6 +140,8 @@ export async function submitToWebhook(
     total_entries: entries.length,
     print_url: printUrl,
     submission_id: submissionId,
+    // Alleen de desktop kiest dit; zonder het veld stuurt Make de mail zoals altijd.
+    ...(options.mailVersturen !== undefined && { mail_versturen: options.mailVersturen }),
     // recipient en spoed worden per foto meegestuurd zodat Make's foto-iterator
     // deze waarden direct beschikbaar heeft. In Make zijn parent-bundle velden
     // (zoals entry.recipient) niet bereikbaar vanuit een geneste sub-route iterator,

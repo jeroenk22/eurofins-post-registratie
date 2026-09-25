@@ -6,11 +6,13 @@ interface Props {
   entries: PostEntry[]
   syncedEntryIds: Set<string>
   onSessionReady?: () => void
+  /** In de kolom naast het formulier (desktop) in plaats van zwevend rechtsboven. */
+  inline?: boolean
 }
 
 type PushState = 'pending' | 'synced' | 'error'
 
-export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady }: Props) {
+export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady, inline = false }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [pushState, setPushState] = useState<PushState>('pending')
@@ -87,8 +89,8 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
   if (selectedEntries.length === 0) return null
 
   return (
-    <div className="hidden md:block fixed top-6 right-6 z-50">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-56">
+    <div className={inline ? 'mb-5' : 'hidden md:block fixed top-6 right-6 z-50'}>
+      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${inline ? 'shadow-sm w-full' : 'shadow-xl w-56'}`}>
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}

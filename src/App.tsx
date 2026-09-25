@@ -2,14 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo, SubmitState } from "./types";
 import { useStore } from "./useStore";
 import { submitToWebhook, resubmitToMake, isWebhookConfigured, SubmitError, type PendingSubmission } from "./webhookService";
-import { validateForm, isValidEmail, isValidPhone } from "./validation";
+import { validateForm } from "./validation";
+import { loadPending, savePending, clearPending, PENDING_HINT } from "./services/pendingSubmission";
 import { useRecipientData } from "./hooks/useRecipientData";
 import Header from "./components/Header";
 import PostCard from "./components/PostCard";
 import SuccessScreen from "./components/SuccessScreen";
 import PrintLinkScreen from "./components/PrintLinkScreen";
 import SectionDivider from "./components/SectionDivider";
-import FormField from "./components/FormField";
+import SenderFields from "./components/SenderFields";
+import DesktopView from "./components/DesktopView";
+import { useIsDesktop } from "./hooks/useIsDesktop";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import QrCodeFloat from "./components/QrCodeFloat";
 import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
@@ -38,6 +41,8 @@ export default function App() {
   }
 
   const store = useStore();
+  // Desktop: per zending verzenden (DesktopView). Telefoon: het formulier zoals altijd.
+  const isDesktop = useIsDesktop();
   const { recipients } = useRecipientData();
   const [submitState, setSubmitState] = useState<SubmitState>(() =>
     sessionStorage.getItem("submit_state") === "success" ? "success" : "idle"
@@ -54,13 +59,7 @@ export default function App() {
     }
   });
   // Orders bestaan al, Make nog niet bereikt: een nieuwe poging gaat alleen naar Make.
-  const [pending, setPending] = useState<PendingSubmission | null>(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("submit_pending") ?? "null") as PendingSubmission | null;
-    } catch {
-      return null;
-    }
-  });
+  const [pending, setPending] = useState<PendingSubmission | null>(loadPending);
   const [errorMsg, setErrorMsg] = useState("");
   const [showErrors, setShowErrors] = useState(false);
   const [errorEntryIds, setErrorEntryIds] = useState<Set<string>>(new Set());
@@ -90,12 +89,14 @@ export default function App() {
   const syncedEntryIds = useMobilePhotoSync(
     sessionId,
     handlePhotosReceived,
-    sessionReady && (submitState === "idle" || submitState === "error"),
+    sessionReady && (isDesktop || submitState === "idle" || submitState === "error"),
   );
 
-  const senderPhoneInvalid = showErrors && store.senderPhone.trim() !== '' && !isValidPhone(store.senderPhone.trim())
-  const senderEmailInvalid = showErrors && store.senderEmail.trim() !== '' && !isValidEmail(store.senderEmail.trim())
-  const ccEmailInvalid = showErrors && store.senderCcEmail.trim() !== '' && !isValidEmail(store.senderCcEmail.trim())
+  const handleShowCcChange = (show: boolean) => {
+    setShowCc(show);
+    if (show) sessionStorage.setItem("show_cc", "1");
+    else sessionStorage.removeItem("show_cc");
+  };
 
   const handleSubmit = async () => {
     const err = validateForm(store.entries, store.senderName, store.senderEmail, store.senderCcEmail, store.senderPhone);
@@ -122,7 +123,7 @@ export default function App() {
             store.senderCcEmail,
           );
       setPending(null);
-      sessionStorage.removeItem("submit_pending");
+      clearPending();
       setSubmittedAt(sentAt);
       sessionStorage.setItem("submit_time", sentAt);
       setOrderIds(ids);
@@ -133,18 +134,12 @@ export default function App() {
       const nowPending = e instanceof SubmitError ? e.pending : null;
       if (nowPending) {
         setPending(nowPending);
-        try {
-          sessionStorage.setItem("submit_pending", JSON.stringify(nowPending));
-        } catch {
-          // Te groot door de foto's: dan alleen in het geheugen (tot een refresh).
-        }
+        savePending(nowPending);
       }
       setSubmitState("error");
       setErrorMsg(
         `Verzenden mislukt: ${e instanceof Error ? e.message : "Onbekende fout"}` +
-          (nowPending
-            ? " — de order in Mendrix is wél al aangemaakt. Druk opnieuw op Versturen; er komt geen tweede order. Wijzigingen in het formulier gaan niet meer mee."
-            : ""),
+          (nowPending ? PENDING_HINT : ""),
       );
     }
   };
@@ -154,7 +149,7 @@ export default function App() {
     sessionStorage.removeItem("submit_state");
     sessionStorage.removeItem("submit_time");
     sessionStorage.removeItem("submit_order_ids");
-    sessionStorage.removeItem("submit_pending");
+    clearPending();
     sessionStorage.removeItem("show_cc");
     setPending(null);
     setSubmittedAt("");
@@ -189,198 +184,104 @@ export default function App() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-lg mx-auto min-h-screen bg-white shadow-sm flex flex-col">
-          <Header />
-
-          {submitState === "success" ? (
-            <SuccessScreen
+      {isDesktop ? (
+        <DesktopView
+          store={store}
+          recipients={recipients}
+          qrPanel={
+            <QrCodeFloat
+              inline
+              sessionId={sessionId}
               entries={store.entries}
-              senderEmail={store.senderEmail}
-              submittedAt={submittedAt}
-              orderIds={orderIds}
-              onReset={handleReset}
+              syncedEntryIds={syncedEntryIds}
+              onSessionReady={() => setSessionReady(true)}
             />
-          ) : (
-            <div className="flex-1 px-4 pt-4 pb-8">
-              <SectionDivider
-                label={`${store.entries.length} ${store.entries.length === 1 ? "zending" : "zendingen"}`}
+          }
+        />
+      ) : (
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-lg mx-auto min-h-screen bg-white shadow-sm flex flex-col">
+            <Header />
+
+            {submitState === "success" ? (
+              <SuccessScreen
+                entries={store.entries}
+                senderEmail={store.senderEmail}
+                submittedAt={submittedAt}
+                orderIds={orderIds}
+                onReset={handleReset}
               />
-
-              {store.entries.map((entry, i) => (
-                <PostCard
-                  key={entry.id}
-                  entry={entry}
-                  index={i}
-                  onUpdate={store.updateEntry}
-                  onRemove={store.removeEntry}
-                  showRemove={store.entries.length > 1}
-                  recipients={recipients}
-                  showErrors={errorEntryIds.has(entry.id)}
+            ) : (
+              <div className="flex-1 px-4 pt-4 pb-8">
+                <SectionDivider
+                  label={`${store.entries.length} ${store.entries.length === 1 ? "zending" : "zendingen"}`}
                 />
-              ))}
 
-              <button
-                type="button"
-                onClick={store.addEntry}
-                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm font-semibold text-ef-blue hover:border-ef-blue hover:bg-ef-blue-light transition-all mb-5 flex items-center justify-center gap-1.5"
-              >
-                <span className="text-lg leading-none">+</span>
-                Nog een zending toevoegen
-              </button>
-
-              <SectionDivider label="Ingevuld door" />
-
-              <div className="card p-4 mb-4">
-                <div className="h-1 -mx-4 -mt-4 mb-4 rounded-t-xl bg-mi-yellow" />
-                <div className="space-y-3">
-                  <FormField
-                    id="sender-name"
-                    label="Jouw naam *"
-                    type="text"
-                    placeholder="bijv. Sophie Jansen"
-                    value={store.senderName}
-                    onChange={(e) => store.setSenderName(e.currentTarget.value)}
-                    autoComplete="name"
-                    className={showErrors && !store.senderName.trim() ? '!border-red-400' : ''}
+                {store.entries.map((entry, i) => (
+                  <PostCard
+                    key={entry.id}
+                    entry={entry}
+                    index={i}
+                    onUpdate={store.updateEntry}
+                    onRemove={store.removeEntry}
+                    showRemove={store.entries.length > 1}
+                    recipients={recipients}
+                    showErrors={errorEntryIds.has(entry.id)}
                   />
-                  <div>
-                    <label htmlFor="sender-phone" className="label-base">
-                      Telefoonnummer
-                      <span className="normal-case font-normal text-gray-400 ml-1">(optioneel)</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="sender-phone"
-                        type="tel"
-                        className={`input-base !pr-7${senderPhoneInvalid ? ' !border-red-400' : ''}`}
-                        placeholder="06 12345678"
-                        value={store.senderPhone}
-                        onChange={(e) => store.setSenderPhone(e.currentTarget.value)}
-                        inputMode="tel"
-                        autoComplete="tel"
-                      />
-                      {store.senderPhone && (
-                        <button
-                          type="button"
-                          tabIndex={-1}
-                          onMouseDown={(e) => { e.preventDefault(); store.setSenderPhone('') }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          aria-label="Veld leegmaken"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="sender-email" className="label-base">
-                      E-mailadres
-                      <span className="normal-case font-normal text-gray-400 ml-1">(optioneel — voor bevestiging)</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="sender-email"
-                        type="email"
-                        className={`input-base !pr-7${senderEmailInvalid ? ' !border-red-400' : ''}`}
-                        placeholder="jouw@emailadres.nl"
-                        value={store.senderEmail}
-                        onChange={(e) => store.setSenderEmail(e.currentTarget.value)}
-                        inputMode="email"
-                        autoComplete="email"
-                      />
-                      {store.senderEmail && (
-                        <button
-                          type="button"
-                          tabIndex={-1}
-                          onMouseDown={(e) => { e.preventDefault(); store.setSenderEmail('') }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          aria-label="Veld leegmaken"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {!showCc && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCc(true);
-                        sessionStorage.setItem("show_cc", "1");
-                      }}
-                      className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 self-start py-2 pr-2"
-                    >
-                      + CC
-                    </button>
-                  )}
-                  {showCc && (
-                    <div>
-                      <label htmlFor="sender-cc-email" className="label-base">
-                        CC e-mailadres
-                        <span className="normal-case font-normal text-gray-400 ml-1">(optioneel)</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="sender-cc-email"
-                          type="email"
-                          className={`input-base !pr-7${ccEmailInvalid ? ' !border-red-400' : ''}`}
-                          placeholder="cc@emailadres.nl"
-                          value={store.senderCcEmail}
-                          onChange={(e) => store.setSenderCcEmail(e.currentTarget.value)}
-                          inputMode="email"
-                          autoComplete="email"
-                        />
-                        <button
-                          type="button"
-                          tabIndex={-1}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            store.setSenderCcEmail('');
-                            setShowCc(false);
-                            sessionStorage.removeItem('show_cc');
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          aria-label="CC verwijderen"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                ))}
 
-              {errorMsg && (
-                <div
-                  role="alert"
-                  className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
+                <button
+                  type="button"
+                  onClick={store.addEntry}
+                  className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm font-semibold text-ef-blue hover:border-ef-blue hover:bg-ef-blue-light transition-all mb-5 flex items-center justify-center gap-1.5"
                 >
-                  {errorMsg}
-                </div>
-              )}
+                  <span className="text-lg leading-none">+</span>
+                  Nog een zending toevoegen
+                </button>
 
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitState === "sending"}
-                className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
-                  submitState === "sending"
-                    ? "bg-ef-blue/60 cursor-not-allowed"
-                    : "bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]"
-                }`}
-              >
-                {submitState === "sending"
-                  ? "⏳ Bezig met verzenden…"
-                  : "📤 Versturen"}
-              </button>
-              <p className="text-center text-xs text-gray-300 mt-2">v{__APP_VERSION__}</p>
-            </div>
-          )}
+                <SectionDivider label="Ingevuld door" />
+
+                <div className="card p-4 mb-4">
+                  <div className="h-1 -mx-4 -mt-4 mb-4 rounded-t-xl bg-mi-yellow" />
+                  <SenderFields
+                    store={store}
+                    showErrors={showErrors}
+                    showCc={showCc}
+                    onShowCcChange={handleShowCcChange}
+                  />
+                </div>
+
+                {errorMsg && (
+                  <div
+                    role="alert"
+                    className="mb-4 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
+                  >
+                    {errorMsg}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitState === "sending"}
+                  className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
+                    submitState === "sending"
+                      ? "bg-ef-blue/60 cursor-not-allowed"
+                      : "bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]"
+                  }`}
+                >
+                  {submitState === "sending"
+                    ? "⏳ Bezig met verzenden…"
+                    : "📤 Versturen"}
+                </button>
+                <p className="text-center text-xs text-gray-300 mt-2">v{__APP_VERSION__}</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       <PwaInstallBanner />
-      {submitState !== "success" && (
+      {!isDesktop && submitState !== "success" && (
         <QrCodeFloat
           sessionId={sessionId}
           entries={store.entries}
