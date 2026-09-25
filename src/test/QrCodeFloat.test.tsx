@@ -107,6 +107,30 @@ describe('QrCodeFloat', () => {
     expect(body.entries[0].colliOmschrijvingen).toEqual(['doos', 'pallet'])
   })
 
+  it('pusht een lege lijst als de laatste zending verzonden is, zodat de telefoon hem niet meer toont', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    const entry = makeEntry({ name: 'Kees Hin', adres: 'Kerkstraat 1' })
+    const { rerender } = render(
+      <QrCodeFloat sessionId="s1" entries={[entry]} syncedEntryIds={new Set()} />
+    )
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    // Verzonden: het formulier heeft weer één lege zending
+    rerender(<QrCodeFloat sessionId="s1" entries={[makeEntry({ id: 'e2' })]} syncedEntryIds={new Set()} />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)
+    expect(body.entries).toEqual([])
+  })
+
+  it('pusht geen lege lijst zolang de sessie nog niet gestart is', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<QrCodeFloat sessionId="s1" entries={[makeEntry()]} syncedEntryIds={new Set()} />)
+    await new Promise(r => setTimeout(r, 20))
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('herprobeert push bij klikken op Opnieuw', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))

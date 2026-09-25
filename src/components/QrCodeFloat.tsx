@@ -28,7 +28,9 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
 
   // Push entries naar backend; na eerste sync gaan vervolgpushes stil
   useEffect(() => {
-    if (selectedEntries.length === 0) return
+    // Ook een lege lijst doorsturen zodra de sessie loopt: anders blijft een net
+    // verzonden zending op de telefoon staan en kan er nog een foto bij.
+    if (selectedEntries.length === 0 && !hasSyncedRef.current) return
 
     abortRef.current?.abort()
     const controller = new AbortController()
