@@ -28,8 +28,9 @@ export default async (request: Request): Promise<Response> => {
   if ('error' in parsed) return json({ error: parsed.error }, 400);
 
   const now = new Date();
-  // Logo's van de productiesite: een preview-adres verdwijnt, de mail blijft.
-  const assetBase = process.env.URL ?? new URL(request.url).origin;
+  // Logo's van de site waarop deze functie draait: productie, of de preview
+  // (daar staan ze vóór de merge al; op productie nog niet).
+  const assetBase = new URL(request.url).origin;
   const payload = {
     to: parsed.to,
     cc: parsed.cc,

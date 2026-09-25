@@ -15,7 +15,6 @@ describe('dagoverzicht — functie', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
     vi.stubEnv('DAGOVERZICHT_WEBHOOK_URL', 'https://hook.eu2.make.com/dagoverzicht')
-    vi.stubEnv('URL', 'https://post-aanmelden.netlify.app')
   })
   afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
 
