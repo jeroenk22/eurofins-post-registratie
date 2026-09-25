@@ -193,7 +193,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
         </div>
       </main>
       {/* Versie in de hoek: bij een vraag kun je hem voorlezen, maar hij kost geen hoogte. */}
-      <p className="fixed bottom-1 right-2 text-[10px] text-gray-300 pointer-events-none">v{__APP_VERSION__}</p>
+      <p className="fixed bottom-1.5 right-3 text-xs text-slate-500 pointer-events-none">v{__APP_VERSION__}</p>
     </div>
   )
 }
