@@ -173,6 +173,21 @@ describe('DesktopView', () => {
       vi.unstubAllGlobals()
     })
 
+    it('geeft een verzonden spoedzending een oranje streep, de rest groen', () => {
+      const label = (name: string, spoed: boolean) => ({
+        name, adres: '', postcode: '', plaats: '', land: 'Nederland', route: 'Route 1',
+        colli: 1, colliOmschrijvingen: [], spoed, orderedAt: VERZONDEN,
+      })
+      localStorage.setItem('verzonden_vandaag', JSON.stringify({ day: '2026-09-24', items: [
+        { id: 'b', sentAt: VERZONDEN, orderId: '1', label: label('Met spoed', true) },
+        { id: 'a', sentAt: VERZONDEN, orderId: '2', label: label('Gewoon', false) },
+      ] }))
+      seed()
+      render(<Harness />)
+      expect(screen.getByText('Met spoed').closest('li')).toHaveClass('!border-l-ef-orange')
+      expect(screen.getByText('Gewoon').closest('li')).toHaveClass('!border-l-mi-green')
+    })
+
     it('print alle labels van vandaag in één keer, oudste eerst', () => {
       const label = (orderId: string, colli: number) => ({
         name: 'X', adres: '', postcode: '', plaats: '', land: 'Nederland', route: 'Route 1',
