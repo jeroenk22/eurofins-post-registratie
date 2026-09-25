@@ -93,7 +93,8 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
           return (
             <li
               key={item.id}
-              className={`card p-3 border-l-4 border-l-mi-green ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
+              // ! nodig: .card staat in de CSS ná border-l-* en zou de groene streep overschrijven.
+              className={`card p-3 !border-l-4 !border-l-mi-green ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-xs font-bold text-gray-800">

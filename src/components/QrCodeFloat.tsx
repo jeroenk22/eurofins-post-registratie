@@ -90,7 +90,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
 
   return (
     <div className={inline ? 'mb-5 max-w-xl' : 'hidden md:block fixed top-6 right-6 z-50'}>
-      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${inline ? 'shadow-sm w-full' : 'shadow-xl w-56'}`}>
+      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${inline ? 'shadow-md w-full border-gray-200' : 'shadow-xl w-56'}`}>
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}

@@ -118,7 +118,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
     // Schermvullend: de kop (met rechts de instellingen) bovenaan, daaronder twee
     // kolommen die elk zelf scrollen. De invultegel groeit tot 46rem; alles daarnaast
     // is voor de verzonden zendingen, in zoveel kolommen als er passen.
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#e3e9f2] overflow-hidden">
       <div className="shrink-0">
         <Header
           actions={
@@ -136,7 +136,9 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
         />
       </div>
 
-      <main className="flex-1 min-h-0 grid gap-4 lg:gap-6 px-4 lg:px-6 pt-4 pb-4 grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_minmax(19rem,34%)] xl:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
+      {/* Blauwgrijze achtergrond met iets zwaardere schaduw en veldranden: de tegels
+          springen eruit. Alleen hier; de telefoon houdt zijn eigen, lichte opmaak. */}
+      <main className="flex-1 min-h-0 [&_.card]:shadow-md [&_.input-base]:border-gray-300 grid gap-4 lg:gap-6 px-4 lg:px-6 pt-4 pb-4 grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_minmax(19rem,34%)] xl:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
         {/* Verzenden staat direct onder de zending, en blijft onderin in beeld als
             de zending hoger is dan het scherm (sticky). */}
         <section aria-label="Nieuwe zending" className="min-h-0 overflow-y-auto pr-1">
@@ -154,7 +156,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
           ))}
           {/* Normaal is er één zending; staan er (uit een oud concept) meer, dan gaan ze om de beurt. */}
           {current && (
-            <div className="sticky bottom-0 bg-gray-50 pt-1 pb-1">
+            <div className="sticky bottom-0 bg-[#e3e9f2] pt-1 pb-1">
               {error?.entryId === current.id && (
                 <div
                   role="alert"
