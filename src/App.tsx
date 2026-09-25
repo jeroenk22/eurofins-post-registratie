@@ -137,7 +137,8 @@ export default function App() {
     setErrorMsg("");
     setShowErrors(false);
     setErrorEntryIds(new Set());
-    setShowCc(false);
+    // De afzender (ook CC) blijft staan; een CC-adres moet dan ook zichtbaar blijven.
+    setShowCc(store.senderCcEmail !== "");
   };
 
   if (!isWebhookConfigured()) {

@@ -41,7 +41,7 @@ const draftWithEntry = JSON.stringify({
 
 
 describe('App — versienummer', () => {
-  beforeEach(() => sessionStorage.clear())
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
 
   it('toont een versienummer onder de verstuurknop', () => {
     render(<App />)
@@ -50,7 +50,7 @@ describe('App — versienummer', () => {
 })
 
 describe('App — validatie: nieuwe entry toont geen rode velden', () => {
-  beforeEach(() => sessionStorage.clear())
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
   afterEach(() => vi.restoreAllMocks())
 
   it('nieuwe entry na mislukte submit heeft geen rode velden', async () => {
@@ -76,7 +76,7 @@ describe('App — validatie: nieuwe entry toont geen rode velden', () => {
 })
 
 describe('App — submit_state persistentie', () => {
-  beforeEach(() => sessionStorage.clear())
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
   afterEach(() => vi.restoreAllMocks())
 
   it('toont formulier als er geen submit_state in sessionStorage is', () => {
@@ -135,5 +135,19 @@ describe('App — submit_state persistentie', () => {
     fireEvent.click(screen.getByText('+ Nieuwe aanmelding'))
 
     expect(sessionStorage.getItem('submit_order_ids')).toBeNull()
+  })
+
+  it('houdt na reset de afzender, en een CC-adres zichtbaar', () => {
+    localStorage.setItem('afzender', JSON.stringify({
+      senderName: 'Sophie', senderPhone: '', senderEmail: 'sophie@example.com', senderCcEmail: 'cc@example.com',
+    }))
+    sessionStorage.setItem(SUBMIT_STATE_KEY, 'success')
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+
+    fireEvent.click(screen.getByText('+ Nieuwe aanmelding'))
+
+    expect(screen.getByLabelText('Jouw naam *')).toHaveValue('Sophie')
+    expect(screen.getByLabelText(/CC e-mailadres/)).toHaveValue('cc@example.com')
   })
 })
