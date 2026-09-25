@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isWebhookConfigured, submitToWebhook } from "../webhookService";
+import { isWebhookConfigured, submitToWebhook, resubmitToMake, SubmitError } from "../webhookService";
 import { decodePrintData } from "../services/printService";
 import type { PostEntry } from "../types";
 
@@ -468,5 +468,88 @@ describe("submitToWebhook — tijdstip komt van de server, in Nederlandse tijd",
     klok.now = "2026-01-15T11:14:00.000Z";
     await submitToWebhook([makeEntry()], "Sophie", "", "");
     expect(payload().datetime_nl).toContain("12:14");
+  });
+});
+
+describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging", () => {
+  beforeEach(() => vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test"));
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  /** fetch per URL: Make en forward-webhook lopen tegelijk, de volgorde ligt niet vast. */
+  const stubFetch = (make: () => Promise<unknown>, forward: () => Promise<unknown>) =>
+    vi.stubGlobal("fetch", vi.fn((url: string) => (url.includes("make.com") ? make() : forward())));
+  const metOrders = (ids: (string | null)[]) => () =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, status: 200, orderIds: ids }) });
+  const makeFaalt = () => Promise.resolve({ ok: false, status: 500, statusText: "Internal Server Error" });
+
+  it("onthoudt payload en order-ID's als Make faalt maar de orders al bestaan", async () => {
+    stubFetch(makeFaalt, metOrders(["1293793"]));
+    const err = await submitToWebhook([makeEntry()], "Sophie", "", "").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SubmitError);
+    expect((err as SubmitError).message).toContain("HTTP 500");
+    const pending = (err as SubmitError).pending!;
+    expect(pending.orderIds).toEqual(["1293793"]);
+    expect(pending.payload.entries[0].recipient).toBe("Acme B.V.");
+  });
+
+  it("ook als Make helemaal onbereikbaar is", async () => {
+    stubFetch(() => Promise.reject(new TypeError("Failed to fetch")), metOrders(["1293793"]));
+    const err = await submitToWebhook([makeEntry()], "Sophie", "", "").catch((e: unknown) => e);
+    expect((err as SubmitError).pending?.orderIds).toEqual(["1293793"]);
+  });
+
+  it("geen pending als er geen order is aangemaakt", async () => {
+    stubFetch(makeFaalt, metOrders([null]));
+    const err = await submitToWebhook([makeEntry()], "Sophie", "", "").catch((e: unknown) => e);
+    expect((err as SubmitError).pending).toBeNull();
+  });
+
+  it("opnieuw proberen gaat alleen naar Make, met exact dezelfde payload", async () => {
+    stubFetch(makeFaalt, metOrders(["1293793"]));
+    const err = (await submitToWebhook([makeEntry()], "Sophie", "", "").catch((e: unknown) => e)) as SubmitError;
+    const eersteBody = (vi.mocked(fetch).mock.calls.find(([u]) => (u as string).includes("make.com"))![1] as RequestInit).body;
+
+    stubFetch(() => Promise.resolve({ ok: true }), metOrders(["9999999"]));
+    const result = await resubmitToMake(err.pending!);
+
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toContain("make.com");
+    expect((calls[0][1] as RequestInit).body).toBe(eersteBody);
+    expect(result).toEqual({ submittedAt: err.pending!.payload.submitted_at, orderIds: ["1293793"] });
+  });
+
+  it("een mislukte nieuwe poging houdt de pending vast", async () => {
+    stubFetch(makeFaalt, metOrders(["1293793"]));
+    const err = (await submitToWebhook([makeEntry()], "Sophie", "", "").catch((e: unknown) => e)) as SubmitError;
+    const again = await resubmitToMake(err.pending!).catch((e: unknown) => e);
+    expect(again).toBeInstanceOf(SubmitError);
+    expect((again as SubmitError).pending).toBe(err.pending);
+  });
+});
+
+describe("submitToWebhook — mail per zending (desktop)", () => {
+  beforeEach(() => {
+    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  const body = () => JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+
+  it("stuurt mail_versturen mee als de desktop het kiest", async () => {
+    await submitToWebhook([makeEntry()], "Sophie", "", "", "", { mailVersturen: false });
+    expect(body().mail_versturen).toBe(false);
+  });
+
+  it("laat het veld weg als niemand het kiest (telefoon), zodat Make mailt zoals altijd", async () => {
+    await submitToWebhook([makeEntry()], "Sophie", "", "");
+    expect("mail_versturen" in body()).toBe(false);
   });
 });

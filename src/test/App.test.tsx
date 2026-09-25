@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import App from '../App'
+import { submitToWebhook, resubmitToMake, SubmitError, type PendingSubmission } from '../webhookService'
+import type { SubmitPayload } from '../types'
 
-vi.mock('../webhookService', () => ({
+vi.mock('../webhookService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../webhookService')>()),
   isWebhookConfigured: vi.fn(() => true),
   submitToWebhook: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1234567'] })),
+  resubmitToMake: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1293793'] })),
 }))
 
 vi.mock('../hooks/useRecipientData', () => ({
@@ -41,7 +45,7 @@ const draftWithEntry = JSON.stringify({
 
 
 describe('App — versienummer', () => {
-  beforeEach(() => sessionStorage.clear())
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
 
   it('toont een versienummer onder de verstuurknop', () => {
     render(<App />)
@@ -50,7 +54,7 @@ describe('App — versienummer', () => {
 })
 
 describe('App — validatie: nieuwe entry toont geen rode velden', () => {
-  beforeEach(() => sessionStorage.clear())
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
   afterEach(() => vi.restoreAllMocks())
 
   it('nieuwe entry na mislukte submit heeft geen rode velden', async () => {
@@ -76,7 +80,7 @@ describe('App — validatie: nieuwe entry toont geen rode velden', () => {
 })
 
 describe('App — submit_state persistentie', () => {
-  beforeEach(() => sessionStorage.clear())
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
   afterEach(() => vi.restoreAllMocks())
 
   it('toont formulier als er geen submit_state in sessionStorage is', () => {
@@ -135,5 +139,94 @@ describe('App — submit_state persistentie', () => {
     fireEvent.click(screen.getByText('+ Nieuwe aanmelding'))
 
     expect(sessionStorage.getItem('submit_order_ids')).toBeNull()
+  })
+
+  it('houdt na reset de afzender, en een CC-adres zichtbaar', () => {
+    localStorage.setItem('afzender', JSON.stringify({
+      senderName: 'Sophie', senderPhone: '', senderEmail: 'sophie@example.com', senderCcEmail: 'cc@example.com',
+    }))
+    sessionStorage.setItem(SUBMIT_STATE_KEY, 'success')
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+
+    fireEvent.click(screen.getByText('+ Nieuwe aanmelding'))
+
+    expect(screen.getByLabelText('Jouw naam *')).toHaveValue('Sophie')
+    expect(screen.getByLabelText(/CC e-mailadres/)).toHaveValue('cc@example.com')
+  })
+})
+
+describe('App — geen tweede Mendrix-order bij opnieuw versturen', () => {
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); vi.clearAllMocks() })
+
+  const pending: PendingSubmission = {
+    payload: { submitted_at: '2026-09-24T09:22:31.000Z' } as SubmitPayload,
+    orderIds: ['1293793'],
+  }
+
+  it('stuurt na een Make-fout met bestaande order alleen nog naar Make', async () => {
+    vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500: Internal Server Error', pending))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(screen.getByRole('alert')).toHaveTextContent('er komt geen tweede order')
+
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(submitToWebhook).toHaveBeenCalledTimes(1)
+    expect(resubmitToMake).toHaveBeenCalledWith(pending)
+    expect(screen.getByText('Verstuurd!')).toBeInTheDocument()
+    expect(sessionStorage.getItem('submit_pending')).toBeNull()
+  })
+
+  it('onthoudt dat ook na een refresh', async () => {
+    vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500', pending))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    const { unmount } = render(<App />)
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    unmount()
+
+    render(<App />)
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(submitToWebhook).toHaveBeenCalledTimes(1)
+    expect(resubmitToMake).toHaveBeenCalledTimes(1)
+  })
+
+  it('zonder aangemaakte order gewoon opnieuw volledig versturen', async () => {
+    vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500', null))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(screen.getByRole('alert')).not.toHaveTextContent('tweede order')
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(submitToWebhook).toHaveBeenCalledTimes(2)
+    expect(resubmitToMake).not.toHaveBeenCalled()
+  })
+})
+
+describe('App — desktop of telefoon', () => {
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
+  afterEach(() => vi.unstubAllGlobals())
+
+  const schermBreed = (breed: boolean) =>
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: breed, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })))
+
+  it('toont op een breed scherm per zending verzenden en "Vandaag verzonden"', () => {
+    schermBreed(true)
+    render(<App />)
+    expect(screen.getByRole('complementary', { name: 'Vandaag verzonden' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Verzenden/ })).toBeInTheDocument()
+    expect(screen.queryByText('📤 Versturen')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nog een zending toevoegen')).not.toBeInTheDocument()
+  })
+
+  it('houdt op een telefoon het formulier zoals het was', () => {
+    schermBreed(false)
+    render(<App />)
+    expect(screen.getByText('📤 Versturen')).toBeInTheDocument()
+    expect(screen.getByText('Nog een zending toevoegen')).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Vandaag verzonden' })).not.toBeInTheDocument()
   })
 })

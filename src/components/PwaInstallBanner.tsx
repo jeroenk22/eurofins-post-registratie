@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { usePwaInstall } from "../usePwaInstall";
+import { IS_DEPLOY_PREVIEW } from "../appContext";
 
 export default function PwaInstallBanner() {
   const { canInstall, install, dismiss } = usePwaInstall();
@@ -12,7 +13,8 @@ export default function PwaInstallBanner() {
     return () => clearTimeout(timer);
   }, [canInstall]);
 
-  if (!canInstall) return null;
+  // Een preview is om te testen, niet om te installeren (zie appContext.ts).
+  if (!canInstall || IS_DEPLOY_PREVIEW) return null;
 
   return (
     <div

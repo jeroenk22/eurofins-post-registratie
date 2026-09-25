@@ -1,13 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
 import RecipientAutocomplete from './RecipientAutocomplete'
 import type { RecipientOption } from '../services/googleSheetsService'
 
 import MestklantSelect from './MestklantSelect'
-import { getSelectedFormat, setSelectedFormat, printLabels } from '../services/printService'
-import { serverNow } from '../services/serverTime'
-import LabelFormatSelect from './LabelFormatSelect'
 
 const SHELVES = [1, 2, 3, 4, 5, 6, 7, 8] as const
 
@@ -39,43 +36,9 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
   const updatePhotos = (fn: (prev: Photo[]) => Photo[]) =>
     onUpdate(entry.id, { photos: fn(entry.photos) })
 
-  const allDescriptionsFilled =
-    entry.colli > 0 &&
-    Array.from({ length: entry.colli }, (_, i) => entry.colliOmschrijvingen[i] ?? '').every(d => d.trim() !== '')
-  const showPrintLink = !!entry.name.trim() && allDescriptionsFilled
-
-  const [printPopupOpen, setPrintPopupOpen] = useState(false)
-  const [formatId, setFormatId] = useState(() => getSelectedFormat().id)
-  const printBtnRef = useRef<HTMLButtonElement>(null)
-  const printPopupRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!printPopupOpen) return
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node
-      if (printBtnRef.current?.contains(t) || printPopupRef.current?.contains(t)) return
-      setPrintPopupOpen(false)
-    }
-    const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') setPrintPopupOpen(false) }
-    document.addEventListener('mousedown', handler)
-    document.addEventListener('keydown', keyHandler)
-    return () => {
-      document.removeEventListener('mousedown', handler)
-      document.removeEventListener('keydown', keyHandler)
-    }
-  }, [printPopupOpen])
-
-  const handlePrint = () => {
-    const format = getSelectedFormat()
-    const route = entry.shelf === 'overig' ? '' : entry.shelf ? `Route ${entry.shelf}` : ''
-    // Deze labels worden vóór het versturen geprint; de order bestaat dan nog niet.
-    // We tonen het huidige tijdstip, dat in de praktijk vlak voor het versturen ligt.
-    printLabels([{ name: entry.name.trim(), adres: entry.adres, postcode: entry.postcode, plaats: entry.plaats, land: entry.land, route, colli: entry.colli, colliOmschrijvingen: entry.colliOmschrijvingen, spoed: entry.spoed, orderedAt: serverNow().toISOString() }], format)
-    setPrintPopupOpen(false)
-  }
-
+  // ! bij de SPOED-streep: .card staat in de CSS ná border-l-* en zou hem anders overschrijven.
   return (
-    <div className={`relative card p-4 mb-3 transition-all ${entry.spoed ? 'border-l-4 border-l-ef-orange' : ''}`}>
+    <div className={`relative card p-4 mb-3 transition-all ${entry.spoed ? '!border-l-4 !border-l-ef-orange' : ''}`}>
 
       {/* Card header */}
       <div className="flex items-center gap-2.5 mb-3.5">
@@ -95,17 +58,6 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
             </span>
           )}
         </div>
-        {showPrintLink && (
-          <button
-            ref={printBtnRef}
-            type="button"
-            onClick={() => setPrintPopupOpen(o => !o)}
-            aria-label="Print label voor deze zending"
-            className="h-6 rounded bg-ef-blue/10 border border-ef-blue/20 text-ef-blue hover:bg-ef-blue/20 text-[10px] font-semibold hidden md:flex items-center gap-1 px-1.5 transition-colors flex-shrink-0"
-          >
-            🖨 Print
-          </button>
-        )}
         {showRemove && (
           <button
             type="button"
@@ -117,34 +69,6 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
           </button>
         )}
       </div>
-
-      {/* Print popup — absoluut over de kaart, volledige breedte */}
-      {printPopupOpen && (
-        <div ref={printPopupRef} className="absolute right-0 top-14 z-50 w-[340px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 hidden md:flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-gray-600">Labelformaat</p>
-            <button
-              type="button"
-              onClick={() => setPrintPopupOpen(false)}
-              aria-label="Sluit"
-              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              ×
-            </button>
-          </div>
-          <LabelFormatSelect
-            value={formatId}
-            onChange={id => { setSelectedFormat(id); setFormatId(id) }}
-          />
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="w-full py-2 rounded-lg bg-ef-blue text-white text-xs font-semibold hover:bg-ef-blue/90 transition-colors"
-          >
-            Print {entry.colli} {entry.colli === 1 ? 'label' : 'labels'}
-          </button>
-        </div>
-      )}
 
       {/* Naam */}
       <div className="mb-3">

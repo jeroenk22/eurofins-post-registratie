@@ -1,5 +1,6 @@
 import QRCode from 'qrcode'
 import { MESTKLANT_SHORT_BY_LABEL } from '../mestklantOptions'
+import type { PostEntry } from '../types'
 
 export interface LabelFormat {
   id: string
@@ -61,6 +62,30 @@ export interface PrintEntry {
   land: string
   orderedAt?: string  // ISO-tijdstip waarop de order is aangemaakt (moment van versturen)
   orderId?: string    // Mendrix order-ID; komt als QR-code op het label
+}
+
+/** "Route 3"; leeg bij "overig" of zonder schap. */
+export function formatRoute(entry: PostEntry): string {
+  if (entry.shelf === 'overig') return ''
+  if (entry.shelf) return `Route ${entry.shelf}`
+  return ''
+}
+
+/** Labelgegevens van een verzonden zending, met het verzendtijdstip en (als die er is) de order. */
+export function toPrintEntry(e: PostEntry, submittedAt: string, orderId: string | null | undefined): PrintEntry {
+  return {
+    name: e.name,
+    adres: e.adres,
+    postcode: e.postcode,
+    plaats: e.plaats,
+    land: e.land,
+    route: formatRoute(e),
+    colli: e.colli,
+    colliOmschrijvingen: e.colliOmschrijvingen,
+    spoed: e.spoed,
+    orderedAt: submittedAt,
+    ...(orderId && { orderId }),
+  }
 }
 
 /**

@@ -6,11 +6,13 @@ interface Props {
   entries: PostEntry[]
   syncedEntryIds: Set<string>
   onSessionReady?: () => void
+  /** In de kolom naast het formulier (desktop) in plaats van zwevend rechtsboven. */
+  inline?: boolean
 }
 
 type PushState = 'pending' | 'synced' | 'error'
 
-export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady }: Props) {
+export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady, inline = false }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [pushState, setPushState] = useState<PushState>('pending')
@@ -28,7 +30,9 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
 
   // Push entries naar backend; na eerste sync gaan vervolgpushes stil
   useEffect(() => {
-    if (selectedEntries.length === 0) return
+    // Ook een lege lijst doorsturen zodra de sessie loopt: anders blijft een net
+    // verzonden zending op de telefoon staan en kan er nog een foto bij.
+    if (selectedEntries.length === 0 && !hasSyncedRef.current) return
 
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -85,8 +89,8 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
   if (selectedEntries.length === 0) return null
 
   return (
-    <div className="hidden md:block fixed top-6 right-6 z-50">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-56">
+    <div className={inline ? 'mb-5 max-w-xl' : 'hidden md:block fixed top-6 right-6 z-50'}>
+      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${inline ? 'shadow-md w-full border-gray-200' : 'shadow-xl w-56'}`}>
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
@@ -98,8 +102,9 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
         </button>
 
         {!collapsed && (
-          <div className="p-3">
-            <div className="flex justify-center mb-2">
+          // In de kolom liggend (QR links, namen rechts): dat kost minder hoogte.
+          <div className={inline ? 'p-3 flex items-center gap-4' : 'p-3'}>
+            <div className={inline ? 'shrink-0' : 'flex justify-center mb-2'}>
               {pushState === 'error' ? (
                 <div className="w-[164px] h-[164px] rounded-lg bg-red-50 flex flex-col items-center justify-center gap-2">
                   <p className="text-xs text-red-400 text-center px-2">Verbinding mislukt</p>
@@ -117,29 +122,31 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
                 <img src={qrDataUrl} alt="QR code" width={164} height={164} className="rounded-lg" />
               )}
             </div>
-            <p className="text-[11px] text-gray-400 text-center mb-3 leading-tight">
-              Scan met je telefoon om<br />foto's toe te voegen
-            </p>
+            <div className={inline ? 'flex-1 min-w-0' : ''}>
+              <p className={`text-[11px] text-gray-400 mb-3 leading-tight ${inline ? '' : 'text-center'}`}>
+                Scan met je telefoon om{inline ? ' ' : <br />}foto's toe te voegen
+              </p>
 
-            <div className="space-y-1.5 border-t border-gray-100 pt-2">
-              {selectedEntries.map(e => {
-                const synced = syncedEntryIds.has(e.id)
-                const hasLocalPhotos = e.photos.length > 0
-                return (
-                  <div key={e.id} className="flex items-center gap-1.5 text-xs">
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
-                      synced
-                        ? 'bg-green-100 text-green-600'
-                        : hasLocalPhotos
-                          ? 'bg-blue-100 text-blue-500'
-                          : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {synced ? '✓' : hasLocalPhotos ? e.photos.length : '○'}
-                    </span>
-                    <span className="text-gray-600 truncate">{e.name}</span>
-                  </div>
-                )
-              })}
+              <div className="space-y-1.5 border-t border-gray-100 pt-2">
+                {selectedEntries.map(e => {
+                  const synced = syncedEntryIds.has(e.id)
+                  const hasLocalPhotos = e.photos.length > 0
+                  return (
+                    <div key={e.id} className="flex items-center gap-1.5 text-xs">
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
+                        synced
+                          ? 'bg-green-100 text-green-600'
+                          : hasLocalPhotos
+                            ? 'bg-blue-100 text-blue-500'
+                            : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        {synced ? '✓' : hasLocalPhotos ? e.photos.length : '○'}
+                      </span>
+                      <span className="text-gray-600 truncate">{e.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
