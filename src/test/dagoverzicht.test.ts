@@ -32,6 +32,15 @@ describe('dagoverzicht — functie', () => {
     expect(body.html).toContain('https://post-aanmelden.netlify.app/email/miedema-logo.png')
   })
 
+  it('stuurt de API-sleutel van de Make-webhook mee als die is ingesteld', async () => {
+    await post({ to: 'a@b.nl', items: [item()] })
+    expect(((vi.mocked(fetch).mock.calls[0][1] as RequestInit).headers as Record<string, string>)['x-make-apikey']).toBeUndefined()
+
+    vi.stubEnv('DAGOVERZICHT_WEBHOOK_KEY', 'geheim-123')
+    await post({ to: 'a@b.nl', items: [item()] })
+    expect(((vi.mocked(fetch).mock.calls[1][1] as RequestInit).headers as Record<string, string>)['x-make-apikey']).toBe('geheim-123')
+  })
+
   it('weigert zonder geldig e-mailadres of zonder zendingen', async () => {
     expect((await post({ to: 'geen-adres', items: [item()] })).status).toBe(400)
     expect((await post({ to: 'a@b.nl', cc: 'fout', items: [item()] })).status).toBe(400)

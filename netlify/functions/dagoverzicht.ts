@@ -38,9 +38,11 @@ export default async (request: Request): Promise<Response> => {
   };
 
   try {
+    // Met een API-sleutel op de Make-webhook kan alleen deze functie het scenario aanroepen.
+    const apiKey = process.env.DAGOVERZICHT_WEBHOOK_KEY;
     const res = await fetch(webhookUrl, {
       method: 'POST',
-      headers: HEADERS,
+      headers: apiKey ? { ...HEADERS, 'x-make-apikey': apiKey } : HEADERS,
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
