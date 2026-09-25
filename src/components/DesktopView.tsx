@@ -49,6 +49,9 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
     setMailState(aan)
   }
 
+  // De zending die Verzenden verstuurt: de bovenste.
+  const current = store.entries[0]
+
   const handleSend = async (entry: PostEntry) => {
     const { senderName, senderPhone, senderEmail, senderCcEmail } = store
     const senderErr = validateForm([], senderName, senderEmail, senderCcEmail, senderPhone)
@@ -134,19 +137,25 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
       </div>
 
       <main className="flex-1 min-h-0 grid gap-4 lg:gap-6 px-4 lg:px-6 pt-4 pb-4 grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_minmax(19rem,34%)] xl:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
+        {/* Verzenden staat direct onder de zending, en blijft onderin in beeld als
+            de zending hoger is dan het scherm (sticky). */}
         <section aria-label="Nieuwe zending" className="min-h-0 overflow-y-auto pr-1">
           {store.entries.map((entry, i) => (
-            <div key={entry.id} className="mb-5">
-              <PostCard
-                entry={entry}
-                index={i}
-                onUpdate={store.updateEntry}
-                onRemove={store.removeEntry}
-                showRemove={store.entries.length > 1}
-                recipients={recipients}
-                showErrors={showEntryErrors && error?.entryId === entry.id}
-              />
-              {error?.entryId === entry.id && (
+            <PostCard
+              key={entry.id}
+              entry={entry}
+              index={i}
+              onUpdate={store.updateEntry}
+              onRemove={store.removeEntry}
+              showRemove={store.entries.length > 1}
+              recipients={recipients}
+              showErrors={showEntryErrors && error?.entryId === entry.id}
+            />
+          ))}
+          {/* Normaal is er één zending; staan er (uit een oud concept) meer, dan gaan ze om de beurt. */}
+          {current && (
+            <div className="sticky bottom-0 bg-gray-50 pt-1 pb-1">
+              {error?.entryId === current.id && (
                 <div
                   role="alert"
                   className="mb-3 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
@@ -156,7 +165,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
               )}
               <button
                 type="button"
-                onClick={() => void handleSend(entry)}
+                onClick={() => void handleSend(current)}
                 disabled={sendingId !== null}
                 className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
                   sendingId !== null
@@ -164,11 +173,10 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
                     : 'bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]'
                 }`}
               >
-                {sendingId === entry.id ? '⏳ Bezig met verzenden…' : '📤 Verzenden'}
+                {sendingId === current.id ? '⏳ Bezig met verzenden…' : '📤 Verzenden'}
               </button>
             </div>
-          ))}
-          <p className="text-center text-xs text-gray-300">v{__APP_VERSION__}</p>
+          )}
         </section>
 
         <div className="min-h-0 flex flex-col">
@@ -181,6 +189,8 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
           />
         </div>
       </main>
+      {/* Versie in de hoek: bij een vraag kun je hem voorlezen, maar hij kost geen hoogte. */}
+      <p className="fixed bottom-1 right-2 text-[10px] text-gray-300 pointer-events-none">v{__APP_VERSION__}</p>
     </div>
   )
 }

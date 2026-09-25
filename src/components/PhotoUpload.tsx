@@ -90,8 +90,9 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
         <p role="alert" className="mt-1.5 text-xs text-red-500">{uploadError}</p>
       )}
 
+      {/* Op desktop kleine thumbnails, en alleen dit deel scrolt: Verzenden blijft in beeld. */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-3 gap-1.5 mt-2">
+        <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] md:max-h-[8rem] md:overflow-y-auto gap-1.5 mt-2">
           {photos.map(p => (
             <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
               <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
