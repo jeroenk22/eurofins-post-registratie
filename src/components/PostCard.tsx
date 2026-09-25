@@ -36,8 +36,9 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
   const updatePhotos = (fn: (prev: Photo[]) => Photo[]) =>
     onUpdate(entry.id, { photos: fn(entry.photos) })
 
+  // ! bij de SPOED-streep: .card staat in de CSS ná border-l-* en zou hem anders overschrijven.
   return (
-    <div className={`relative card p-4 mb-3 transition-all ${entry.spoed ? 'border-l-4 border-l-ef-orange' : ''}`}>
+    <div className={`relative card p-4 mb-3 transition-all ${entry.spoed ? '!border-l-4 !border-l-ef-orange' : ''}`}>
 
       {/* Card header */}
       <div className="flex items-center gap-2.5 mb-3.5">
