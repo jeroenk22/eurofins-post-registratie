@@ -89,4 +89,16 @@ describe('ip-guard', () => {
       expect(context.next.mock.calls[0][0]).toBeUndefined()
     })
   })
+
+  it('laat de mail-logo’s altijd door: Gmail en Outlook halen ze van hun eigen servers', async () => {
+    const context = makeContext('9.9.9.9')
+    await handler(new Request('https://example.com/email/miedema-logo.png'), context)
+    expect(context.next).toHaveBeenCalledOnce()
+  })
+
+  it('laat verder niets onder /email/ door', async () => {
+    const context = makeContext('9.9.9.9')
+    const response = await handler(new Request('https://example.com/email/index.html'), context)
+    expect(response?.status).toBe(403)
+  })
 })

@@ -144,12 +144,49 @@ describe('DesktopView', () => {
       expect(labels).toEqual([expect.objectContaining({ name: 'Jansen (Wageningen)', orderId: '1293793', orderedAt: VERZONDEN, route: 'Route 3' })])
     })
 
-    it('biedt het dagoverzicht als mail aan', async () => {
+    it('mailt het dagoverzicht via de functie, naar de afzender', async () => {
       seed()
       render(<Harness />)
       expect(screen.queryByText(/Dagoverzicht mailen/)).not.toBeInTheDocument()
       await verzend()
-      expect(screen.getByText(/Dagoverzicht mailen/).closest('a')).toHaveAttribute('href', expect.stringMatching(/^mailto:magazijn%40eurofins\.nl\?/))
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
+      vi.stubGlobal('fetch', fetchMock)
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Dagoverzicht mailen/ })) })
+
+      const [url, init] = fetchMock.mock.calls.find(([u]) => u === '/.netlify/functions/dagoverzicht')!
+      expect(url).toBe('/.netlify/functions/dagoverzicht')
+      const body = JSON.parse((init as RequestInit).body as string)
+      expect(body.to).toBe('magazijn@eurofins.nl')
+      expect(body.senderName).toBe('Sophie')
+      expect(body.items).toEqual([expect.objectContaining({ orderId: '1293793', name: 'Jansen (Wageningen)', colli: 2, colliOmschrijvingen: ['Doos', 'Koelbox'] })])
+      expect(screen.getByRole('status')).toHaveTextContent('Dagoverzicht verstuurd naar magazijn@eurofins.nl')
+      vi.unstubAllGlobals()
+    })
+
+    it('toont het als het dagoverzicht niet verstuurd kon worden', async () => {
+      seed()
+      render(<Harness />)
+      await verzend()
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({ error: 'Het dagoverzicht per mail is nog niet ingesteld.' }) }))
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Dagoverzicht mailen/ })) })
+      expect(screen.getByRole('alert')).toHaveTextContent('nog niet ingesteld')
+      vi.unstubAllGlobals()
+    })
+
+    it('print alle labels van vandaag in één keer, oudste eerst', () => {
+      const label = (orderId: string, colli: number) => ({
+        name: 'X', adres: '', postcode: '', plaats: '', land: 'Nederland', route: 'Route 1',
+        colli, colliOmschrijvingen: [], spoed: false, orderedAt: VERZONDEN, orderId,
+      })
+      localStorage.setItem('verzonden_vandaag', JSON.stringify({ day: '2026-09-24', items: [
+        { id: 'b', sentAt: '2026-09-24T10:00:00.000Z', orderId: '1293800', label: label('1293800', 1) },
+        { id: 'a', sentAt: VERZONDEN, orderId: '1293793', label: label('1293793', 2) },
+      ] }))
+      seed()
+      render(<Harness />)
+      fireEvent.click(screen.getByRole('button', { name: /Alle labels printen \(3\)/ }))
+      const [labels] = vi.mocked(printLabels).mock.calls[0]
+      expect(labels.map(l => l.orderId)).toEqual(['1293793', '1293800'])
     })
 
     it('toont zonder ordernummer dat er geen QR-code op komt', async () => {

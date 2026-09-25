@@ -1,21 +1,40 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getSelectedFormat, printLabels } from '../services/printService'
-import { dagoverzichtMailto, type SentItem } from '../services/sentToday'
+import type { SentItem } from '../services/sentToday'
+import { mailDagoverzicht } from '../services/dagoverzicht'
 
 interface SentListProps {
   items: SentItem[]
   /** De zojuist verzonden zending: valt op, zodat printen de logische volgende stap is. */
   highlightId: string | null
+  senderName: string
   senderEmail: string
   senderCcEmail: string
 }
+
+type MailState = { status: 'idle' } | { status: 'sending' } | { status: 'sent'; to: string } | { status: 'error'; message: string }
 
 const tijd = (iso: string) =>
   new Date(iso).toLocaleTimeString('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' })
 
 /** "Vandaag verzonden" op de desktop: per zending het ordernummer en opnieuw printen. */
-export default function SentList({ items, highlightId, senderEmail, senderCcEmail }: SentListProps) {
+export default function SentList({ items, highlightId, senderName, senderEmail, senderCcEmail }: SentListProps) {
   const listRef = useRef<HTMLUListElement>(null)
+  const [mail, setMail] = useState<MailState>({ status: 'idle' })
+  const totaalColli = items.reduce((som, i) => som + i.label.colli, 0)
+
+  const handleMail = async () => {
+    setMail({ status: 'sending' })
+    try {
+      await mailDagoverzicht(items, senderEmail, senderCcEmail, senderName)
+      setMail({ status: 'sent', to: senderEmail.trim() })
+    } catch (e) {
+      setMail({ status: 'error', message: e instanceof Error ? e.message : 'Versturen mislukt' })
+    }
+  }
+
+  // Alle labels van vandaag in één printopdracht, in de volgorde van verzenden.
+  const printAlles = () => printLabels([...items].reverse().map(i => i.label), getSelectedFormat())
 
   // Nieuwste staat bovenaan: na verzenden terug naar boven, zodat de printknop in beeld is.
   useEffect(() => {
@@ -25,19 +44,40 @@ export default function SentList({ items, highlightId, senderEmail, senderCcEmai
   return (
     // Vult de rest van de kolom; alleen de lijst scrolt, de kop blijft staan.
     <aside aria-label="Vandaag verzonden" className="flex-1 min-h-0 flex flex-col">
-      <div className="shrink-0 flex items-center justify-between gap-2 mb-3">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="text-sm font-bold text-gray-700">
           Vandaag verzonden <span className="font-normal text-gray-400">({items.length})</span>
         </h2>
         {items.length > 0 && (
-          <a
-            href={dagoverzichtMailto(items, senderEmail, senderCcEmail)}
-            className="text-xs font-semibold text-ef-blue hover:underline"
-          >
-            ✉ Dagoverzicht mailen
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={printAlles}
+              className="rounded-lg bg-ef-blue/10 text-ef-blue hover:bg-ef-blue/20 text-xs font-semibold px-2.5 py-1.5 transition-colors"
+            >
+              🖨 Alle labels printen ({totaalColli})
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleMail()}
+              disabled={mail.status === 'sending' || !senderEmail.trim()}
+              title={senderEmail.trim() ? `Naar ${senderEmail.trim()}` : 'Vul eerst je e-mailadres in bij de instellingen'}
+              className="rounded-lg bg-ef-blue text-white hover:bg-ef-blue/90 disabled:bg-ef-blue/40 disabled:cursor-not-allowed text-xs font-semibold px-2.5 py-1.5 transition-colors"
+            >
+              {mail.status === 'sending' ? '⏳ Versturen…' : '✉ Dagoverzicht mailen'}
+            </button>
+          </div>
         )}
       </div>
+      {mail.status === 'sent' && (
+        <p role="status" className="shrink-0 -mt-1 mb-3 text-xs text-mi-green">✓ Dagoverzicht verstuurd naar {mail.to}.</p>
+      )}
+      {mail.status === 'error' && (
+        <p role="alert" className="shrink-0 -mt-1 mb-3 text-xs text-red-600">{mail.message}</p>
+      )}
+      {items.length > 0 && !senderEmail.trim() && (
+        <p className="shrink-0 -mt-1 mb-3 text-xs text-gray-400">Vul bij de instellingen je e-mailadres in om het dagoverzicht te mailen.</p>
+      )}
 
       {items.length === 0 && (
         <p className="text-xs text-gray-400 leading-relaxed">

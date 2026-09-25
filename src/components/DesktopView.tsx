@@ -184,6 +184,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
           <SentList
             items={sent}
             highlightId={highlightId}
+            senderName={store.senderName}
             senderEmail={store.senderEmail}
             senderCcEmail={store.senderCcEmail}
           />

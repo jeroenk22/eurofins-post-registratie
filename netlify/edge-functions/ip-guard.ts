@@ -20,6 +20,10 @@ export default async function handler(
     )
   }
 
+  // De logo's in de dagoverzicht-mail: Gmail en Outlook halen ze op vanaf hun
+  // eigen servers, niet vanaf de werkplek. Alleen die paar plaatjes, verder niets.
+  if (url.pathname.startsWith('/email/') && url.pathname.endsWith('.png')) return context.next()
+
   if (!FILTER_ENABLED || ALLOWED_IPS.includes(clientIp)) return context.next(withClientIpHeader(request, url, clientIp))
 
   return new Response(blockedHtml(clientIp), {

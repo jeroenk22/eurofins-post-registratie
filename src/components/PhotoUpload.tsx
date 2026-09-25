@@ -97,7 +97,7 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
 
       {/* Op desktop kleine thumbnails, en alleen dit deel scrolt: Verzenden blijft in beeld. */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(4.25rem,1fr))] md:max-h-[9.5rem] md:overflow-y-auto gap-1.5 mt-2">
+        <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] md:max-h-[13rem] md:overflow-y-auto gap-1.5 mt-2">
           {photos.map((p, i) => (
             <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
               {isDesktop ? (
