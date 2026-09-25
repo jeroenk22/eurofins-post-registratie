@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo, SubmitState } from "./types";
 import { useStore } from "./useStore";
-import { submitToWebhook, isWebhookConfigured } from "./webhookService";
+import { submitToWebhook, resubmitToMake, isWebhookConfigured, SubmitError, type PendingSubmission } from "./webhookService";
 import { validateForm, isValidEmail, isValidPhone } from "./validation";
 import { useRecipientData } from "./hooks/useRecipientData";
 import Header from "./components/Header";
@@ -51,6 +51,14 @@ export default function App() {
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
+    }
+  });
+  // Orders bestaan al, Make nog niet bereikt: een nieuwe poging gaat alleen naar Make.
+  const [pending, setPending] = useState<PendingSubmission | null>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("submit_pending") ?? "null") as PendingSubmission | null;
+    } catch {
+      return null;
     }
   });
   const [errorMsg, setErrorMsg] = useState("");
@@ -104,13 +112,17 @@ export default function App() {
     setErrorMsg("");
 
     try {
-      const { submittedAt: sentAt, orderIds: ids } = await submitToWebhook(
-        store.entries,
-        store.senderName,
-        store.senderPhone,
-        store.senderEmail,
-        store.senderCcEmail,
-      );
+      const { submittedAt: sentAt, orderIds: ids } = pending
+        ? await resubmitToMake(pending)
+        : await submitToWebhook(
+            store.entries,
+            store.senderName,
+            store.senderPhone,
+            store.senderEmail,
+            store.senderCcEmail,
+          );
+      setPending(null);
+      sessionStorage.removeItem("submit_pending");
       setSubmittedAt(sentAt);
       sessionStorage.setItem("submit_time", sentAt);
       setOrderIds(ids);
@@ -118,9 +130,21 @@ export default function App() {
       setSubmitState("success");
       sessionStorage.setItem("submit_state", "success");
     } catch (e) {
+      const nowPending = e instanceof SubmitError ? e.pending : null;
+      if (nowPending) {
+        setPending(nowPending);
+        try {
+          sessionStorage.setItem("submit_pending", JSON.stringify(nowPending));
+        } catch {
+          // Te groot door de foto's: dan alleen in het geheugen (tot een refresh).
+        }
+      }
       setSubmitState("error");
       setErrorMsg(
-        `Verzenden mislukt: ${e instanceof Error ? e.message : "Onbekende fout"}`,
+        `Verzenden mislukt: ${e instanceof Error ? e.message : "Onbekende fout"}` +
+          (nowPending
+            ? " — de order in Mendrix is wél al aangemaakt. Druk opnieuw op Versturen; er komt geen tweede order. Wijzigingen in het formulier gaan niet meer mee."
+            : ""),
       );
     }
   };
@@ -130,7 +154,9 @@ export default function App() {
     sessionStorage.removeItem("submit_state");
     sessionStorage.removeItem("submit_time");
     sessionStorage.removeItem("submit_order_ids");
+    sessionStorage.removeItem("submit_pending");
     sessionStorage.removeItem("show_cc");
+    setPending(null);
     setSubmittedAt("");
     setOrderIds([]);
     setSubmitState("idle");

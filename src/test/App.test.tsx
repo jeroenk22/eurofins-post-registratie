@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import App from '../App'
+import { submitToWebhook, resubmitToMake, SubmitError, type PendingSubmission } from '../webhookService'
+import type { SubmitPayload } from '../types'
 
-vi.mock('../webhookService', () => ({
+vi.mock('../webhookService', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../webhookService')>()),
   isWebhookConfigured: vi.fn(() => true),
   submitToWebhook: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1234567'] })),
+  resubmitToMake: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1293793'] })),
 }))
 
 vi.mock('../hooks/useRecipientData', () => ({
@@ -149,5 +153,53 @@ describe('App — submit_state persistentie', () => {
 
     expect(screen.getByLabelText('Jouw naam *')).toHaveValue('Sophie')
     expect(screen.getByLabelText(/CC e-mailadres/)).toHaveValue('cc@example.com')
+  })
+})
+
+describe('App — geen tweede Mendrix-order bij opnieuw versturen', () => {
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); vi.clearAllMocks() })
+
+  const pending: PendingSubmission = {
+    payload: { submitted_at: '2026-09-24T09:22:31.000Z' } as SubmitPayload,
+    orderIds: ['1293793'],
+  }
+
+  it('stuurt na een Make-fout met bestaande order alleen nog naar Make', async () => {
+    vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500: Internal Server Error', pending))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(screen.getByRole('alert')).toHaveTextContent('er komt geen tweede order')
+
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(submitToWebhook).toHaveBeenCalledTimes(1)
+    expect(resubmitToMake).toHaveBeenCalledWith(pending)
+    expect(screen.getByText('Verstuurd!')).toBeInTheDocument()
+    expect(sessionStorage.getItem('submit_pending')).toBeNull()
+  })
+
+  it('onthoudt dat ook na een refresh', async () => {
+    vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500', pending))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    const { unmount } = render(<App />)
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    unmount()
+
+    render(<App />)
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(submitToWebhook).toHaveBeenCalledTimes(1)
+    expect(resubmitToMake).toHaveBeenCalledTimes(1)
+  })
+
+  it('zonder aangemaakte order gewoon opnieuw volledig versturen', async () => {
+    vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500', null))
+    sessionStorage.setItem(FORM_DRAFT_KEY, draftWithEntry)
+    render(<App />)
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(screen.getByRole('alert')).not.toHaveTextContent('tweede order')
+    await act(async () => { fireEvent.click(screen.getByText('📤 Versturen')) })
+    expect(submitToWebhook).toHaveBeenCalledTimes(2)
+    expect(resubmitToMake).not.toHaveBeenCalled()
   })
 })

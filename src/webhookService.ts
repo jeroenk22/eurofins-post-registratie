@@ -31,6 +31,35 @@ export interface SubmitResult {
   orderIds: (string | null)[];
 }
 
+/**
+ * Een aanmelding waarvan de Mendrix-orders al bestaan, maar die Make niet
+ * bereikte. Opnieuw proberen gaat alleen nog naar Make, met dezelfde payload:
+ * nog eens langs create-order zou een tweede order maken.
+ */
+export interface PendingSubmission {
+  payload: SubmitPayload;
+  orderIds: (string | null)[];
+}
+
+/** Verzenden mislukt; `pending` is gezet als de orders toch al zijn aangemaakt. */
+export class SubmitError extends Error {
+  readonly pending: PendingSubmission | null;
+  constructor(message: string, pending: PendingSubmission | null) {
+    super(message);
+    this.name = "SubmitError";
+    this.pending = pending;
+  }
+}
+
+async function postToMake(url: string, payload: SubmitPayload): Promise<void> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+}
+
 /** Haalt de order-ID's uit het antwoord van forward-webhook; nooit een fout. */
 async function readOrderIds(res: Response | null): Promise<(string | null)[]> {
   if (!res?.ok) return [];
@@ -113,22 +142,36 @@ export async function submitToWebhook(
     entries: submitEntries,
   };
 
-  const [res, forwardRes] = await Promise.all([
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }),
+  // Ook als Make faalt wachten op forward-webhook: create-order kan de orders
+  // dan al hebben gemaakt, en die ID's zijn nodig om het niet dubbel te doen.
+  const [make, forwardRes] = await Promise.all([
+    postToMake(url, payload).then(() => null, (err: unknown) => err),
     fetch("/.netlify/functions/forward-webhook", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).catch(() => null),
   ]);
+  const orderIds = await readOrderIds(forwardRes);
 
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  if (make) {
+    const message = make instanceof Error ? make.message : String(make);
+    throw new SubmitError(message, orderIds.some(Boolean) ? { payload, orderIds } : null);
+  }
 
   // Het verzendtijdstip wordt teruggegeven zodat de labels exact dezelfde
   // datum/tijd tonen als de payload en de print-link.
-  return { submittedAt: payload.submitted_at, orderIds: await readOrderIds(forwardRes) };
+  return { submittedAt: payload.submitted_at, orderIds };
+}
+
+/** Tweede poging na een SubmitError met `pending`: alleen Make, zelfde payload. */
+export async function resubmitToMake(pending: PendingSubmission): Promise<SubmitResult> {
+  const url = getWebhookUrl();
+  if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
+  try {
+    await postToMake(url, pending.payload);
+  } catch (err) {
+    throw new SubmitError(err instanceof Error ? err.message : String(err), pending);
+  }
+  return { submittedAt: pending.payload.submitted_at, orderIds: pending.orderIds };
 }
