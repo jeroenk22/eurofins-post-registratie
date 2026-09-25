@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { getSelectedFormat, printLabels } from '../services/printService'
 import { dagoverzichtMailto, type SentItem } from '../services/sentToday'
 
@@ -14,9 +15,17 @@ const tijd = (iso: string) =>
 
 /** "Vandaag verzonden" op de desktop: per zending het ordernummer en opnieuw printen. */
 export default function SentList({ items, highlightId, senderEmail, senderCcEmail }: SentListProps) {
+  const listRef = useRef<HTMLUListElement>(null)
+
+  // Nieuwste staat bovenaan: na verzenden terug naar boven, zodat de printknop in beeld is.
+  useEffect(() => {
+    if (highlightId) listRef.current?.scrollTo?.({ top: 0 })
+  }, [highlightId])
+
   return (
-    <aside aria-label="Vandaag verzonden">
-      <div className="flex items-center justify-between gap-2 mb-3">
+    // Vult de rest van de kolom; alleen de lijst scrolt, de kop blijft staan.
+    <aside aria-label="Vandaag verzonden" className="flex-1 min-h-0 flex flex-col">
+      <div className="shrink-0 flex items-center justify-between gap-2 mb-3">
         <h2 className="text-sm font-bold text-gray-700">
           Vandaag verzonden <span className="font-normal text-gray-400">({items.length})</span>
         </h2>
@@ -36,14 +45,15 @@ export default function SentList({ items, highlightId, senderEmail, senderCcEmai
         </p>
       )}
 
-      <ul className="space-y-2">
+      {/* Zoveel kolommen als er passen: één op een laptop, vier of meer op een breed scherm. */}
+      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
         {items.map(item => {
           const l = item.label
           const nieuw = item.id === highlightId
           return (
             <li
               key={item.id}
-              className={`card p-3 border-l-4 border-l-mi-green ${nieuw ? 'ring-2 ring-mi-green/60' : ''}`}
+              className={`card p-3 border-l-4 border-l-mi-green ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-xs font-bold text-gray-800">

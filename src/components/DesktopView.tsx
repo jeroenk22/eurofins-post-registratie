@@ -112,9 +112,14 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="max-w-6xl mx-auto px-6 py-5">
+    // Schermvullend: kop en instellingen bovenaan, daaronder twee kolommen die elk
+    // zelf scrollen. De invultegel groeit tot 46rem; alles daarnaast is voor de
+    // verzonden zendingen, die in zoveel kolommen staan als er passen.
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      <div className="shrink-0">
+        <Header />
+      </div>
+      <div className="shrink-0 px-4 lg:px-6 pt-4 max-h-[60vh] overflow-y-auto">
         <SettingsPanel
           store={store}
           open={settingsOpen}
@@ -125,56 +130,55 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
           mailPerZending={mailPerZending}
           onMailPerZendingChange={handleMailChange}
         />
+      </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
-          <section aria-label="Nieuwe zending">
-            {store.entries.map((entry, i) => (
-              <div key={entry.id} className="mb-5">
-                <PostCard
-                  entry={entry}
-                  index={i}
-                  onUpdate={store.updateEntry}
-                  onRemove={store.removeEntry}
-                  showRemove={store.entries.length > 1}
-                  recipients={recipients}
-                  showErrors={showEntryErrors && error?.entryId === entry.id}
-                />
-                {error?.entryId === entry.id && (
-                  <div
-                    role="alert"
-                    className="mb-3 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
-                  >
-                    {error.message}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void handleSend(entry)}
-                  disabled={sendingId !== null}
-                  className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
-                    sendingId !== null
-                      ? 'bg-ef-blue/60 cursor-not-allowed'
-                      : 'bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]'
-                  }`}
+      <main className="flex-1 min-h-0 grid gap-4 lg:gap-6 px-4 lg:px-6 pb-4 grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_minmax(19rem,34%)] xl:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
+        <section aria-label="Nieuwe zending" className="min-h-0 overflow-y-auto pr-1">
+          {store.entries.map((entry, i) => (
+            <div key={entry.id} className="mb-5">
+              <PostCard
+                entry={entry}
+                index={i}
+                onUpdate={store.updateEntry}
+                onRemove={store.removeEntry}
+                showRemove={store.entries.length > 1}
+                recipients={recipients}
+                showErrors={showEntryErrors && error?.entryId === entry.id}
+              />
+              {error?.entryId === entry.id && (
+                <div
+                  role="alert"
+                  className="mb-3 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600"
                 >
-                  {sendingId === entry.id ? '⏳ Bezig met verzenden…' : '📤 Verzenden'}
-                </button>
-              </div>
-            ))}
-          </section>
+                  {error.message}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleSend(entry)}
+                disabled={sendingId !== null}
+                className={`w-full py-3.5 rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all ${
+                  sendingId !== null
+                    ? 'bg-ef-blue/60 cursor-not-allowed'
+                    : 'bg-ef-blue hover:bg-ef-blue/90 active:scale-[0.98]'
+                }`}
+              >
+                {sendingId === entry.id ? '⏳ Bezig met verzenden…' : '📤 Verzenden'}
+              </button>
+            </div>
+          ))}
+          <p className="text-center text-xs text-gray-300">v{__APP_VERSION__}</p>
+        </section>
 
-          <div>
-            {qrPanel}
-            <SentList
-              items={sent}
-              highlightId={highlightId}
-              senderEmail={store.senderEmail}
-              senderCcEmail={store.senderCcEmail}
-            />
-          </div>
+        <div className="min-h-0 flex flex-col">
+          <div className="shrink-0">{qrPanel}</div>
+          <SentList
+            items={sent}
+            highlightId={highlightId}
+            senderEmail={store.senderEmail}
+            senderCcEmail={store.senderCcEmail}
+          />
         </div>
-
-        <p className="text-center text-xs text-gray-300 mt-4">v{__APP_VERSION__}</p>
       </main>
     </div>
   )
