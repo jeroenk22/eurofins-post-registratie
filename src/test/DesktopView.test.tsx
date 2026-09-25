@@ -73,10 +73,29 @@ describe('DesktopView', () => {
       expect(screen.getByText(/Sophie · magazijn@eurofins\.nl/)).toBeInTheDocument()
     })
 
+    it('vragen in de balk om gegevens zolang er geen naam is', () => {
+      seed({ afzender: false })
+      render(<Harness />)
+      expect(screen.getByRole('button', { name: 'Instellingen' })).toHaveTextContent('Vul eerst je gegevens in')
+    })
+
+    it('sluiten met Escape of een klik ernaast', () => {
+      seed()
+      render(<Harness />)
+      fireEvent.click(screen.getByRole('button', { name: 'Instellingen' }))
+      expect(screen.getByLabelText('Jouw naam *')).toBeInTheDocument()
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByLabelText('Jouw naam *')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Instellingen' }))
+      fireEvent.mouseDown(screen.getByPlaceholderText(/bijv\. jan de vries/i))
+      expect(screen.queryByLabelText('Jouw naam *')).not.toBeInTheDocument()
+    })
+
     it('klappen open met een melding als de naam ontbreekt bij verzenden', async () => {
       seed({ afzender: false })
       render(<Harness />)
-      fireEvent.click(screen.getByRole('button', { name: /Inklappen/ }))
+      fireEvent.click(screen.getByRole('button', { name: 'Instellingen sluiten' }))
       await verzend()
       expect(screen.getByLabelText('Jouw naam *')).toHaveClass('!border-red-400')
       expect(screen.getByRole('alert')).toHaveTextContent('Vul je naam in')
@@ -146,7 +165,7 @@ describe('DesktopView', () => {
   it('stuurt mail_versturen=false als de mail per zending uit staat', async () => {
     seed()
     render(<Harness />)
-    fireEvent.click(screen.getByRole('button', { name: /Wijzigen/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Instellingen' }))
     fireEvent.click(screen.getByLabelText(/Bevestigingsmail bij elke verzonden zending/))
     await verzend()
     expect(vi.mocked(submitToWebhook).mock.calls[0][5]).toEqual({ mailVersturen: false })

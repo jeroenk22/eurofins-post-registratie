@@ -7,16 +7,18 @@ interface SenderFieldsProps {
   showErrors: boolean
   showCc: boolean
   onShowCcChange: (show: boolean) => void
+  /** Twee kolommen naast elkaar (desktop-instellingen) in plaats van onder elkaar. */
+  columns?: boolean
 }
 
 /** Naam, telefoon, e-mail en CC van wie aanmeldt; mobiel onderaan, desktop in de instellingen. */
-export default function SenderFields({ store, showErrors, showCc, onShowCcChange }: SenderFieldsProps) {
+export default function SenderFields({ store, showErrors, showCc, onShowCcChange, columns = false }: SenderFieldsProps) {
   const senderPhoneInvalid = showErrors && store.senderPhone.trim() !== '' && !isValidPhone(store.senderPhone.trim())
   const senderEmailInvalid = showErrors && store.senderEmail.trim() !== '' && !isValidEmail(store.senderEmail.trim())
   const ccEmailInvalid = showErrors && store.senderCcEmail.trim() !== '' && !isValidEmail(store.senderCcEmail.trim())
 
   return (
-    <div className="space-y-3">
+    <div className={columns ? 'grid grid-cols-2 gap-x-4 gap-y-3 items-start' : 'space-y-3'}>
       <FormField
         id="sender-name"
         label="Jouw naam *"
@@ -89,7 +91,7 @@ export default function SenderFields({ store, showErrors, showCc, onShowCcChange
         <button
           type="button"
           onClick={() => onShowCcChange(true)}
-          className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 self-start py-2 pr-2"
+          className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2 self-start justify-self-start py-2 pr-2"
         >
           + CC
         </button>

@@ -112,27 +112,28 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
   }
 
   return (
-    // Schermvullend: kop en instellingen bovenaan, daaronder twee kolommen die elk
-    // zelf scrollen. De invultegel groeit tot 46rem; alles daarnaast is voor de
-    // verzonden zendingen, die in zoveel kolommen staan als er passen.
+    // Schermvullend: de kop (met rechts de instellingen) bovenaan, daaronder twee
+    // kolommen die elk zelf scrollen. De invultegel groeit tot 46rem; alles daarnaast
+    // is voor de verzonden zendingen, in zoveel kolommen als er passen.
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <div className="shrink-0">
-        <Header />
-      </div>
-      <div className="shrink-0 px-4 lg:px-6 pt-4 max-h-[60vh] overflow-y-auto">
-        <SettingsPanel
-          store={store}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          showErrors={showSenderErrors}
-          formatId={formatId}
-          onFormatChange={handleFormatChange}
-          mailPerZending={mailPerZending}
-          onMailPerZendingChange={handleMailChange}
+        <Header
+          actions={
+            <SettingsPanel
+              store={store}
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              showErrors={showSenderErrors}
+              formatId={formatId}
+              onFormatChange={handleFormatChange}
+              mailPerZending={mailPerZending}
+              onMailPerZendingChange={handleMailChange}
+            />
+          }
         />
       </div>
 
-      <main className="flex-1 min-h-0 grid gap-4 lg:gap-6 px-4 lg:px-6 pb-4 grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_minmax(19rem,34%)] xl:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
+      <main className="flex-1 min-h-0 grid gap-4 lg:gap-6 px-4 lg:px-6 pt-4 pb-4 grid-cols-[minmax(0,1fr)_17rem] lg:grid-cols-[minmax(0,1fr)_minmax(19rem,34%)] xl:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
         <section aria-label="Nieuwe zending" className="min-h-0 overflow-y-auto pr-1">
           {store.entries.map((entry, i) => (
             <div key={entry.id} className="mb-5">
