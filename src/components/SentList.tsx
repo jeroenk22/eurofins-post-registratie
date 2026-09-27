@@ -89,7 +89,7 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
       )}
 
       {/* Zoveel kolommen als er passen: één op een laptop, vier of meer op een breed scherm. */}
-      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
+      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(16rem,1fr))]">
         {items.map(item => {
           const l = item.label
           const nieuw = item.id === highlightId
