@@ -16,8 +16,8 @@ import SentList from './SentList'
 interface DesktopViewProps {
   store: Store
   recipients: RecipientOption[]
-  /** QR-code voor foto's via de telefoon; staat boven "Vandaag verzonden". */
-  qrPanel?: ReactNode
+  /** Naast het kopje Foto's van een zending: de QR-code voor de telefoon. */
+  photoAction?: (entry: PostEntry) => ReactNode
 }
 
 /**
@@ -26,7 +26,7 @@ interface DesktopViewProps {
  * het ordernummer en de printknop (labels mét QR-code). Wat in het formulier
  * staat is dus altijd nog niet verzonden: dubbel verzenden kan niet.
  */
-export default function DesktopView({ store, recipients, qrPanel }: DesktopViewProps) {
+export default function DesktopView({ store, recipients, photoAction }: DesktopViewProps) {
   // Nieuwe werkplek (nog geen naam bekend): instellingen open.
   const [settingsOpen, setSettingsOpen] = useState(() => !store.senderName.trim())
   const [formatId, setFormatId] = useState(() => getSelectedFormat().id)
@@ -168,6 +168,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
               showRemove={store.entries.length > 1}
               recipients={recipients}
               showErrors={showEntryErrors && error?.entryId === entry.id}
+              photoAction={photoAction?.(entry)}
             />
           ))}
           {/* Normaal is er één zending; staan er (uit een oud concept) meer, dan gaan ze om de beurt. */}
@@ -198,7 +199,6 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
         </section>
 
         <div className="min-h-0 flex flex-col">
-          <div className="shrink-0">{qrPanel}</div>
           <SentList
             items={sent}
             highlightId={highlightId}

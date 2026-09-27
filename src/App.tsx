@@ -15,6 +15,8 @@ import DesktopView from "./components/DesktopView";
 import { useIsDesktop } from "./hooks/useIsDesktop";
 import PwaInstallBanner from "./components/PwaInstallBanner";
 import QrCodeFloat from "./components/QrCodeFloat";
+import MobilePhotoQr from "./components/MobilePhotoQr";
+import { useMobileSession } from "./hooks/useMobileSession";
 import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
 import { useSwUpdateCheck } from "./hooks/useSwUpdateCheck";
 import { decodePrintData } from "./services/printService";
@@ -85,6 +87,11 @@ export default function App() {
       storeRef.current.updateEntry(entryId, { photos: [...entry.photos, ...toAdd] });
     }
   }, []);
+
+  // Desktop: de telefoonsessie draait hier, los van het formulier, dat na elke
+  // verzending opnieuw begint. De QR-code zelf staat in het fotovak (MobilePhotoQr).
+  // Op de telefoon doet QrCodeFloat dit zelf.
+  const mobileSession = useMobileSession(sessionId, store.entries, () => setSessionReady(true), isDesktop);
 
   const syncedEntryIds = useMobilePhotoSync(
     sessionId,
@@ -188,15 +195,15 @@ export default function App() {
         <DesktopView
           store={store}
           recipients={recipients}
-          qrPanel={
-            <QrCodeFloat
-              inline
+          photoAction={entry => (
+            <MobilePhotoQr
               sessionId={sessionId}
-              entries={store.entries}
-              syncedEntryIds={syncedEntryIds}
-              onSessionReady={() => setSessionReady(true)}
+              pushState={mobileSession.pushState}
+              onRetry={mobileSession.retry}
+              ready={!!(entry.name && entry.adres)}
+              received={syncedEntryIds.has(entry.id)}
             />
-          }
+          )}
         />
       ) : (
         <div className="min-h-screen bg-gray-50">

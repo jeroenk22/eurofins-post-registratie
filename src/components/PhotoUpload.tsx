@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Photo } from '../types'
 import { validateImageFiles, resizeAndEncode } from '../photoUtils'
 import { useIsDesktop } from '../hooks/useIsDesktop'
@@ -8,9 +8,11 @@ interface PhotoUploadProps {
   photos: Photo[]
   onChange: (fn: (prev: Photo[]) => Photo[]) => void
   invalid?: boolean
+  /** Rechts naast het kopje, bijv. "Via telefoon" op de desktop. */
+  action?: ReactNode
 }
 
-export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadProps) {
+export default function PhotoUpload({ photos, onChange, invalid, action }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploadError, setUploadError] = useState('')
   // Desktop: klik op een thumbnail opent de foto groot. Op de telefoon niet.
@@ -49,7 +51,14 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
 
   return (
     <div>
-      <p className="label-base">Foto's</p>
+      {action ? (
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <p className="label-base !mb-0">Foto's</p>
+          {action}
+        </div>
+      ) : (
+        <p className="label-base">Foto's</p>
+      )}
 
       {/* Mobiel: klik opent direct file dialog / camera */}
       <button

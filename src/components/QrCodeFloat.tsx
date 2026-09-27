@@ -1,96 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PostEntry } from '../types'
+import { mobileUrl, useMobileSession } from '../hooks/useMobileSession'
 
 interface Props {
   sessionId: string
   entries: PostEntry[]
   syncedEntryIds: Set<string>
   onSessionReady?: () => void
-  /** In de kolom naast het formulier (desktop) in plaats van zwevend rechtsboven. */
-  inline?: boolean
 }
 
-type PushState = 'pending' | 'synced' | 'error'
-
-export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady, inline = false }: Props) {
+/** Zwevend QR-paneel rechtsboven. De desktop gebruikt MobilePhotoQr in het fotovak. */
+export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
-  const [pushState, setPushState] = useState<PushState>('pending')
-  const [retryCount, setRetryCount] = useState(0)
-  const abortRef = useRef<AbortController | null>(null)
-  const hasSyncedRef = useRef(false)
-  const onSessionReadyRef = useRef(onSessionReady)
-  onSessionReadyRef.current = onSessionReady
-
-  const viteAppUrl = import.meta.env.VITE_APP_URL
-  const appUrl = (viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin).replace(/\/$/, '')
-  const mobileUrl = `${appUrl}/?mobile=${sessionId}`
-
-  const selectedEntries = entries.filter(e => e.name && e.adres)
-
-  // Push entries naar backend; na eerste sync gaan vervolgpushes stil
-  useEffect(() => {
-    // Ook een lege lijst doorsturen zodra de sessie loopt: anders blijft een net
-    // verzonden zending op de telefoon staan en kan er nog een foto bij.
-    if (selectedEntries.length === 0 && !hasSyncedRef.current) return
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    if (!hasSyncedRef.current) {
-      setPushState('pending')
-    }
-
-    fetch('/.netlify/functions/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: sessionId,
-        entries: selectedEntries.map(e => ({ id: e.id, name: e.name, colli: e.colli, colliOmschrijvingen: (e.colliOmschrijvingen ?? []).slice(0, e.colli), desktopPhotoCount: e.photos.length })),
-      }),
-      signal: controller.signal,
-    })
-      .then(r => {
-        if (controller.signal.aborted) return
-        if (!hasSyncedRef.current) {
-          if (r.ok) {
-            hasSyncedRef.current = true
-            setPushState('synced')
-            onSessionReadyRef.current?.()
-          } else {
-            setPushState('error')
-          }
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted && !hasSyncedRef.current) {
-          setPushState('error')
-        }
-      })
-
-    return () => controller.abort()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name + e.colli + e.photos.length + (e.colliOmschrijvingen ?? []).join('\x00'))), retryCount])
+  const { pushState, retry, selectedEntries } = useMobileSession(sessionId, entries, onSessionReady)
+  const url = mobileUrl(sessionId)
 
   // Genereer QR eenmalig zodra eerste push geslaagd is en paneel open staat
   useEffect(() => {
     if (pushState !== 'synced' || collapsed || qrDataUrl) return
     import('qrcode').then(mod => {
       const QRCode = (mod.default ?? mod) as { toDataURL: (text: string, opts: object) => Promise<string> }
-      return QRCode.toDataURL(mobileUrl, {
+      return QRCode.toDataURL(url, {
         width: 164,
         margin: 1,
         color: { dark: '#003c71', light: '#ffffff' },
       })
-    }).then(url => setQrDataUrl(url)).catch(() => {})
-  }, [mobileUrl, pushState, collapsed, qrDataUrl])
+    }).then(setQrDataUrl).catch(() => {})
+  }, [url, pushState, collapsed, qrDataUrl])
 
   if (selectedEntries.length === 0) return null
 
   return (
-    <div className={inline ? 'mb-5 max-w-xl' : 'hidden md:block fixed top-6 right-6 z-50'}>
-      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden ${inline ? 'shadow-md w-full border-gray-200' : 'shadow-xl w-56'}`}>
+    <div className="hidden md:block fixed top-6 right-6 z-50">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xl w-56">
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
@@ -102,15 +45,14 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
         </button>
 
         {!collapsed && (
-          // In de kolom liggend (QR links, namen rechts): dat kost minder hoogte.
-          <div className={inline ? 'p-3 flex items-center gap-4' : 'p-3'}>
-            <div className={inline ? 'shrink-0' : 'flex justify-center mb-2'}>
+          <div className="p-3">
+            <div className="flex justify-center mb-2">
               {pushState === 'error' ? (
                 <div className="w-[164px] h-[164px] rounded-lg bg-red-50 flex flex-col items-center justify-center gap-2">
                   <p className="text-xs text-red-400 text-center px-2">Verbinding mislukt</p>
                   <button
                     type="button"
-                    onClick={() => setRetryCount(c => c + 1)}
+                    onClick={retry}
                     className="text-xs text-ef-blue underline"
                   >
                     Opnieuw
@@ -122,9 +64,9 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
                 <img src={qrDataUrl} alt="QR code" width={164} height={164} className="rounded-lg" />
               )}
             </div>
-            <div className={inline ? 'flex-1 min-w-0' : ''}>
-              <p className={`text-[11px] text-gray-400 mb-3 leading-tight ${inline ? '' : 'text-center'}`}>
-                Scan met je telefoon om{inline ? ' ' : <br />}foto's toe te voegen
+            <div>
+              <p className="text-[11px] text-gray-400 mb-3 leading-tight text-center">
+                Scan met je telefoon om<br />foto's toe te voegen
               </p>
 
               <div className="space-y-1.5 border-t border-gray-100 pt-2">

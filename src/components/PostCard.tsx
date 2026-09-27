@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { PostEntry, Photo } from '../types'
 import PhotoUpload from './PhotoUpload'
 import RecipientAutocomplete from './RecipientAutocomplete'
@@ -16,9 +16,11 @@ interface PostCardProps {
   showRemove: boolean
   recipients: RecipientOption[]
   showErrors?: boolean
+  /** Naast het kopje Foto's (desktop: QR-code voor de telefoon). */
+  photoAction?: ReactNode
 }
 
-export default function PostCard({ entry, index, onUpdate, onRemove, showRemove, recipients, showErrors = false }: PostCardProps) {
+export default function PostCard({ entry, index, onUpdate, onRemove, showRemove, recipients, showErrors = false, photoAction }: PostCardProps) {
   const set = <K extends keyof PostEntry>(key: K, val: PostEntry[K]) =>
     onUpdate(entry.id, { [key]: val } as Partial<PostEntry>)
 
@@ -267,7 +269,7 @@ export default function PostCard({ entry, index, onUpdate, onRemove, showRemove,
         })}
       </div>
 
-      <PhotoUpload photos={entry.photos} onChange={updatePhotos} invalid={showErrors && entry.photos.length === 0} />
+      <PhotoUpload photos={entry.photos} onChange={updatePhotos} invalid={showErrors && entry.photos.length === 0} action={photoAction} />
     </div>
   )
 }
