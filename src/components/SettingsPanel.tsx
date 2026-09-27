@@ -71,9 +71,10 @@ export default function SettingsPanel({
       {open && (
         <section
           aria-label="Instellingen voor deze werkplek"
-          className="absolute right-0 top-full mt-2 z-50 w-[40rem] max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+          // Geen overflow-hidden: de uitklaplijst van het labelformaat moet buiten het paneel kunnen vallen.
+          className="absolute right-0 top-full mt-2 z-50 w-[40rem] max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200"
         >
-          <div className="h-1 bg-mi-yellow" />
+          <div className="h-1 bg-mi-yellow rounded-t-xl" />
           <div className="px-4 pt-3 pb-4">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>

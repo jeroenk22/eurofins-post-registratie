@@ -16,6 +16,21 @@ export interface SentItem {
   orderId: string | null
   /** Labelgegevens, inclusief het order-ID voor de QR-code. */
   label: PrintEntry
+  /** Extra's voor het detailvenster. Ontbreekt bij zendingen van vóór dit veld. */
+  details?: SentDetails
+}
+
+export interface SentDetails {
+  /** Zoals in de webhook: "Schap 3" of "Overig: op de kar". */
+  schap: string
+  recipientType?: 'Monsternemers' | 'AP06' | 'Mestklanten'
+  photoCount: number
+  senderName: string
+  senderPhone: string
+  senderEmail: string
+  senderCcEmail: string
+  /** Of er bij deze zending een bevestigingsmail is gevraagd. */
+  mailVerstuurd: boolean
 }
 
 interface Stored {

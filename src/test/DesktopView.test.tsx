@@ -206,6 +206,60 @@ describe('DesktopView', () => {
       expect(labels.map(l => l.orderId)).toEqual(['1293793', '1293800'])
     })
 
+    it('toont alle gegevens van een verzonden zending in een venster', async () => {
+      seed()
+      render(<Harness />)
+      await verzend()
+      fireEvent.click(screen.getByRole('button', { name: 'Details van Jansen (Wageningen)' }))
+
+      const venster = screen.getByRole('dialog', { name: 'Zending Jansen (Wageningen)' })
+      expect(within(venster).getByText('Order 1293793')).toBeInTheDocument()
+      expect(within(venster).getByText('Monsternemer')).toBeInTheDocument()
+      expect(within(venster).getByText('Dorpsstraat 1')).toBeInTheDocument()
+      expect(within(venster).getByText('6700AA Wageningen')).toBeInTheDocument()
+      expect(within(venster).getByText('Schap 3')).toBeInTheDocument()
+      expect(within(venster).getByText('Doos')).toBeInTheDocument()
+      expect(within(venster).getByText('Koelbox')).toBeInTheDocument()
+      expect(within(venster).getByText('Sophie')).toBeInTheDocument()
+      expect(within(venster).getByText('magazijn@eurofins.nl')).toBeInTheDocument()
+
+      fireEvent.click(within(venster).getByRole('button', { name: /Print 2 labels/ }))
+      expect(vi.mocked(printLabels).mock.calls[0][0]).toEqual([expect.objectContaining({ orderId: '1293793' })])
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('opent het venster ook bij een klik op de tegel, maar niet bij printen', async () => {
+      seed()
+      render(<Harness />)
+      await verzend()
+      const lijst = screen.getByRole('complementary', { name: 'Vandaag verzonden' })
+      fireEvent.click(within(lijst).getByRole('button', { name: /Print 2 labels/ }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+      fireEvent.click(within(lijst).getByText('Order 1293793'))
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('toont ook zendingen van vóór de extra gegevens', () => {
+      localStorage.setItem('verzonden_vandaag', JSON.stringify({ day: '2026-09-24', items: [
+        { id: 'a', sentAt: VERZONDEN, orderId: '7', label: {
+          name: 'Oud', adres: '', postcode: '', plaats: '', land: '', route: 'Route 1',
+          colli: 1, colliOmschrijvingen: [], spoed: true, orderedAt: VERZONDEN,
+        } },
+      ] }))
+      seed()
+      render(<Harness />)
+      fireEvent.click(screen.getByRole('button', { name: 'Details van Oud' }))
+      const venster = screen.getByRole('dialog')
+      expect(within(venster).getByText('Route 1')).toBeInTheDocument()
+      expect(within(venster).getByText('SPOED')).toBeInTheDocument()
+      expect(within(venster).queryByText('Aangemeld door')).not.toBeInTheDocument()
+    })
+
     it('toont zonder ordernummer dat er geen QR-code op komt', async () => {
       vi.mocked(submitToWebhook).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: [] })
       seed()

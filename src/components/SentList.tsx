@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSelectedFormat, printLabels } from '../services/printService'
 import type { SentItem } from '../services/sentToday'
 import { mailDagoverzicht } from '../services/dagoverzicht'
+import SentDetailModal from './SentDetailModal'
 
 interface SentListProps {
   items: SentItem[]
@@ -21,6 +22,8 @@ const tijd = (iso: string) =>
 export default function SentList({ items, highlightId, senderName, senderEmail, senderCcEmail }: SentListProps) {
   const listRef = useRef<HTMLUListElement>(null)
   const [mail, setMail] = useState<MailState>({ status: 'idle' })
+  const [detail, setDetail] = useState<SentItem | null>(null)
+  const closeDetail = useCallback(() => setDetail(null), [])
   const totaalColli = items.reduce((som, i) => som + i.label.colli, 0)
 
   const handleMail = async () => {
@@ -93,8 +96,10 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
           return (
             <li
               key={item.id}
+              // Klik op de tegel = details; de printknop houdt zijn eigen klik.
+              onClick={() => setDetail(item)}
               // Streep: oranje bij SPOED, anders groen. ! nodig: .card staat in de CSS ná border-l-* en zou hem overschrijven.
-              className={`card p-3 !border-l-4 ${l.spoed ? '!border-l-ef-orange' : '!border-l-mi-green'} ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
+              className={`card p-3 cursor-pointer hover:!shadow-lg transition-shadow !border-l-4 ${l.spoed ? '!border-l-ef-orange' : '!border-l-mi-green'} ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-xs font-bold text-gray-800">
@@ -104,7 +109,15 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
                   {item.orderId ? `Order ${item.orderId}` : 'Geen ordernummer'}
                 </p>
               </div>
-              <p className="text-sm text-gray-700 truncate mt-0.5" title={l.name}>{l.name}</p>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setDetail(item) }}
+                aria-label={`Details van ${l.name}`}
+                title="Details bekijken"
+                className="block w-full text-left text-sm text-gray-700 truncate mt-0.5 hover:text-ef-blue hover:underline focus:outline-none focus-visible:underline"
+              >
+                {l.name}
+              </button>
               <div className="flex items-center justify-between gap-2 mt-1.5">
                 <p className="text-xs text-gray-500">
                   {[l.route, `${l.colli} colli`].filter(Boolean).join(' · ')}
@@ -112,7 +125,7 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
                 </p>
                 <button
                   type="button"
-                  onClick={() => printLabels([l], getSelectedFormat())}
+                  onClick={e => { e.stopPropagation(); printLabels([l], getSelectedFormat()) }}
                   className={`flex-shrink-0 rounded-lg text-xs font-semibold px-2.5 py-1.5 transition-colors ${
                     nieuw
                       ? 'bg-ef-blue text-white hover:bg-ef-blue/90'
@@ -131,6 +144,7 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
           )
         })}
       </ul>
+      {detail && <SentDetailModal item={detail} onClose={closeDetail} />}
     </aside>
   )
 }

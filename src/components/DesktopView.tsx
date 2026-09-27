@@ -91,6 +91,17 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
         sentAt: submittedAt,
         orderId,
         label: toPrintEntry(entry, submittedAt, orderId),
+        details: {
+          schap: entry.shelf === 'overig' ? `Overig: ${entry.shelfDescription.trim()}` : `Schap ${entry.shelf}`,
+          recipientType: entry.recipientType,
+          photoCount: entry.photos.length,
+          senderName: senderName.trim(),
+          senderPhone: senderPhone.trim(),
+          senderEmail: senderEmail.trim(),
+          senderCcEmail: senderCcEmail.trim(),
+          // Bij een herkansing geldt wat er de eerste keer is meegestuurd.
+          mailVerstuurd: retry ? retry.payload.mail_versturen !== false : mailPerZending,
+        },
       }
       setSent(addSentToday(item))
       setHighlightId(item.id)
