@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Check, QrCode } from 'lucide-react'
 import { mobileUrl, type PushState } from '../hooks/useMobileSession'
 
 interface MobilePhotoQrProps {
@@ -12,7 +13,7 @@ interface MobilePhotoQrProps {
 }
 
 /**
- * Desktop: "📱 Via telefoon" naast het kopje Foto's. Een klik toont de QR-code in
+ * Desktop: "Via telefoon" (met QR-icoon) naast het kopje Foto's. Een klik toont de QR-code in
  * een zwevend venstertje boven het fotovak, zodat er niets verspringt.
  * Sluiten met ✕, Escape of een klik ernaast.
  */
@@ -55,10 +56,15 @@ export default function MobilePhotoQr({ sessionId, pushState, onRetry, ready, re
         disabled={!ready}
         aria-expanded={aan}
         title={ready ? "Foto's maken met je telefoon" : 'Kies eerst een ontvanger'}
-        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 -my-0.5 text-xs font-semibold text-ef-blue hover:bg-ef-blue/10 disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+        className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 -my-1 text-xs font-semibold transition-colors disabled:bg-gray-50 disabled:border-gray-200 disabled:text-gray-300 disabled:cursor-not-allowed ${
+          aan
+            ? 'bg-ef-blue border-ef-blue text-white'
+            : 'bg-ef-blue/10 border-ef-blue/20 text-ef-blue hover:bg-ef-blue/20'
+        }`}
       >
-        <span aria-hidden="true">📱</span> Via telefoon
-        {received && <span className="ml-0.5 text-mi-green" aria-label="foto's ontvangen">✓</span>}
+        <QrCode size={15} strokeWidth={2.25} aria-hidden="true" />
+        Via telefoon
+        {received && <Check size={14} strokeWidth={3} className={aan ? 'text-white' : 'text-mi-green'} aria-label="foto's ontvangen" />}
       </button>
 
       {aan && (
@@ -68,7 +74,9 @@ export default function MobilePhotoQr({ sessionId, pushState, onRetry, ready, re
           className="absolute right-0 bottom-full mb-2 z-40 w-[19rem] bg-white rounded-xl shadow-2xl border border-gray-200 p-3"
         >
           <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-sm font-bold text-gray-800">📱 Foto's via telefoon</p>
+            <p className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+              <QrCode size={16} className="text-ef-blue" aria-hidden="true" /> Foto's via telefoon
+            </p>
             <button
               type="button"
               onClick={() => setOpen(false)}
