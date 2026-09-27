@@ -128,14 +128,12 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
   return (
     // Schermvullend: de kop (met rechts de instellingen) bovenaan, daaronder twee
     // kolommen die elk zelf scrollen. Links de invultegel, rechts de verzonden
-    // zendingen in zoveel kolommen (van min. 15rem) als er passen.
-    // De invultegel groeit zonder sprongen mee met het scherm (vanaf 768px, daaronder
-    // is het de telefoonweergave):
-    //   - 12.5vw + 22rem: langzaam, van 28rem op 768px tot ~32.5rem op ~1350px. Rechts
-    //     één tegel, vanaf ~1060px twee;
-    //   - 100vw - 52rem: daarna gaat de extra breedte naar het formulier, en blijft er
-    //     rechts precies plek voor drie tegels (plus schuifbalk) — ook op een 1366px-laptop;
-    //   - hooguit 46rem: op een breed scherm gaat de rest naar de tegels (vier vanaf ~1810px).
+    // zendingen in zoveel kolommen als er passen (zie SentList).
+    // De invultegel groeit langzaam en zonder sprongen mee (12.5vw + 22rem, hooguit
+    // 42rem): 28rem op 768px, ~33rem op een 1366px-laptop, ~34.5rem op 1600px. De
+    // rest van de breedte gaat naar de tegels: 1 kolom tot ~1060px, 2 tot ~1350px,
+    // 3 op een laptop (tegels ~300px op 1600px), 4 vanaf ~1780px.
+    // (Vanaf 768px; daaronder is het de telefoonweergave.)
     <div className="h-screen flex flex-col bg-[#e3e9f2] overflow-hidden">
       <div className="shrink-0">
         <Header
@@ -156,7 +154,7 @@ export default function DesktopView({ store, recipients, qrPanel }: DesktopViewP
 
       {/* Blauwgrijze achtergrond met iets zwaardere schaduw en veldranden: de tegels
           springen eruit. Alleen hier; de telefoon houdt zijn eigen, lichte opmaak. */}
-      <main className="flex-1 min-h-0 [&_.card]:shadow-md [&_.input-base]:border-gray-300 grid gap-4 lg:gap-6 px-4 lg:px-6 pt-4 pb-4 grid-cols-[minmax(0,min(max(12.5vw_+_22rem,100vw_-_52rem),46rem))_minmax(0,1fr)]">
+      <main className="flex-1 min-h-0 [&_.card]:shadow-md [&_.input-base]:border-gray-300 grid gap-4 lg:gap-6 px-4 lg:px-6 pt-4 pb-4 grid-cols-[minmax(0,min(12.5vw_+_22rem,42rem))_minmax(0,1fr)]">
         {/* Verzenden staat direct onder de zending, en blijft onderin in beeld als
             de zending hoger is dan het scherm (sticky). */}
         <section aria-label="Nieuwe zending" className="min-h-0 overflow-y-auto pr-1">

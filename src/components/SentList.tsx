@@ -89,8 +89,10 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
       )}
 
       {/* Zoveel kolommen als er passen (zie DesktopView): één op een klein scherm, drie op
-          een laptop, vier of meer op een breed scherm; tegels rekken mee tot de rij vol is. Vol = nieuwe rij en verticaal scrollen. */}
-      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(15rem,1fr))]">
+          een laptop, vier of meer op een breed scherm; tegels rekken mee tot de rij vol is.
+          Min. 15rem, zodat er op 1366px drie passen; vanaf 1536px 17rem, zodat een laptop
+          van ~1600px drie ruime tegels houdt i.p.v. vier krappe. Vol = nieuwe rij en verticaal scrollen. */}
+      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] 2xl:grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
         {items.map(item => {
           const l = item.label
           const nieuw = item.id === highlightId
