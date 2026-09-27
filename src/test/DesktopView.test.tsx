@@ -265,8 +265,9 @@ describe('DesktopView', () => {
       seed()
       render(<Harness />)
       await verzend()
-      expect(screen.getByText('Geen ordernummer')).toBeInTheDocument()
-      expect(screen.getByText(/geen QR-code/)).toBeInTheDocument()
+      expect(screen.getByText('Geen ordernummer')).toHaveAttribute('title', expect.stringMatching(/geen QR-code/))
+      fireEvent.click(screen.getByRole('button', { name: 'Details van Jansen (Wageningen)' }))
+      expect(within(screen.getByRole('dialog')).getByText(/geen QR-code/)).toBeInTheDocument()
     })
   })
 

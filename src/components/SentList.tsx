@@ -52,11 +52,11 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
           Vandaag verzonden <span className="font-normal text-gray-400">({items.length})</span>
         </h2>
         {items.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={printAlles}
-              className="rounded-lg bg-ef-blue/10 text-ef-blue hover:bg-ef-blue/20 text-xs font-semibold px-2.5 py-1.5 transition-colors"
+              className="whitespace-nowrap rounded-lg bg-ef-blue/10 text-ef-blue hover:bg-ef-blue/20 text-xs font-semibold px-2.5 py-1.5 transition-colors"
             >
               🖨 Alle labels printen ({totaalColli})
             </button>
@@ -65,7 +65,7 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
               onClick={() => void handleMail()}
               disabled={mail.status === 'sending' || !senderEmail.trim()}
               title={senderEmail.trim() ? `Naar ${senderEmail.trim()}` : 'Vul eerst je e-mailadres in bij de instellingen'}
-              className="rounded-lg bg-ef-blue text-white hover:bg-ef-blue/90 disabled:bg-ef-blue/40 disabled:cursor-not-allowed text-xs font-semibold px-2.5 py-1.5 transition-colors"
+              className="whitespace-nowrap rounded-lg bg-ef-blue text-white hover:bg-ef-blue/90 disabled:bg-ef-blue/40 disabled:cursor-not-allowed text-xs font-semibold px-2.5 py-1.5 transition-colors"
             >
               {mail.status === 'sending' ? '⏳ Versturen…' : '✉ Dagoverzicht mailen'}
             </button>
@@ -88,8 +88,9 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
         </p>
       )}
 
-      {/* Zoveel kolommen als er passen: één op een laptop, vier of meer op een breed scherm. */}
-      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(16rem,1fr))]">
+      {/* Zoveel kolommen als er passen (zie DesktopView): één op een klein scherm, drie op
+          een laptop, vier of meer op een breed scherm; tegels rekken mee tot de rij vol is. Vol = nieuwe rij en verticaal scrollen. */}
+      <ul ref={listRef} className="flex-1 min-h-0 overflow-y-auto pr-1 pb-1 grid gap-2 content-start grid-cols-[repeat(auto-fill,minmax(15rem,1fr))]">
         {items.map(item => {
           const l = item.label
           const nieuw = item.id === highlightId
@@ -101,11 +102,17 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
               // Streep: oranje bij SPOED, anders groen. ! nodig: .card staat in de CSS ná border-l-* en zou hem overschrijven.
               className={`card p-3 cursor-pointer hover:!shadow-lg transition-shadow !border-l-4 ${l.spoed ? '!border-l-ef-orange' : '!border-l-mi-green'} ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
             >
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="text-xs font-bold text-gray-800">
-                  <span className="text-mi-green">✓</span> {tijd(item.sentAt)}
+              {/* SPOED staat bovenin: onderaan maakte het de regel op een smalle tegel te lang. */}
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-gray-800 whitespace-nowrap">
+                  <span><span className="text-mi-green">✓</span> {tijd(item.sentAt)}</span>
+                  {l.spoed && <span className="rounded bg-ef-orange text-white text-[10px] leading-none px-1 py-0.5">SPOED</span>}
                 </p>
-                <p className={`text-xs font-bold ${item.orderId ? 'text-gray-800' : 'text-amber-700'}`}>
+                {/* De uitleg staat in de tooltip en het detailvenster: zo blijven alle tegels even hoog. */}
+                <p
+                  title={item.orderId ? undefined : 'De order in Mendrix is niet aangemaakt; het label heeft geen QR-code.'}
+                  className={`text-xs font-bold whitespace-nowrap ${item.orderId ? 'text-gray-800' : 'text-amber-700'}`}
+                >
                   {item.orderId ? `Order ${item.orderId}` : 'Geen ordernummer'}
                 </p>
               </div>
@@ -119,14 +126,13 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
                 {l.name}
               </button>
               <div className="flex items-center justify-between gap-2 mt-1.5">
-                <p className="text-xs text-gray-500">
+                <p className="min-w-0 truncate text-xs text-gray-500">
                   {[l.route, `${l.colli} colli`].filter(Boolean).join(' · ')}
-                  {l.spoed && <span className="ml-1.5 font-bold text-ef-orange">SPOED</span>}
                 </p>
                 <button
                   type="button"
                   onClick={e => { e.stopPropagation(); printLabels([l], getSelectedFormat()) }}
-                  className={`flex-shrink-0 rounded-lg text-xs font-semibold px-2.5 py-1.5 transition-colors ${
+                  className={`flex-shrink-0 whitespace-nowrap rounded-lg text-xs font-semibold px-2.5 py-1.5 transition-colors ${
                     nieuw
                       ? 'bg-ef-blue text-white hover:bg-ef-blue/90'
                       : 'bg-ef-blue/10 text-ef-blue hover:bg-ef-blue/20'
@@ -135,11 +141,6 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
                   🖨 Print {l.colli} {l.colli === 1 ? 'label' : 'labels'}
                 </button>
               </div>
-              {!item.orderId && (
-                <p className="text-[11px] text-amber-700 mt-1">
-                  De order in Mendrix is niet aangemaakt; het label heeft geen QR-code.
-                </p>
-              )}
             </li>
           )
         })}
