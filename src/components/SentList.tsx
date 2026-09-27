@@ -123,7 +123,8 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
                 onClick={e => { e.stopPropagation(); setDetail(item) }}
                 aria-label={`Details van ${l.name}`}
                 title="Details bekijken"
-                className="block w-full text-left text-sm text-gray-700 truncate mt-0.5 hover:text-ef-blue hover:underline focus:outline-none focus-visible:underline"
+                // Geen eigen hover: de hele tegel is klikbaar. Wel een knop, voor het toetsenbord.
+                className="block w-full text-left text-sm text-gray-700 truncate mt-0.5 focus:outline-none focus-visible:underline"
               >
                 {l.name}
               </button>
