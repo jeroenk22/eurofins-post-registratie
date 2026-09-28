@@ -43,7 +43,7 @@ export default function LabelFormatSelect({ value, onChange }: LabelFormatSelect
       </button>
 
       {open && (
-        <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+        <ul className="absolute z-50 mt-1 w-full max-h-[min(22rem,60vh)] overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
           {LABEL_FORMATS.map((f) => (
             <li key={f.id}>
               <button

@@ -169,4 +169,47 @@ describe('MobileCameraPage', () => {
     render(<MobileCameraPage sessionId="test-session" />)
     expect(await screen.findByAltText('foto.jpg')).toBeInTheDocument()
   })
+
+  it('haalt de lijst opnieuw op als het scherm weer actief wordt', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ ok: true, json: async () => mockSession } as Response)
+      .mockResolvedValue({ ok: true, json: async () => ({ entries: [mockSession.entries[0]] }) } as Response)
+
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Wim Scholten')
+
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    await waitFor(() => expect(screen.queryByText('Wim Scholten')).not.toBeInTheDocument())
+    expect(screen.getByText('Kees Hin')).toBeInTheDocument()
+  })
+
+  it('uploadt niet voor een zending die op de desktop al verzonden is', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ ok: true, json: async () => mockSession } as Response)
+      // controle vlak voor het uploaden: Wim Scholten is intussen verzonden
+      .mockResolvedValue({ ok: true, json: async () => ({ entries: [mockSession.entries[0]] }) } as Response)
+
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Wim Scholten')
+    const inputs = screen.getAllByText('Foto\'s toevoegen (meerdere mogelijk)')
+    fireEvent.change(inputs[1].closest('label')!.querySelector('input')!, {
+      target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
+    })
+    await screen.findByText('×')
+
+    fireEvent.click(screen.getByText("📤 Foto's uploaden"))
+
+    expect(await screen.findByText(/Al verzonden op de desktop: Wim Scholten/)).toBeInTheDocument()
+    const postCalls = vi.mocked(fetch).mock.calls.filter(([, init]) => (init as RequestInit)?.method === 'POST')
+    expect(postCalls).toHaveLength(0)
+    expect(screen.queryByText('Wim Scholten')).not.toBeInTheDocument()
+  })
+
+  it('toont een melding als er geen open zendingen zijn', async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ entries: [] }) } as Response)
+    render(<MobileCameraPage sessionId="test-session" />)
+    expect(await screen.findByText(/geen open zendingen/)).toBeInTheDocument()
+  })
 })

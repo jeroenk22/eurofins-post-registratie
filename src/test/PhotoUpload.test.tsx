@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import PhotoUpload from '../components/PhotoUpload'
 import type { Photo } from '../types'
 
@@ -219,5 +219,61 @@ describe('PhotoUpload — invalid styling', () => {
   it('desktop paste-zone heeft grijze border bij invalid=false', () => {
     render(<PhotoUpload photos={[]} onChange={vi.fn()} invalid={false} />)
     expect(getPasteZone().className).toContain('border-gray-200')
+  })
+})
+
+describe('PhotoUpload — foto groot bekijken (alleen desktop)', () => {
+  const photos: Photo[] = [mockPhoto, mockPhoto2, { id: '3', name: 'derde.jpg', data: 'data:image/jpeg;base64,def' }]
+  const scherm = (breed: boolean) =>
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: breed, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+  afterEach(() => vi.unstubAllGlobals())
+
+  const groteFoto = () => screen.getByRole('dialog', { name: 'Foto bekijken' }).querySelector('img')!
+
+  it('opent een foto groot na klikken, en bladert met de pijlen', () => {
+    scherm(true)
+    render(<PhotoUpload photos={photos} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 2 groot bekijken' }))
+    expect(groteFoto()).toHaveAttribute('alt', 'screen2.png')
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende foto' }))
+    expect(groteFoto()).toHaveAttribute('alt', 'derde.jpg')
+    fireEvent.keyDown(document, { key: 'ArrowRight' })
+    expect(groteFoto()).toHaveAttribute('alt', 'foto.jpg')
+    fireEvent.keyDown(document, { key: 'ArrowLeft' })
+    expect(groteFoto()).toHaveAttribute('alt', 'derde.jpg')
+  })
+
+  it('sluit met Escape, ✕ of een klik naast de foto', () => {
+    scherm(true)
+    render(<PhotoUpload photos={photos} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 1 groot bekijken' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 1 groot bekijken' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 1 groot bekijken' }))
+    fireEvent.click(screen.getByRole('dialog'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('kan de foto vanuit het grote beeld verwijderen', () => {
+    scherm(true)
+    const onChange = vi.fn()
+    render(<PhotoUpload photos={photos} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Foto 2 groot bekijken' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Verwijder foto/ }))
+    const updater = onChange.mock.calls[0][0] as (prev: Photo[]) => Photo[]
+    expect(updater(photos).map(p => p.id)).toEqual(['1', '3'])
+  })
+
+  it('doet op de telefoon niets bij tikken op een foto', () => {
+    scherm(false)
+    render(<PhotoUpload photos={photos} onChange={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: /groot bekijken/ })).not.toBeInTheDocument()
   })
 })

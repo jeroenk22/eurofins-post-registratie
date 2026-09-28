@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PostEntry } from '../types'
+import { mobileUrl, useMobileSession } from '../hooks/useMobileSession'
 
 interface Props {
   sessionId: string
@@ -8,85 +9,31 @@ interface Props {
   onSessionReady?: () => void
 }
 
-type PushState = 'pending' | 'synced' | 'error'
-
+/** Zwevend QR-paneel rechtsboven. De desktop gebruikt MobilePhotoQr in het fotovak. */
 export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSessionReady }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
-  const [pushState, setPushState] = useState<PushState>('pending')
-  const [retryCount, setRetryCount] = useState(0)
-  const abortRef = useRef<AbortController | null>(null)
-  const hasSyncedRef = useRef(false)
-  const onSessionReadyRef = useRef(onSessionReady)
-  onSessionReadyRef.current = onSessionReady
-
-  const viteAppUrl = import.meta.env.VITE_APP_URL
-  const appUrl = (viteAppUrl?.startsWith('http') ? viteAppUrl : window.location.origin).replace(/\/$/, '')
-  const mobileUrl = `${appUrl}/?mobile=${sessionId}`
-
-  const selectedEntries = entries.filter(e => e.name && e.adres)
-
-  // Push entries naar backend; na eerste sync gaan vervolgpushes stil
-  useEffect(() => {
-    if (selectedEntries.length === 0) return
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    if (!hasSyncedRef.current) {
-      setPushState('pending')
-    }
-
-    fetch('/.netlify/functions/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: sessionId,
-        entries: selectedEntries.map(e => ({ id: e.id, name: e.name, colli: e.colli, colliOmschrijvingen: (e.colliOmschrijvingen ?? []).slice(0, e.colli), desktopPhotoCount: e.photos.length })),
-      }),
-      signal: controller.signal,
-    })
-      .then(r => {
-        if (controller.signal.aborted) return
-        if (!hasSyncedRef.current) {
-          if (r.ok) {
-            hasSyncedRef.current = true
-            setPushState('synced')
-            onSessionReadyRef.current?.()
-          } else {
-            setPushState('error')
-          }
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted && !hasSyncedRef.current) {
-          setPushState('error')
-        }
-      })
-
-    return () => controller.abort()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, JSON.stringify(selectedEntries.map(e => e.id + e.name + e.colli + e.photos.length + (e.colliOmschrijvingen ?? []).join('\x00'))), retryCount])
+  const { pushState, retry, selectedEntries } = useMobileSession(sessionId, entries, onSessionReady)
+  const url = mobileUrl(sessionId)
 
   // Genereer QR eenmalig zodra eerste push geslaagd is en paneel open staat
   useEffect(() => {
     if (pushState !== 'synced' || collapsed || qrDataUrl) return
     import('qrcode').then(mod => {
       const QRCode = (mod.default ?? mod) as { toDataURL: (text: string, opts: object) => Promise<string> }
-      return QRCode.toDataURL(mobileUrl, {
+      return QRCode.toDataURL(url, {
         width: 164,
         margin: 1,
         color: { dark: '#003c71', light: '#ffffff' },
       })
-    }).then(url => setQrDataUrl(url)).catch(() => {})
-  }, [mobileUrl, pushState, collapsed, qrDataUrl])
+    }).then(setQrDataUrl).catch(() => {})
+  }, [url, pushState, collapsed, qrDataUrl])
 
   if (selectedEntries.length === 0) return null
 
   return (
     <div className="hidden md:block fixed top-6 right-6 z-50">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-56">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xl w-56">
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
@@ -105,7 +52,7 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
                   <p className="text-xs text-red-400 text-center px-2">Verbinding mislukt</p>
                   <button
                     type="button"
-                    onClick={() => setRetryCount(c => c + 1)}
+                    onClick={retry}
                     className="text-xs text-ef-blue underline"
                   >
                     Opnieuw
@@ -117,29 +64,31 @@ export default function QrCodeFloat({ sessionId, entries, syncedEntryIds, onSess
                 <img src={qrDataUrl} alt="QR code" width={164} height={164} className="rounded-lg" />
               )}
             </div>
-            <p className="text-[11px] text-gray-400 text-center mb-3 leading-tight">
-              Scan met je telefoon om<br />foto's toe te voegen
-            </p>
+            <div>
+              <p className="text-[11px] text-gray-400 mb-3 leading-tight text-center">
+                Scan met je telefoon om<br />foto's toe te voegen
+              </p>
 
-            <div className="space-y-1.5 border-t border-gray-100 pt-2">
-              {selectedEntries.map(e => {
-                const synced = syncedEntryIds.has(e.id)
-                const hasLocalPhotos = e.photos.length > 0
-                return (
-                  <div key={e.id} className="flex items-center gap-1.5 text-xs">
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
-                      synced
-                        ? 'bg-green-100 text-green-600'
-                        : hasLocalPhotos
-                          ? 'bg-blue-100 text-blue-500'
-                          : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {synced ? '✓' : hasLocalPhotos ? e.photos.length : '○'}
-                    </span>
-                    <span className="text-gray-600 truncate">{e.name}</span>
-                  </div>
-                )
-              })}
+              <div className="space-y-1.5 border-t border-gray-100 pt-2">
+                {selectedEntries.map(e => {
+                  const synced = syncedEntryIds.has(e.id)
+                  const hasLocalPhotos = e.photos.length > 0
+                  return (
+                    <div key={e.id} className="flex items-center gap-1.5 text-xs">
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${
+                        synced
+                          ? 'bg-green-100 text-green-600'
+                          : hasLocalPhotos
+                            ? 'bg-blue-100 text-blue-500'
+                            : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        {synced ? '✓' : hasLocalPhotos ? e.photos.length : '○'}
+                      </span>
+                      <span className="text-gray-600 truncate">{e.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}

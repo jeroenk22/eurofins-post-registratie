@@ -25,6 +25,20 @@ interface Props {
   sessionId: string
 }
 
+const ENTRIES_REFRESH_MS = 5000
+
+/** Actuele zendingen van de desktop; `null` als dat nu niet lukt. */
+async function fetchEntries(sessionId: string): Promise<MobileEntry[] | null> {
+  try {
+    const r = await fetch(`/.netlify/functions/session?id=${encodeURIComponent(sessionId)}`)
+    if (!r.ok) return null
+    const data = (await r.json()) as { entries?: MobileEntry[] }
+    return data.entries ?? []
+  } catch {
+    return null
+  }
+}
+
 export default function MobileCameraPage({ sessionId }: Props) {
   const [entries, setEntries] = useState<MobileEntry[]>([])
   const [photos, setPhotos] = useState<Record<string, Photo[]>>({})
@@ -70,6 +84,23 @@ export default function MobileCameraPage({ sessionId }: Props) {
     return () => { cancelled = true }
   }, [sessionId])
 
+  // Houd de lijst bij: op de desktop kan intussen een zending verzonden zijn
+  // (die moet hier verdwijnen) of een nieuwe zijn begonnen (die moet erbij).
+  useEffect(() => {
+    if (loading || loadError || submitted) return
+    const refresh = async () => {
+      const fresh = await fetchEntries(sessionId)
+      if (fresh) setEntries(fresh)
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
+    const interval = setInterval(refresh, ENTRIES_REFRESH_MS)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [sessionId, loading, loadError, submitted])
+
   // Laad foto's uit IndexedDB bij mount
   useEffect(() => {
     loadPhotos(sessionId).then(setPhotos)
@@ -97,6 +128,26 @@ export default function MobileCameraPage({ sessionId }: Props) {
   }
 
   const handleSubmit = async () => {
+    setSubmitError('')
+    // Vlak voor het uploaden: staan de zendingen nog open op de desktop? Een foto
+    // bij een al verzonden zending zou daar stil verdwijnen.
+    const fresh = await fetchEntries(sessionId)
+    if (fresh) {
+      const openIds = new Set(fresh.map(e => e.id))
+      const verzonden = entries.filter(e => !openIds.has(e.id))
+      setEntries(fresh)
+      if (verzonden.length > 0) {
+        const updated = { ...photos }
+        verzonden.forEach(e => delete updated[e.id])
+        setPhotos(updated)
+        void savePhotos(sessionId, updated)
+        setSubmitError(
+          `Al verzonden op de desktop: ${verzonden.map(e => e.name || '(geen naam)').join(', ')}. ` +
+            'Foto\'s voor deze zending kunnen niet meer worden toegevoegd.',
+        )
+        return
+      }
+    }
     const missing = entries.filter(
       entry => (photos[entry.id] ?? []).length === 0 && entry.desktopPhotoCount === 0
     )
@@ -202,6 +253,11 @@ export default function MobileCameraPage({ sessionId }: Props) {
       </div>
 
       <div className="p-4 space-y-4 pb-8">
+        {entries.length === 0 && (
+          <p className="text-sm text-gray-500 text-center py-6">
+            Er staan geen open zendingen op de desktop. Kies op de desktop een ontvanger; die verschijnt hier vanzelf.
+          </p>
+        )}
         {entries.map(entry => {
           const entryPhotos = photos[entry.id] ?? []
           return (

@@ -1,4 +1,11 @@
-export default function Header() {
+import type { ReactNode } from 'react'
+
+interface HeaderProps {
+  /** Rechts in de blauwe balk, bijvoorbeeld de instellingen op desktop. */
+  actions?: ReactNode
+}
+
+export default function Header({ actions }: HeaderProps = {}) {
   return (
     <header className="bg-white border-b border-gray-100">
       {/* Logo bar */}
@@ -22,13 +29,16 @@ export default function Header() {
       </div>
 
       {/* Title band */}
-      <div className="bg-ef-blue px-4 py-3">
-        <h1 className="text-white font-semibold text-base leading-tight">
-          Post aanmelden
-        </h1>
-        <p className="text-ef-blue-light/70 text-xs mt-0.5">
-          Vul in wat er klaarstaat.
-        </p>
+      <div className="bg-ef-blue px-4 py-3 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-white font-semibold text-base leading-tight">
+            Post aanmelden
+          </h1>
+          <p className="text-ef-blue-light/70 text-xs mt-0.5">
+            Vul in wat er klaarstaat.
+          </p>
+        </div>
+        {actions}
       </div>
     </header>
   );

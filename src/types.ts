@@ -33,6 +33,8 @@ export interface SubmitPayload {
   print_url: string;
   /** Willekeurige code per aanmelding; daaronder bewaart forward-webhook de order-ID's. */
   submission_id: string;
+  /** Alleen vanaf desktop; `false` = Make slaat de bevestigingsmail over. */
+  mail_versturen?: boolean;
 }
 
 export interface SubmitEntry {

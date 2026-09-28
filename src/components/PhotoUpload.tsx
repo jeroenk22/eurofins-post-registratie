@@ -1,16 +1,23 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Photo } from '../types'
 import { validateImageFiles, resizeAndEncode } from '../photoUtils'
+import { useIsDesktop } from '../hooks/useIsDesktop'
+import PhotoLightbox from './PhotoLightbox'
 
 interface PhotoUploadProps {
   photos: Photo[]
   onChange: (fn: (prev: Photo[]) => Photo[]) => void
   invalid?: boolean
+  /** Rechts naast het kopje, bijv. "Via telefoon" op de desktop. */
+  action?: ReactNode
 }
 
-export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadProps) {
+export default function PhotoUpload({ photos, onChange, invalid, action }: PhotoUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploadError, setUploadError] = useState('')
+  // Desktop: klik op een thumbnail opent de foto groot. Op de telefoon niet.
+  const isDesktop = useIsDesktop()
+  const [viewIndex, setViewIndex] = useState<number | null>(null)
 
   const handleFileArray = async (files: File[]) => {
     setUploadError('')
@@ -44,7 +51,14 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
 
   return (
     <div>
-      <p className="label-base">Foto's</p>
+      {action ? (
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <p className="label-base !mb-0">Foto's</p>
+          {action}
+        </div>
+      ) : (
+        <p className="label-base">Foto's</p>
+      )}
 
       {/* Mobiel: klik opent direct file dialog / camera */}
       <button
@@ -90,11 +104,23 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
         <p role="alert" className="mt-1.5 text-xs text-red-500">{uploadError}</p>
       )}
 
+      {/* Op desktop kleine thumbnails, en alleen dit deel scrolt: Verzenden blijft in beeld. */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-3 gap-1.5 mt-2">
-          {photos.map(p => (
+        <div className="grid grid-cols-3 md:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] md:max-h-[13rem] md:overflow-y-auto gap-1.5 mt-2">
+          {photos.map((p, i) => (
             <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-              <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+              {isDesktop ? (
+                <button
+                  type="button"
+                  onClick={() => setViewIndex(i)}
+                  aria-label={`Foto ${i + 1} groot bekijken`}
+                  className="w-full h-full cursor-zoom-in"
+                >
+                  <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+                </button>
+              ) : (
+                <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+              )}
               <button
                 type="button"
                 onClick={() => remove(p.id)}
@@ -106,6 +132,19 @@ export default function PhotoUpload({ photos, onChange, invalid }: PhotoUploadPr
             </div>
           ))}
         </div>
+      )}
+
+      {viewIndex !== null && (
+        <PhotoLightbox
+          photos={photos}
+          index={Math.min(viewIndex, photos.length - 1)}
+          onIndexChange={setViewIndex}
+          onClose={() => setViewIndex(null)}
+          onRemove={id => {
+            remove(id)
+            if (photos.length <= 1) setViewIndex(null)
+          }}
+        />
       )}
     </div>
   )

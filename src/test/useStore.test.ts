@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useStore, saveDraft, newEntry } from "../useStore";
+import { useStore, saveDraft, newEntry, loadSender } from "../useStore";
 
 const SESSION_KEY = 'form_draft';
 
@@ -22,7 +22,7 @@ describe("newEntry", () => {
 });
 
 describe("useStore", () => {
-  beforeEach(() => sessionStorage.clear());
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); });
 
   it("starts with one empty entry", () => {
     const { result } = renderHook(() => useStore());
@@ -81,24 +81,26 @@ describe("useStore", () => {
     expect(result.current.entries[0].shelfDescription).toBe('Ligt op kar naast de stelling');
   });
 
-  it("reset clears all state", () => {
+  it("reset wist de zendingen maar houdt de afzender", () => {
     const { result } = renderHook(() => useStore());
     act(() => {
       result.current.addEntry();
+      result.current.updateEntry(result.current.entries[0].id, { name: "Acme" });
       result.current.setSenderName("Sophie");
       result.current.setSenderPhone("0612345678");
       result.current.setSenderEmail("sophie@example.com");
-      result.current.reset();
     });
+    act(() => result.current.reset());
     expect(result.current.entries).toHaveLength(1);
-    expect(result.current.senderName).toBe("");
-    expect(result.current.senderPhone).toBe("");
-    expect(result.current.senderEmail).toBe("");
+    expect(result.current.entries[0].name).toBe("");
+    expect(result.current.senderName).toBe("Sophie");
+    expect(result.current.senderPhone).toBe("0612345678");
+    expect(result.current.senderEmail).toBe("sophie@example.com");
   });
 });
 
 describe("useStore — sessionStorage persistentie", () => {
-  beforeEach(() => sessionStorage.clear());
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); });
 
   it("slaat state op in sessionStorage na wijziging", async () => {
     const { result } = renderHook(() => useStore());
@@ -121,7 +123,7 @@ describe("useStore — sessionStorage persistentie", () => {
     expect(result.current.entries[0].colli).toBe(3);
   });
 
-  it("reset schrijft lege state naar sessionStorage", () => {
+  it("reset schrijft lege zendingen naar sessionStorage", () => {
     const { result } = renderHook(() => useStore());
     act(() => {
       result.current.setSenderName("Sophie");
@@ -129,7 +131,7 @@ describe("useStore — sessionStorage persistentie", () => {
     });
     act(() => result.current.reset());
     const draft = JSON.parse(sessionStorage.getItem(SESSION_KEY)!);
-    expect(draft.senderName).toBe("");
+    expect(draft.senderName).toBe("Sophie");
     expect(draft.entries).toHaveLength(1);
   });
 
@@ -164,5 +166,57 @@ describe("useStore — sessionStorage persistentie", () => {
     } finally {
       Object.defineProperty(window, 'sessionStorage', { value: originalStorage, configurable: true });
     }
+  });
+});
+
+describe("useStore — afzender onthouden per werkplek (localStorage)", () => {
+  beforeEach(() => { sessionStorage.clear(); localStorage.clear(); });
+
+  it("bewaart de afzender in localStorage", () => {
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      result.current.setSenderName("Sophie");
+      result.current.setSenderEmail("sophie@example.com");
+    });
+    expect(loadSender()).toEqual({
+      senderName: "Sophie",
+      senderPhone: "",
+      senderEmail: "sophie@example.com",
+      senderCcEmail: "",
+    });
+  });
+
+  it("vult de afzender in bij een nieuwe sessie", () => {
+    localStorage.setItem("afzender", JSON.stringify({
+      senderName: "Sophie", senderPhone: "0612345678", senderEmail: "sophie@example.com", senderCcEmail: "cc@example.com",
+    }));
+    const { result } = renderHook(() => useStore());
+    expect(result.current.senderName).toBe("Sophie");
+    expect(result.current.senderPhone).toBe("0612345678");
+    expect(result.current.senderEmail).toBe("sophie@example.com");
+    expect(result.current.senderCcEmail).toBe("cc@example.com");
+  });
+
+  it("een ander e-mailadres overschrijft het onthouden adres", () => {
+    localStorage.setItem("afzender", JSON.stringify({
+      senderName: "Sophie", senderPhone: "", senderEmail: "oud@example.com", senderCcEmail: "",
+    }));
+    const { result } = renderHook(() => useStore());
+    act(() => result.current.setSenderEmail("nieuw@example.com"));
+    expect(loadSender()?.senderEmail).toBe("nieuw@example.com");
+  });
+
+  it("valt terug op het sessie-concept als er nog niets onthouden is", () => {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      entries: [], senderName: "Sophie", senderPhone: "", senderEmail: "", senderCcEmail: "",
+    }));
+    const { result } = renderHook(() => useStore());
+    expect(result.current.senderName).toBe("Sophie");
+  });
+
+  it("negeert onleesbare opslag", () => {
+    localStorage.setItem("afzender", "{kapot");
+    const { result } = renderHook(() => useStore());
+    expect(result.current.senderName).toBe("");
   });
 });
