@@ -102,7 +102,8 @@ export default function SentList({ items, highlightId, senderName, senderEmail, 
               // Klik op de tegel = details; de printknop houdt zijn eigen klik.
               onClick={() => setDetail(item)}
               // Streep: oranje bij SPOED, anders groen. ! nodig: .card staat in de CSS ná border-l-* en zou hem overschrijven.
-              className={`card p-3 cursor-pointer hover:!shadow-lg transition-shadow !border-l-4 ${l.spoed ? '!border-l-ef-orange' : '!border-l-mi-green'} ${nieuw ? 'ring-2 ring-inset ring-mi-green/60' : ''}`}
+              // Geen extra rand om de net verzonden tegel: die valt al op door de donkere printknop.
+              className={`card p-3 cursor-pointer hover:!shadow-lg transition-shadow !border-l-4 ${l.spoed ? '!border-l-ef-orange' : '!border-l-mi-green'}`}
             >
               {/* SPOED staat bovenin: onderaan maakte het de regel op een smalle tegel te lang. */}
               <div className="flex items-center justify-between gap-2">
