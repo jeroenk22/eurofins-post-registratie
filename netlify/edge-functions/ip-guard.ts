@@ -7,18 +7,7 @@ export default async function handler(
 ) {
   const clientIp = context.ip ?? 'onbekend'
 
-  // Tijdelijk diagnostisch eindpunt: /debug-ip toont het gedetecteerde IP
   const url = new URL(request.url)
-  if (url.pathname === '/debug-ip') {
-    return new Response(
-      JSON.stringify({
-        ip: clientIp,
-        filterEnabled: FILTER_ENABLED,
-        allowed: ALLOWED_IPS.includes(clientIp),
-      }),
-      { headers: { 'content-type': 'application/json' } },
-    )
-  }
 
   // De logo's in de dagoverzicht-mail: Gmail en Outlook halen ze op vanaf hun
   // eigen servers, niet vanaf de werkplek. Alleen die paar plaatjes, verder niets.

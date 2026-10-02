@@ -7,13 +7,25 @@
  * pagina de ID's later ophaalt.
  */
 
-/** Willekeurige, niet te raden code per aanmelding (16 tekens, base64url). */
-export function newSubmissionId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(12))
+/** Willekeurige, niet te raden tekst van `byteCount` bytes, base64url. */
+export function randomBase64Url(byteCount: number): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(byteCount))
   let binary = ''
   bytes.forEach((b) => (binary += String.fromCharCode(b)))
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_')
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
+
+/** Willekeurige, niet te raden code per aanmelding (16 tekens, base64url). */
+export function newSubmissionId(): string {
+  return randomBase64Url(12)
+}
+
+/** Sessie-ID voor de telefoonkoppeling: 16 bytes = 22 tekens base64url. */
+export function newSessionId(): string {
+  return randomBase64Url(16)
+}
+
+export const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/
 
 export const SUBMISSION_ID_PATTERN = /^[A-Za-z0-9_-]{16}$/
 

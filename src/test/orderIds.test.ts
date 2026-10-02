@@ -1,5 +1,26 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { fetchOrderIds, newSubmissionId, parseOrderIds, SUBMISSION_ID_PATTERN } from '../services/orderIds'
+import {
+  fetchOrderIds, newSessionId, newSubmissionId, parseOrderIds, SESSION_ID_PATTERN, SUBMISSION_ID_PATTERN,
+} from '../services/orderIds'
+import { SESSION_ID_PATTERN as SERVER_SESSION_ID_PATTERN } from '../../netlify/functions/session'
+
+describe('ID-formaten', () => {
+  it('newSessionId voldoet altijd aan het patroon: 22 tekens, geen padding', () => {
+    for (let i = 0; i < 50; i++) {
+      const id = newSessionId()
+      expect(id).toHaveLength(22)
+      expect(id).toMatch(SESSION_ID_PATTERN)
+    }
+  })
+
+  it('newSubmissionId voldoet altijd aan het patroon', () => {
+    for (let i = 0; i < 50; i++) expect(newSubmissionId()).toMatch(SUBMISSION_ID_PATTERN)
+  })
+
+  it('het sessiepatroon in de app en in de server-functie is gelijk', () => {
+    expect(SERVER_SESSION_ID_PATTERN.source).toBe(SESSION_ID_PATTERN.source)
+  })
+})
 
 describe('newSubmissionId', () => {
   it('maakt een code van 16 URL-veilige tekens', () => {
