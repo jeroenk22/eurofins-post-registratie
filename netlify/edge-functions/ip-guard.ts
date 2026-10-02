@@ -1,9 +1,22 @@
-import { FILTER_ENABLED, ALLOWED_IPS } from '../allowed-ips.ts'
+import { getStore } from '@netlify/blobs'
+import { FILTER_MODE, ALLOWED_IPS } from '../allowed-ips.ts'
 import { CLIENT_IP_HEADER } from '../client-ip.ts'
+import { isBeschermdPad } from '../beschermde-paden.ts'
+import { netwerkVan, staatOpLijst } from '../ip-match.ts'
+import { LIJST_KEY, NETWERKEN_STORE, TOEGANG_STORE, netwerkKey, vandaag, type ToegangsLijst } from '../toegang-opslag.ts'
+
+const CACHE_MS = 60_000
+
+let lijstCache: string[] | null = null
+let volgendePoging = 0
+let lopend: Promise<string[]> | null = null
+let waarschuwingGegeven = false
+// Per isolate: elk netwerk hoogstens één keer per dag wegschrijven
+const geregistreerd = new Set<string>()
 
 export default async function handler(
   request: Request,
-  context: { ip: string; next: (request?: Request) => Promise<Response> },
+  context: { ip: string; next: (request?: Request) => Promise<Response>; waitUntil?: (promise: Promise<unknown>) => void },
 ) {
   const clientIp = context.ip ?? 'onbekend'
 
@@ -13,12 +26,17 @@ export default async function handler(
   // eigen servers, niet vanaf de werkplek. Alleen die paar plaatjes, verder niets.
   if (url.pathname.startsWith('/email/') && url.pathname.endsWith('.png')) return context.next()
 
-  if (!FILTER_ENABLED || ALLOWED_IPS.includes(clientIp)) return context.next(withClientIpHeader(request, url, clientIp))
+  if (FILTER_MODE !== 'uit' && isBeschermdPad(url.pathname)) {
+    registreer(clientIp, context.waitUntil)
+    if (FILTER_MODE === 'aan' && !(await heeftToegang(clientIp))) {
+      return new Response(JSON.stringify({ error: 'geen-toegang', netwerk: netwerkVan(clientIp) }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+  }
 
-  return new Response(blockedHtml(clientIp), {
-    status: 403,
-    headers: { 'content-type': 'text/html; charset=utf-8' },
-  })
+  return context.next(withClientIpHeader(request, url, clientIp))
 }
 
 /**
@@ -33,33 +51,56 @@ function withClientIpHeader(request: Request, url: URL, clientIp: string): Reque
   return new Request(request, { headers })
 }
 
-function blockedHtml(ip: string): string {
-  return `<!doctype html>
-<html lang="nl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Geen toegang</title>
-  <style>
-    body { font-family: system-ui, sans-serif; background: #f9fafb;
-           display: flex; align-items: center; justify-content: center;
-           min-height: 100vh; margin: 0; }
-    .card { background: #fff; border-radius: 12px; padding: 2rem 2.5rem;
-            max-width: 360px; text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-    h1 { color: #003883; font-size: 1.25rem; margin: 0 0 .75rem; }
-    p  { color: #6b7280; font-size: .9rem; line-height: 1.6; margin: 0; }
-    .ip { font-family: monospace; font-size: .8rem; color: #9ca3af;
-          margin-top: .75rem; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Toegang geweigerd</h1>
-    <p>Deze applicatie is alleen toegankelijk via een goedgekeurd netwerk.<br>
-       Verbind met het juiste wifi-netwerk en probeer het opnieuw.</p>
-    <p class="ip">Gedetecteerd IP: ${ip}</p>
-  </div>
-</body>
-</html>`
+/** Zet het netwerk (eenmaal per dag) in de blob-store, zonder de request te vertragen. */
+function registreer(ip: string, waitUntil?: (promise: Promise<unknown>) => void): void {
+  if (ip === 'onbekend') return
+  const netwerk = netwerkVan(ip)
+  const datum = vandaag()
+  const sleutel = netwerkKey(datum, netwerk)
+  if (geregistreerd.has(sleutel)) return
+  geregistreerd.add(sleutel)
+
+  const schrijf = (async () => {
+    try {
+      await getStore(NETWERKEN_STORE).setJSON(sleutel, { netwerk, datum })
+    } catch (error) {
+      // Mislukt: bij de volgende request opnieuw proberen
+      geregistreerd.delete(sleutel)
+      console.warn('ip-guard: netwerk registreren mislukt', error)
+    }
+  })()
+  if (waitUntil) waitUntil(schrijf)
+}
+
+async function heeftToegang(ip: string): Promise<boolean> {
+  const lijst = await leesToegangslijst()
+  return staatOpLijst(ip, [...ALLOWED_IPS, ...lijst])
+}
+
+/**
+ * Toegestane netwerken uit de blob. Hoogstens één leespoging per 60 s, ook na een
+ * fout. Faalt het lezen, dan blijft de laatst bekende lijst gelden (stale-if-error);
+ * is die er niet, dan geldt alleen het vangnet ALLOWED_IPS.
+ */
+function leesToegangslijst(): Promise<string[]> {
+  // Gelijktijdige requests wachten op dezelfde leesactie
+  if (lopend) return lopend
+  if (Date.now() < volgendePoging) return Promise.resolve(lijstCache ?? [])
+  lopend = laadToegangslijst().finally(() => { lopend = null })
+  return lopend
+}
+
+async function laadToegangslijst(): Promise<string[]> {
+  volgendePoging = Date.now() + CACHE_MS
+  try {
+    const lijst = (await getStore(TOEGANG_STORE).get(LIJST_KEY, { type: 'json' })) as ToegangsLijst | null
+    if (!lijst || !Array.isArray(lijst.netwerken)) throw new Error('geen toegangslijst')
+    lijstCache = lijst.netwerken
+  } catch (error) {
+    if (!waarschuwingGegeven) {
+      waarschuwingGegeven = true
+      console.warn('ip-guard: toegangslijst niet beschikbaar, laatst bekende lijst of ALLOWED_IPS geldt', error)
+    }
+  }
+  return lijstCache ?? []
 }

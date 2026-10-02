@@ -1,25 +1,10 @@
 /// <reference types="node" />
 import type { Handler, HandlerEvent } from '@netlify/functions'
-import { JWT } from 'google-auth-library'
+import { googleAccessToken, GoogleAuthConfigError } from '../google-auth'
 
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 const TOEGESTANE_TABS = ['Monsternemers', 'AP06', 'Mestklanten']
 const TOEGESTANE_KOLOMMEN = ['Code', 'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Naam', 'Adres', 'Postcode', 'Plaats', 'Land', 'Route']
-
-// Eén client per functie-instantie: de library cachet en vernieuwt het access token zelf
-let client: JWT | null = null
-let clientSleutel = ''
-
-function getClient(email: string, privateKey: string): JWT {
-  // Letterlijke \n (zoals geplakt in de Netlify-UI) omzetten naar echte newlines
-  const key = privateKey.replace(/\\n/g, '\n')
-  const sleutel = `${email}\n${key}`
-  if (!client || sleutel !== clientSleutel) {
-    client = new JWT({ email, key, scopes: [SCOPE] })
-    clientSleutel = sleutel
-  }
-  return client
-}
 
 // Houdt alleen de toegestane kolommen over; korte rijen worden aangevuld met lege cellen
 function filterKolommen(rows: string[][]): string[][] {
@@ -47,15 +32,13 @@ export const handler: Handler = async (event: HandlerEvent) => {
   }
 
   const sheetId = process.env.GOOGLE_SHEETS_ID
-  const email = process.env.GOOGLE_SA_EMAIL
-  const privateKey = process.env.GOOGLE_SA_PRIVATE_KEY
 
-  if (!sheetId || !email || !privateKey) {
+  if (!sheetId) {
     return json(503, { error: 'Google Sheets niet geconfigureerd' })
   }
 
   try {
-    const { token } = await getClient(email, privateKey).getAccessToken()
+    const token = await googleAccessToken(SCOPE)
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(`'${tab}'`)}`
     const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
     if (!response.ok) {
@@ -65,6 +48,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const data = await response.json()
     return json(200, { values: filterKolommen(data.values ?? []) })
   } catch (error) {
+    if (error instanceof GoogleAuthConfigError) {
+      return json(503, { error: 'Google Sheets niet geconfigureerd' })
+    }
     console.error('Ophalen uit Google Sheets mislukt:', error instanceof Error ? error.message : 'onbekende fout')
     return json(502, { error: 'Ophalen uit Google Sheets mislukt' })
   }
