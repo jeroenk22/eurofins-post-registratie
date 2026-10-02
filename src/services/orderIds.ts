@@ -12,7 +12,7 @@ export function randomBase64Url(byteCount: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteCount))
   let binary = ''
   bytes.forEach((b) => (binary += String.fromCharCode(b)))
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_')
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 /** Willekeurige, niet te raden code per aanmelding (16 tekens, base64url). */

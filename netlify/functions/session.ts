@@ -22,7 +22,7 @@ export interface SessionData {
 }
 
 /** Zelfde vorm als newSessionId() in de app: 16 bytes, 22 tekens base64url. */
-const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/
+export const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/
 
 const HEADERS = {
   'Content-Type': 'application/json',
