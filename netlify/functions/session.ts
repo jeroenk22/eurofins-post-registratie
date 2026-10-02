@@ -21,25 +21,25 @@ export interface SessionData {
   updatedAt: number
 }
 
+/** Zelfde vorm als newSessionId() in de app: 16 bytes, 22 tekens base64url. */
+const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/
+
 const HEADERS = {
   'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+}
+
+function ongeldigeSessie(): Response {
+  return new Response(JSON.stringify({ error: 'Ongeldige sessie' }), { status: 400, headers: HEADERS })
 }
 
 export default async (request: Request): Promise<Response> => {
-  if (request.method === 'OPTIONS') {
-    return new Response('', { status: 204, headers: HEADERS })
-  }
-
   try {
     const store = getStore('mobile-sessions')
     const url = new URL(request.url)
 
     if (request.method === 'GET') {
       const id = url.searchParams.get('id')
-      if (!id) return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400, headers: HEADERS })
+      if (!id || !SESSION_ID_PATTERN.test(id)) return ongeldigeSessie()
       const raw = await store.get(id, { type: 'text' })
       if (!raw) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: HEADERS })
       return new Response(raw, { status: 200, headers: HEADERS })
@@ -53,7 +53,7 @@ export default async (request: Request): Promise<Response> => {
         photos?: MobilePhoto[]
       }
 
-      if (!body.id) return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400, headers: HEADERS })
+      if (typeof body.id !== 'string' || !SESSION_ID_PATTERN.test(body.id)) return ongeldigeSessie()
 
       // Upsert entries (preserves existing photos)
       if (body.entries !== undefined) {

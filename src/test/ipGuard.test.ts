@@ -52,14 +52,10 @@ describe('ip-guard', () => {
     expect(text).toContain('9.9.9.9')
   })
 
-  it('/debug-ip retourneert het gedetecteerde IP als JSON', async () => {
+  it('heeft geen /debug-ip-eindpunt meer', async () => {
     const context = makeContext('9.9.9.9')
     const response = await handler(new Request('https://example.com/debug-ip'), context)
-    const json = await response!.json()
-    expect(json.ip).toBe('9.9.9.9')
-    expect(json.filterEnabled).toBe(true)
-    expect(json.allowed).toBe(false)
-    expect(json.allowedIps).toBeUndefined()
+    expect(response?.status).toBe(403)
   })
 
   describe('echt IP doorgeven aan de functies', () => {

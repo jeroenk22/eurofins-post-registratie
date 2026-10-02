@@ -21,12 +21,13 @@ import { useMobilePhotoSync } from "./hooks/useMobilePhotoSync";
 import { useSwUpdateCheck } from "./hooks/useSwUpdateCheck";
 import { decodePrintData } from "./services/printService";
 import { syncServerTime } from "./services/serverTime";
+import { newSessionId, SESSION_ID_PATTERN } from "./services/orderIds";
 
 // Generate a stable session ID for this browser session
 function getSessionId(): string {
   let id = sessionStorage.getItem("mobile_session_id");
-  if (!id) {
-    id = `s${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  if (!id || !SESSION_ID_PATTERN.test(id)) {
+    id = newSessionId();
     sessionStorage.setItem("mobile_session_id", id);
   }
   return id;
