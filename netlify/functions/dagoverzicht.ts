@@ -1,10 +1,14 @@
+import { getStore } from '@netlify/blobs';
+import { randomBytes } from 'node:crypto';
+import { AANMELDINGEN_STORE, CODE_PATTERN, labelsKey, type Label, type OpgeslagenLabels } from '../aanmelding-opslag';
 import { dagoverzichtHtml, dagoverzichtSubject, type DagoverzichtItem } from '../dagoverzicht-mail';
 
 const HEADERS = { 'Content-Type': 'application/json' };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_ITEMS = 300;
-/** encodePrintData() in de app: base64url. Bovengrens houdt de link bruikbaar in mailprogramma's. */
+/** Legacy: encodePrintData() van een oude client, base64url. */
 const PRINT_DATA = /^[A-Za-z0-9_-]{1,60000}$/;
+const MAX_LABELS = 300;
 
 /**
  * Verstuurt het dagoverzicht van een werkplek als opgemaakte mail. De HTML wordt
@@ -33,9 +37,9 @@ export default async (request: Request): Promise<Response> => {
   // Logo's van de site waarop deze functie draait: productie, of de preview
   // (daar staan ze vóór de merge al; op productie nog niet).
   const assetBase = new URL(request.url).origin;
-  // Alleen een link naar deze eigen site, en alleen met base64url-tekens: zo
-  // kan er via printData niets anders in de mail komen dan een printlink.
-  const printUrl = parsed.printData ? `${assetBase}/?printData=${parsed.printData}` : undefined;
+  // De labels staan op de server onder een nieuwe, onraadbare code: de link bevat geen gegevens.
+  const printCode = parsed.labels ? await bewaarLabels(parsed.labels) : undefined;
+  const printUrl = printCode ? `${assetBase}/?s=${printCode}` : undefined;
   const payload = {
     to: parsed.to,
     cc: parsed.cc,
@@ -62,6 +66,35 @@ export default async (request: Request): Promise<Response> => {
   return json({ ok: true }, 200);
 };
 
+/** Geeft de nieuwe code, of undefined als opslaan mislukt (dan geen printknop in de mail). */
+async function bewaarLabels(labels: Label[]): Promise<string | undefined> {
+  const code = randomBytes(12).toString('base64url');
+  try {
+    const opgeslagen: OpgeslagenLabels = { labels, createdAt: Date.now() };
+    await getStore(AANMELDINGEN_STORE).setJSON(labelsKey(code), opgeslagen);
+    return code;
+  } catch (err) {
+    console.error('dagoverzicht: labels opslaan mislukt:', err instanceof Error ? err.message : err);
+    return undefined;
+  }
+}
+
+/** Ongeldig of leeg: dan gewoon geen printknop in de mail. */
+function geldigeLabels(v: unknown): Label[] | undefined {
+  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_LABELS) return undefined;
+  const ok = v.every(l => !!l && typeof l === 'object' && typeof (l as { name?: unknown }).name === 'string');
+  return ok ? (v as Label[]) : undefined;
+}
+
+/** Spiegel van decodePrintData() in de app: base64url naar een JSON-array. */
+function decodeLegacyPrintData(encoded: string): Label[] | undefined {
+  try {
+    return geldigeLabels(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')));
+  } catch {
+    return undefined;
+  }
+}
+
 function json(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), { status, headers: HEADERS });
 }
@@ -70,7 +103,7 @@ const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0
 
 function parse(
   body: unknown,
-): { to: string; cc: string; senderName: string; items: DagoverzichtItem[]; printData: string } | { error: string } {
+): { to: string; cc: string; senderName: string; items: DagoverzichtItem[]; labels?: Label[] } | { error: string } {
   const b = (body ?? {}) as Record<string, unknown>;
   const to = str(b.to);
   const cc = str(b.cc);
@@ -98,9 +131,18 @@ function parse(
         ? i.colliOmschrijvingen.slice(0, 99).map(v => str(v, 120))
         : [],
       spoed: i.spoed === true,
+      ...fotoVelden(i),
     });
   }
-  // Ongeldig of te lang: dan gewoon geen printknop in de mail.
-  const printData = typeof b.printData === 'string' && PRINT_DATA.test(b.printData) ? b.printData : '';
-  return { to, cc, senderName: str(b.senderName, 100), items, printData };
+  const labels =
+    geldigeLabels(b.labels) ??
+    (typeof b.printData === 'string' && PRINT_DATA.test(b.printData) ? decodeLegacyPrintData(b.printData) : undefined);
+  return { to, cc, senderName: str(b.senderName, 100), items, labels };
+}
+
+/** De fotolink komt alleen bij een geldige code en minstens één foto. */
+function fotoVelden(i: Record<string, unknown>): { submissionId?: string; fotoCount?: number } {
+  const fotoCount = Number(i.fotoCount);
+  if (typeof i.submissionId !== 'string' || !CODE_PATTERN.test(i.submissionId) || !(fotoCount > 0)) return {};
+  return { submissionId: i.submissionId, fotoCount };
 }

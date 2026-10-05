@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const blobs = vi.hoisted(() => ({ getStore: vi.fn() }))
 vi.mock('@netlify/blobs', () => ({ getStore: blobs.getStore }))
 
+import { AANMELDING_BEWAARTERMIJN_MS } from '../../netlify/aanmelding-opslag'
 import {
   opruimen, SESSIE_BEWAARTERMIJN_MS, ORDER_ID_BEWAARTERMIJN_MS, type OpruimStores,
 } from '../../netlify/functions/opruimen'
@@ -44,7 +45,7 @@ describe('opruimen', () => {
     })
     const res = await opruimen(NOW, { sessies: s.store, orderIds: leeg() } as OpruimStores)
     expect(s.deleted).toEqual(['oud'])
-    expect(res).toEqual({ sessies: 1, orderIds: 0 })
+    expect(res).toEqual({ sessies: 1, orderIds: 0, aanmeldingen: 0 })
   })
 
   it('valt voor een sessie terug op createdAt als updatedAt 0 is of ontbreekt', async () => {
@@ -77,7 +78,20 @@ describe('opruimen', () => {
     const res = await opruimen(NOW, { sessies: s.store, orderIds: o.store })
     expect(s.deleted).toEqual(['geen', 'kapot', 'nul', 'lijst'])
     expect(o.deleted).toEqual(['geen', 'kapot'])
-    expect(res).toEqual({ sessies: 4, orderIds: 2 })
+    expect(res).toEqual({ sessies: 4, orderIds: 2, aanmeldingen: 0 })
+  })
+
+  it('verwijdert aanmeldingen (labels en fotos) voorbij 30 dagen en bewaart de rest', async () => {
+    const a = maakStore([['x/labels', 'x/fotos/1', 'y/labels', 'z/fotos/1', 'kapot']], {
+      'x/labels': json({ labels: [], createdAt: NOW - AANMELDING_BEWAARTERMIJN_MS + 1 }),
+      'x/fotos/1': json({ fotos: [], createdAt: NOW - AANMELDING_BEWAARTERMIJN_MS + 1 }),
+      'y/labels': json({ labels: [], createdAt: NOW - AANMELDING_BEWAARTERMIJN_MS - 1 }),
+      'z/fotos/1': json({ fotos: [] }),
+      kapot: '{niet-json',
+    })
+    const res = await opruimen(NOW, { sessies: leeg(), orderIds: leeg(), aanmeldingen: a.store })
+    expect(a.deleted).toEqual(['y/labels', 'z/fotos/1', 'kapot'])
+    expect(res.aanmeldingen).toBe(3)
   })
 
   it('loopt alle pagina\'s door', async () => {
@@ -110,7 +124,7 @@ describe('opruimen', () => {
     const o = maakStore([['oud']], { oud: json({ createdAt: 1 }) })
     const res = await opruimen(NOW, { sessies: kapot as unknown as OpruimStores['sessies'], orderIds: o.store })
     expect(o.deleted).toEqual(['oud'])
-    expect(res).toEqual({ sessies: 0, orderIds: 1 })
+    expect(res).toEqual({ sessies: 0, orderIds: 1, aanmeldingen: 0 })
   })
 
   it('logt één regel met aantallen en geen inhoud', async () => {

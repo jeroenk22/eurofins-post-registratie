@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import DesktopView from '../components/DesktopView'
 import { useStore } from '../useStore'
 import { submitToWebhook, resubmitToMake, SubmitError, type PendingSubmission } from '../webhookService'
-import { printLabels, decodePrintData } from '../services/printService'
+import { printLabels } from '../services/printService'
 import type { SubmitPayload } from '../types'
 
 vi.mock('../webhookService', async (importOriginal) => ({
@@ -47,6 +47,8 @@ function Harness() {
   return <DesktopView store={store} recipients={[]} />
 }
 
+const CODE = 'abcdEFGH1234_-xy'
+
 const verzend = async () => {
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Verzenden/ })) })
 }
@@ -56,7 +58,7 @@ describe('DesktopView', () => {
     sessionStorage.clear()
     localStorage.clear()
     vi.clearAllMocks()
-    vi.mocked(submitToWebhook).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: ['1293793'] })
+    vi.mocked(submitToWebhook).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: ['1293793'], submissionId: CODE })
   })
 
   describe('instellingen', () => {
@@ -135,6 +137,13 @@ describe('DesktopView', () => {
       expect(JSON.parse(localStorage.getItem('verzonden_vandaag')!).items).toHaveLength(1)
     })
 
+    it('bewaart de aanmeldingscode bij de verzonden zending', async () => {
+      seed()
+      render(<Harness />)
+      await verzend()
+      expect(JSON.parse(localStorage.getItem('verzonden_vandaag')!).items[0].submissionId).toBe(CODE)
+    })
+
     it('print de labels mét order-ID (QR-code) vanuit de verzonden zending', async () => {
       seed()
       render(<Harness />)
@@ -160,7 +169,9 @@ describe('DesktopView', () => {
       expect(body.senderName).toBe('Sophie')
       expect(body.items).toEqual([expect.objectContaining({ orderId: '1293793', name: 'Jansen (Wageningen)', colli: 2, colliOmschrijvingen: ['Doos', 'Koelbox'] })])
       // De printlink in de mail krijgt de labels mét order-ID (QR-code).
-      expect(decodePrintData(body.printData)).toEqual([expect.objectContaining({ name: 'Jansen (Wageningen)', orderId: '1293793', route: 'Route 3' })])
+      expect(body.labels).toEqual([expect.objectContaining({ name: 'Jansen (Wageningen)', orderId: '1293793', route: 'Route 3' })])
+      expect(body.printData).toBeUndefined()
+      expect(body.items[0]).toEqual(expect.objectContaining({ submissionId: CODE, fotoCount: 1 }))
       expect(screen.getByRole('status')).toHaveTextContent('Dagoverzicht verstuurd naar magazijn@eurofins.nl')
       vi.unstubAllGlobals()
     })
@@ -261,7 +272,7 @@ describe('DesktopView', () => {
     })
 
     it('toont zonder ordernummer dat er geen QR-code op komt', async () => {
-      vi.mocked(submitToWebhook).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: [] })
+      vi.mocked(submitToWebhook).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: [], submissionId: CODE })
       seed()
       render(<Harness />)
       await verzend()
@@ -282,7 +293,7 @@ describe('DesktopView', () => {
   })
 
   it('verstuurt niet twee keer bij dubbelklikken', async () => {
-    let klaar: (v: { submittedAt: string; orderIds: string[] }) => void = () => {}
+    let klaar: (v: { submittedAt: string; orderIds: string[]; submissionId: string }) => void = () => {}
     vi.mocked(submitToWebhook).mockReturnValue(new Promise(r => { klaar = r }))
     seed()
     render(<Harness />)
@@ -290,14 +301,14 @@ describe('DesktopView', () => {
     fireEvent.click(knop)
     fireEvent.click(knop)
     expect(knop).toBeDisabled()
-    await act(async () => { klaar({ submittedAt: VERZONDEN, orderIds: ['1293793'] }) })
+    await act(async () => { klaar({ submittedAt: VERZONDEN, orderIds: ['1293793'], submissionId: CODE }) })
     expect(submitToWebhook).toHaveBeenCalledTimes(1)
   })
 
   it('maakt geen tweede order als Make faalde terwijl de order al bestond', async () => {
     const pending: PendingSubmission = { payload: { submitted_at: VERZONDEN } as SubmitPayload, orderIds: ['1293793'] }
     vi.mocked(submitToWebhook).mockRejectedValueOnce(new SubmitError('HTTP 500', pending))
-    vi.mocked(resubmitToMake).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: ['1293793'] })
+    vi.mocked(resubmitToMake).mockResolvedValue({ submittedAt: VERZONDEN, orderIds: ['1293793'], submissionId: CODE })
     seed()
     render(<Harness />)
 
@@ -308,6 +319,7 @@ describe('DesktopView', () => {
     expect(submitToWebhook).toHaveBeenCalledTimes(1)
     expect(resubmitToMake).toHaveBeenCalledWith(expect.objectContaining({ orderIds: ['1293793'], entryId: 'e1' }))
     expect(screen.getByText('Order 1293793')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('verzonden_vandaag')!).items[0].submissionId).toBe(CODE)
     expect(sessionStorage.getItem('submit_pending')).toBeNull()
   })
 

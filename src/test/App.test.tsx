@@ -6,8 +6,8 @@ import type { SubmitPayload } from '../types'
 
 vi.mock('../webhookService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../webhookService')>()),
-  submitToWebhook: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1234567'] })),
-  resubmitToMake: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1293793'] })),
+  submitToWebhook: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1234567'], submissionId: 'abcdEFGH1234_-xy' })),
+  resubmitToMake: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1293793'], submissionId: 'abcdEFGH1234_-xy' })),
 }))
 
 vi.mock('../hooks/useRecipientData', () => ({
