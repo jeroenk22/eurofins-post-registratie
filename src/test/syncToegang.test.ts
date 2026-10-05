@@ -9,7 +9,7 @@ import syncHandler, {
 import { netwerkKey, LIJST_KEY } from '../../netlify/toegang-opslag'
 
 const NOW = Date.UTC(2026, 9, 2, 12) // 02-10-2026
-const KOP = ['Netwerk', 'Eerst gezien', 'Laatst gezien', 'Aantal dagen', 'Toegestaan', 'Omschrijving']
+const KOP = ['Netwerk', 'Eerst gezien', 'Laatst gezien', 'Aantal dagen', 'Toegestaan', 'Omschrijving', 'Herkomst']
 
 /** Nep-sheet in het geheugen; `rijen` null betekent: het tabblad bestaat niet. */
 function maakSheet(rijen: string[][] | null, faal: Partial<Record<keyof SheetsClient, boolean>> = {}) {
@@ -51,11 +51,14 @@ function maakNetwerken(keys: string[]) {
   }
 }
 
-function opzet(rijen: string[][] | null, keys: string[] = [], faal: Partial<Record<keyof SheetsClient, boolean>> = {}) {
+function opzet(
+  rijen: string[][] | null, keys: string[] = [], faal: Partial<Record<keyof SheetsClient, boolean>> = {},
+  zoekHerkomst: SyncDeps['zoekHerkomst'] = async () => null,
+) {
   const sheet = maakSheet(rijen, faal)
   const netwerken = maakNetwerken(keys)
   const setJSON = vi.fn(async () => {})
-  const deps: SyncDeps = { sheets: sheet.client, netwerken: netwerken.store, toegang: { setJSON } }
+  const deps: SyncDeps = { sheets: sheet.client, netwerken: netwerken.store, toegang: { setJSON }, zoekHerkomst }
   return { sheet, netwerken, setJSON, deps }
 }
 
@@ -77,7 +80,7 @@ describe('syncToegang', () => {
   it('voegt een nieuw netwerk toe met de juiste waarden en ruimt de sleutels op', async () => {
     const o = opzet([KOP], [k('2026-09-30', '1.2.3.4'), k('2026-10-01', '1.2.3.4')])
     const res = await syncToegang(NOW, o.deps)
-    expect(o.sheet.state.rijen[1]).toEqual(['1.2.3.4', '30-09-2026', '01-10-2026', '2', '', ''])
+    expect(o.sheet.state.rijen[1]).toEqual(['1.2.3.4', '30-09-2026', '01-10-2026', '2', '', '', ''])
     expect(o.netwerken.over.size).toBe(0)
     expect(res).toMatchObject({ nieuw: 1, bijgewerkt: 0 })
   })
@@ -110,7 +113,7 @@ describe('syncToegang', () => {
     ])
     await syncToegang(NOW, o.deps)
     expect(o.sheet.state.rijen[1]).toEqual(['Kantoor', 'ja', '5.6.7.8', '3', '02-10-2026', '30-09-2026'])
-    expect(o.sheet.state.rijen[2]).toEqual(['', '', '9.9.9.9', '1', '02-10-2026', '02-10-2026'])
+    expect(o.sheet.state.rijen[2]).toEqual(['', '', '9.9.9.9', '1', '02-10-2026', '02-10-2026', ''])
     expect(o.setJSON).toHaveBeenCalledWith(LIJST_KEY, { netwerken: ['5.6.7.8'], bijgewerkt: NOW })
   })
 
@@ -211,6 +214,92 @@ describe('syncToegang', () => {
     ])
     await syncToegang(NOW, o.deps)
     expect(o.sheet.state.aanroepen).toEqual(['sheetId', 'lees', 'schrijf', 'voegToe'])
+  })
+})
+
+describe('Herkomst', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  const OUD_KOP = KOP.slice(0, 6)
+  const zoek = () => vi.fn(async (netwerk: string) => `label ${netwerk}`)
+
+  it('voegt de kop Herkomst toe in de eerste lege kolom rechts', async () => {
+    const o = opzet([OUD_KOP, ['1.1.1.1', '', '01-10-2026', '1', 'ja', 'Kantoor']], [], {}, zoek())
+    await syncToegang(NOW, o.deps)
+    expect(o.sheet.state.rijen[0]).toEqual(KOP)
+    expect(o.sheet.state.rijen[1]).toEqual(['1.1.1.1', '', '01-10-2026', '1', 'ja', 'Kantoor', 'label 1.1.1.1'])
+  })
+
+  it('schrijft de kop Herkomst ook rechts van een eigen kolom', async () => {
+    const o = opzet([[...OUD_KOP, 'Notitie']], [], {}, zoek())
+    await syncToegang(NOW, o.deps)
+    expect(o.sheet.state.rijen[0]).toEqual([...OUD_KOP, 'Notitie', 'Herkomst'])
+  })
+
+  it('vult een lege Herkomst en overschrijft een gevulde niet; Omschrijving en Toegestaan blijven', async () => {
+    const lookup = zoek()
+    const o = opzet([KOP,
+      ['1.1.1.1', '', '01-10-2026', '1', 'ja', 'Kantoor', ''],
+      ['2.2.2.2', '', '01-10-2026', '1', '', 'Thuis', 'Eigen tekst'],
+      ['3.3.3.3', '', '01-10-2026', '1', 'nee', '', '  '],
+    ], [], {}, lookup)
+    await syncToegang(NOW, o.deps)
+    expect(o.sheet.state.rijen.slice(1)).toEqual([
+      ['1.1.1.1', '', '01-10-2026', '1', 'ja', 'Kantoor', 'label 1.1.1.1'],
+      ['2.2.2.2', '', '01-10-2026', '1', '', 'Thuis', 'Eigen tekst'],
+      ['3.3.3.3', '', '01-10-2026', '1', 'nee', '', 'label 3.3.3.3'],
+    ])
+    expect(lookup).toHaveBeenCalledTimes(2)
+    expect(lookup).not.toHaveBeenCalledWith('2.2.2.2')
+  })
+
+  it('doet hoogstens 10 lookups per run en vult de rest de volgende run', async () => {
+    const lookup = zoek()
+    const rijen = Array.from({ length: 12 }, (_, i) => [`10.0.0.${i}`, '', '01-10-2026', '1', '', '', ''])
+    const o = opzet([KOP, ...rijen], [], {}, lookup)
+    await syncToegang(NOW, o.deps)
+    expect(lookup).toHaveBeenCalledTimes(10)
+    expect(o.sheet.state.rijen.slice(1).filter((r) => r[6]).length).toBe(10)
+    await syncToegang(NOW, o.deps)
+    expect(lookup).toHaveBeenCalledTimes(12)
+    expect(o.sheet.state.rijen.slice(1).every((r) => r[6])).toBe(true)
+  })
+
+  it('geeft bij een lookup-fout een lege cel en de run gaat door', async () => {
+    const lookup = vi.fn(async (netwerk: string) => {
+      if (netwerk === '1.1.1.1') throw new Error('stuk')
+      return null
+    })
+    const o = opzet([KOP, ['1.1.1.1', '', '01-09-2026', '1', '', '', ''], ['2.2.2.2', '', '01-09-2026', '1', '', '', '']],
+      [k('2026-10-01', '1.1.1.1'), k('2026-10-01', '9.9.9.9')], {}, lookup)
+    const res = await syncToegang(NOW, o.deps)
+    expect(res).toMatchObject({ nieuw: 1, bijgewerkt: 1 })
+    expect(o.sheet.state.rijen.map((r) => r[6])).toEqual(['Herkomst', '', '', ''])
+    expect(o.netwerken.over.size).toBe(0)
+  })
+
+  it('geeft nieuwe rijen direct een Herkomst, en schrijft die in dezelfde append', async () => {
+    const o = opzet([KOP], [k('2026-10-01', '3.80.1.1')], {}, zoek())
+    await syncToegang(NOW, o.deps)
+    expect(o.sheet.state.rijen[1]).toEqual(['3.80.1.1', '01-10-2026', '01-10-2026', '1', '', '', 'label 3.80.1.1'])
+    expect(o.sheet.state.aanroepen).toEqual(['sheetId', 'lees', 'voegToe'])
+  })
+
+  it('past de veilige volgorde toe: cellen, verwijderen, toevoegen', async () => {
+    const o = opzet([KOP,
+      ['oud', '', '01-01-2026', '3', '', '', ''],
+      ['1.1.1.1', '01-09-2026', '01-09-2026', '1', 'ja', '', ''],
+    ], [k('2026-10-01', '7.7.7.7')], {}, zoek())
+    await syncToegang(NOW, o.deps)
+    expect(o.sheet.state.aanroepen).toEqual(['sheetId', 'lees', 'schrijf', 'verwijderRijen', 'voegToe'])
+  })
+
+  it('doet niets met Herkomst als de kop niet te schrijven is', async () => {
+    const o = opzet([OUD_KOP, ['1.1.1.1', '', '01-10-2026', '1', '', '']], [], { schrijf: true }, zoek())
+    await expect(syncToegang(NOW, o.deps)).resolves.not.toBeNull()
+    expect(o.sheet.state.rijen[1]).toHaveLength(6)
   })
 })
 
