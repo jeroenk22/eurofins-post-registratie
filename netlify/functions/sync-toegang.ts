@@ -1,17 +1,21 @@
 /// <reference types="node" />
 import { getStore } from '@netlify/blobs'
 import { googleAccessToken } from '../google-auth'
+import { zoekHerkomst } from '../herkomst'
 import {
   NETWERKEN_STORE, TOEGANG_STORE, LIJST_KEY, leesNetwerkKey, vandaag, type ToegangsLijst,
 } from '../toegang-opslag'
 
 const SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 const TAB = 'Netwerken'
-const KOPREGEL = ['Netwerk', 'Eerst gezien', 'Laatst gezien', 'Aantal dagen', 'Toegestaan', 'Omschrijving']
+const KOPREGEL = ['Netwerk', 'Eerst gezien', 'Laatst gezien', 'Aantal dagen', 'Toegestaan', 'Omschrijving', 'Herkomst']
 const VERPLICHTE_KOLOMMEN = ['Netwerk', 'Eerst gezien', 'Laatst gezien', 'Aantal dagen', 'Toegestaan']
 
 /** Bewaartermijn IP-adressen (AVG), gekozen in het veiligheidsplan. Geldt niet voor rijen met "ja". */
 export const BEWAARTERMIJN_DAGEN = 60
+
+/** Hoogstens zoveel RDAP-lookups per run; de rest komt in volgende runs. */
+export const MAX_LOOKUPS = 10
 
 const DAG_MS = 24 * 60 * 60 * 1000
 
@@ -36,6 +40,7 @@ export interface SyncDeps {
   sheets: SheetsClient
   netwerken: LeesStore
   toegang: { setJSON(key: string, value: ToegangsLijst): Promise<unknown> }
+  zoekHerkomst: (netwerk: string) => Promise<string | null>
 }
 
 export interface SyncResultaat { nieuw: number; bijgewerkt: number; verwijderd: number; toegestaan: number }
@@ -65,7 +70,7 @@ const toonDatum = (iso: string): string => iso.split('-').reverse().join('-')
 
 // ---- Sheet-rijen ----
 
-interface Kolommen { netwerk: number; eerst: number; laatst: number; aantal: number; toegestaan: number; breedte: number }
+interface Kolommen { netwerk: number; eerst: number; laatst: number; aantal: number; toegestaan: number; herkomst: number; breedte: number }
 
 function zoekKolommen(kop: string[]): Kolommen | null {
   const index = (naam: string) => kop.findIndex((k) => k.trim().toLowerCase() === naam.toLowerCase())
@@ -74,7 +79,8 @@ function zoekKolommen(kop: string[]): Kolommen | null {
     aantal: index('Aantal dagen'), toegestaan: index('Toegestaan'),
   }
   if (Object.values(k).some((i) => i < 0)) return null
-  return { ...k, breedte: Math.max(kop.length, ...Object.values(k).map((i) => i + 1)) }
+  const herkomst = index('Herkomst') // optioneel, net als Omschrijving
+  return { ...k, herkomst, breedte: Math.max(kop.length, ...Object.values(k).map((i) => i + 1)) }
 }
 
 const sleutelVan = (netwerk: string) => netwerk.trim().toLowerCase()
@@ -152,6 +158,32 @@ function teVerwijderenRijen(rijen: string[][], kol: Kolommen, now: number): numb
   return indexen.sort((a, b) => b - a)
 }
 
+/** Vult lege Herkomst-cellen (bestaande rijen via cellen, nieuwe rijen direct), hoogstens MAX_LOOKUPS per run. */
+async function vulHerkomst(
+  plan: Plan, rijen: string[][], kol: Kolommen, zoek: (netwerk: string) => Promise<string | null>,
+): Promise<void> {
+  if (kol.herkomst < 0) return
+  const leeg = (waarde: string | undefined) => !(waarde ?? '').trim()
+  const doelen: { netwerk: string; zet: (waarde: string) => void }[] = []
+  rijen.forEach((rij, i) => {
+    const netwerk = (rij[kol.netwerk] ?? '').trim()
+    if (i === 0 || !netwerk || !leeg(rij[kol.herkomst])) return
+    doelen.push({ netwerk, zet: (waarde) => plan.cellen.push({ rij: i, kolom: kol.herkomst, waarde }) })
+  })
+  for (const rij of plan.nieuweRijen) {
+    doelen.push({ netwerk: rij[kol.netwerk], zet: (waarde) => { rij[kol.herkomst] = waarde } })
+  }
+  // Parallel: een geplande functie heeft maar kort de tijd
+  await Promise.all(doelen.slice(0, MAX_LOOKUPS).map(async (doel) => {
+    try {
+      const waarde = (await zoek(doel.netwerk))?.trim()
+      if (waarde) doel.zet(waarde)
+    } catch {
+      // Lege cel; de volgende run probeert het opnieuw
+    }
+  }))
+}
+
 const foutTekst = (err: unknown) => (err instanceof Error ? err.message : 'onbekende fout')
 
 /** Zet registraties in de sheet, schrijft de "ja"-lijst terug en ruimt oude rijen op. */
@@ -176,6 +208,16 @@ export async function syncToegang(now: number, deps: SyncDeps): Promise<SyncResu
     return null
   }
 
+  // Ontbreekt de kop Herkomst, zet hem dan in de eerste lege kolom rechts van de kopregel
+  if (!rijen[0].some((c) => c.trim().toLowerCase() === 'herkomst')) {
+    try {
+      await deps.sheets.schrijf(TAB, [{ rij: 0, kolom: rijen[0].length, waarde: 'Herkomst' }])
+      rijen[0].push('Herkomst')
+    } catch (err) {
+      console.error('sync-toegang: kop Herkomst toevoegen mislukt:', foutTekst(err))
+    }
+  }
+
   const kol = zoekKolommen(rijen[0])
   if (!kol) {
     console.error(`sync-toegang: kopregel van "${TAB}" mist een van de kolommen ${VERPLICHTE_KOLOMMEN.join(', ')}`)
@@ -188,6 +230,7 @@ export async function syncToegang(now: number, deps: SyncDeps): Promise<SyncResu
   try {
     const { perNetwerk, alleKeys } = await leesRegistraties(deps.netwerken)
     plan = maakPlan(perNetwerk, alleKeys, rijen, kol)
+    await vulHerkomst(plan, rijen, kol, deps.zoekHerkomst)
   } catch (err) {
     planGelukt = false
     console.error('sync-toegang: registraties lezen mislukt:', foutTekst(err))
@@ -316,6 +359,7 @@ export default async (): Promise<Response> => {
     sheets: maakSheetsClient(sheetId),
     netwerken: getStore(NETWERKEN_STORE),
     toegang: getStore(TOEGANG_STORE),
+    zoekHerkomst,
   })
   return new Response(JSON.stringify(resultaat), { status: 200 })
 }
