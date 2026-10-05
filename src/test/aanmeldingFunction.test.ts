@@ -61,6 +61,15 @@ describe('aanmelding function', () => {
     expect(alle.zendingen.map((z: { nr: number }) => z.nr)).toEqual([1, 2, 10])
   })
 
+  it('geeft 200 met lege lijst als de labels bestaan maar er geen foto\'s zijn', async () => {
+    blobs.data[`aanmeldingen:${code}/labels`] = { labels: [label()], createdAt: Date.now() }
+    for (const q of [`?s=${code}&soort=fotos`, `?s=${code}&soort=fotos&zending=3`]) {
+      const res = await get(q)
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ zendingen: [] })
+    }
+  })
+
   it('geeft 404 verlopen bij niet gevonden', async () => {
     for (const q of [`?s=${code}&soort=labels`, `?s=${code}&soort=fotos`, `?s=${code}&soort=fotos&zending=1`]) {
       const res = await get(q)

@@ -124,6 +124,18 @@ describe('FotoPagina via ?fotos=', () => {
     expect(fetchMock).toHaveBeenCalledWith(`/.netlify/functions/aanmelding?s=${CODE}&soort=fotos&zending=2`)
   })
 
+  it('toont een melding als er geen foto\'s zijn gemaakt', async () => {
+    vi.stubGlobal('fetch', antwoord(200, { zendingen: [] }))
+    gaNaar(`?fotos=${CODE}`)
+    const a = render(<App />)
+    expect(await screen.findByText("Bij deze aanmelding zijn geen foto's gemaakt.")).toBeInTheDocument()
+    a.unmount()
+
+    gaNaar(`?fotos=${CODE}&zending=2`)
+    render(<App />)
+    expect(await screen.findByText("Bij deze zending zijn geen foto's gemaakt.")).toBeInTheDocument()
+  })
+
   it('opent een foto groot en sluit weer', async () => {
     vi.stubGlobal('fetch', antwoord(200, fotos))
     gaNaar(`?fotos=${CODE}`)

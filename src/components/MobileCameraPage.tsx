@@ -177,6 +177,8 @@ export default function MobileCameraPage({ sessionId }: Props) {
       sessionStorage.setItem(`submitted-${sessionId}`, '1')
       clearPhotos(sessionId)
       setSubmitted(true)
+      // De lijst met zendingen kan lang zijn: het bevestigingsscherm begint bovenaan
+      window.scrollTo(0, 0)
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Uploaden mislukt.')
       setSubmitting(false)
@@ -185,7 +187,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-scherm bg-gray-50 flex flex-col">
         <LogoBar />
         <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-green-100 max-w-sm w-full">
@@ -214,7 +216,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-scherm bg-gray-50 flex flex-col">
         <LogoBar />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm text-gray-400">Laden…</p>
@@ -225,7 +227,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-scherm bg-gray-50 flex flex-col">
         <LogoBar />
         <div className="flex-1 flex items-center justify-center p-6">
         <div className="bg-white rounded-xl p-6 text-center shadow-sm border border-red-100 max-w-sm w-full">
@@ -239,7 +241,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-scherm bg-gray-50">
       <LogoBar />
       {/* Header */}
       <div className="bg-ef-blue text-white px-4 py-4 flex items-center gap-3">

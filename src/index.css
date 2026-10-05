@@ -21,4 +21,10 @@
   .card {
     @apply bg-white border border-gray-100 rounded-xl shadow-sm;
   }
+  /* Precies het zichtbare scherm: 100vh telt op Android de adresbalk mee
+     (dan scrolt de pagina); dvh niet. vh is de terugval voor oude browsers. */
+  .min-h-scherm {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }

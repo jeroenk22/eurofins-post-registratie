@@ -31,7 +31,11 @@ export default function FotoPagina({ code, zending }: FotoPaginaProps) {
     <LinkPagina breed>
       <h2 className="text-base font-bold text-gray-800 mb-4">Foto's van de aanmelding</h2>
 
-      {zendingen.length === 0 && <p className="text-sm text-gray-500">Geen foto's gevonden.</p>}
+      {zendingen.length === 0 && (
+        <p className="text-sm text-gray-500">
+          {zending !== undefined ? "Bij deze zending zijn geen foto's gemaakt." : "Bij deze aanmelding zijn geen foto's gemaakt."}
+        </p>
+      )}
 
       {zendingen.map((z) => (
         <section key={z.nr} className="mb-6">
