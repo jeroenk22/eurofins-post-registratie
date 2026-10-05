@@ -1,18 +1,26 @@
 /**
- * IP-whitelist configuratie
+ * Toegang per netwerk
  *
- * Zet FILTER_ENABLED op false om het filter tijdelijk uit te schakelen
- * (toegang voor alle IP-adressen). Commit en push naar main — Netlify
- * herdeployt automatisch binnen ~1-2 minuten.
+ * De beheerder geeft toegang via de toegangs-sheet ("Post-app toegang",
+ * tabblad Netwerken): zet "ja" bij een netwerk. De app zet zelf nieuwe
+ * netwerken in die sheet. De lijst hieronder is alleen een vangnet.
+ *
+ * FILTER_MODE:
+ *  - 'uit'    geen registratie, niets blokkeren
+ *  - 'meten'  netwerken registreren, niets blokkeren
+ *  - 'aan'    registreren, en netwerken zonder toegang krijgen een 403 op de
+ *             beschermde eindpunten
+ *
+ * Wijzigen: commit en push naar main; Netlify herdeployt binnen ~1-2 minuten.
  */
-export const FILTER_ENABLED = false;
+export type FilterMode = 'uit' | 'meten' | 'aan'
+export const FILTER_MODE: FilterMode = 'meten';
 
 /**
- * Publieke IP-adressen die toegang hebben tot de app.
- * Controleer het IP-adres van elk netwerk via https://whatismyip.com
- * terwijl je verbonden bent met dat wifi-netwerk.
+ * Vaste basislijst: deze netwerken hebben altijd toegang, ook als Google of
+ * de sync hapert. Alleen voor vaste, betrouwbare locaties; de rest hoort in
+ * de toegangs-sheet. Een regel mag een IPv4-adres, IPv4-CIDR of IPv6-/64-prefix zijn.
  */
 export const ALLOWED_IPS: string[] = [
   "195.222.119.185", // Miedema
-  "5.6.7.8", // ← vervang met het werkelijke IP-adres van locatie 2
 ];
