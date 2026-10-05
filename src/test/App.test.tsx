@@ -6,7 +6,6 @@ import type { SubmitPayload } from '../types'
 
 vi.mock('../webhookService', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../webhookService')>()),
-  isWebhookConfigured: vi.fn(() => true),
   submitToWebhook: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1234567'] })),
   resubmitToMake: vi.fn(() => Promise.resolve({ submittedAt: '2026-08-31T12:07:00.000Z', orderIds: ['1293793'] })),
 }))

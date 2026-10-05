@@ -6,6 +6,7 @@ describe('isBeschermdPad', () => {
     '/.netlify/functions/sheets',
     '/.netlify/functions/forward-webhook',
     '/.netlify/functions/dagoverzicht',
+    '/.netlify/functions/naar-make',
     '/.netlify/functions/sheets/',
     '/.netlify/functions/SHEETS',
     '/.netlify/functions/%73heets',

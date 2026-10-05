@@ -3,6 +3,7 @@ export const BESCHERMDE_PADEN = [
   '/.netlify/functions/sheets',
   '/.netlify/functions/forward-webhook',
   '/.netlify/functions/dagoverzicht',
+  '/.netlify/functions/naar-make',
 ]
 
 /**
