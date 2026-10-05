@@ -59,7 +59,7 @@ function fotoLink(item: DagoverzichtItem, base: string): string {
   const url = `${base}/?fotos=${item.submissionId}&zending=1`
   const aantal = item.fotoCount === 1 ? '1 foto' : `${item.fotoCount} foto's`
   // Als knopje, zoals de order-badge; Outlook onderstreept links anders altijd.
-  return `<div style="margin-top:8px;"><a href="${esc(url)}" target="_blank" style="display:inline-block;${FONT}font-size:12px;font-weight:bold;color:${BLAUW};background:${BLAUW_LICHT};border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap;"><span style="color:${BLAUW};text-decoration:none;">&#128247;&nbsp; Bekijk ${aantal}</span></a></div>`
+  return `<div style="margin-top:8px;"><a href="${esc(url)}" target="_blank" style="display:inline-block;${FONT}font-size:12px;font-weight:bold;color:${BLAUW};background:${BLAUW_LICHT};border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap;"><span style="color:${BLAUW};text-decoration:none;"><span style="font-size:13px;line-height:1;vertical-align:1px;">&#128247;</span>&nbsp; Bekijk ${aantal}</span></a></div>`
 }
 
 export function dagoverzichtSubject(items: DagoverzichtItem[], now: Date): string {
