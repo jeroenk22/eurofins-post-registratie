@@ -193,7 +193,7 @@ describe('dagoverzicht — printlink in de mail', () => {
     ] })
     const h = html()
     expect(h).toContain(`href="https://post-aanmelden.netlify.app/?fotos=${code}&amp;zending=1"`)
-    expect(h.split('&#128247; Foto').length - 1).toBe(1)
+    expect(h.split('&#128247;&nbsp; Bekijk').length - 1).toBe(1)
     expect(h).not.toContain('<script>')
     expect(h).not.toContain('abcdEFGH5678_-xy')
   })

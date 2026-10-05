@@ -57,7 +57,9 @@ const korteDatum = (d: Date) => d.toLocaleDateString('nl-NL', { ...tz, day: '2-d
 function fotoLink(item: DagoverzichtItem, base: string): string {
   if (!item.submissionId || !CODE_PATTERN.test(item.submissionId) || !((item.fotoCount ?? 0) > 0)) return ''
   const url = `${base}/?fotos=${item.submissionId}&zending=1`
-  return `<div style="font-size:13px;margin-top:6px;"><a href="${esc(url)}" target="_blank" style="color:${BLAUW};text-decoration:underline;">&#128247; Foto's</a></div>`
+  const aantal = item.fotoCount === 1 ? '1 foto' : `${item.fotoCount} foto's`
+  // Als knopje, zoals de order-badge; Outlook onderstreept links anders altijd.
+  return `<div style="margin-top:8px;"><a href="${esc(url)}" target="_blank" style="display:inline-block;${FONT}font-size:12px;font-weight:bold;color:${BLAUW};background:${BLAUW_LICHT};border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap;"><span style="color:${BLAUW};text-decoration:none;">&#128247;&nbsp; Bekijk ${aantal}</span></a></div>`
 }
 
 export function dagoverzichtSubject(items: DagoverzichtItem[], now: Date): string {
