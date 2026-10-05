@@ -58,6 +58,8 @@ export default async (request: Request): Promise<Response> => {
   const { labels: _labels, ...rest } = payload;
   const doorgestuurd = JSON.stringify({
     ...rest,
+    // colli gaat ongeformatteerd het orderlog in (om op te tellen): altijd een getal
+    ...(Array.isArray(rest.entries) && { entries: rest.entries.map(alsGetalColli) }),
     print_url: `${origin}/?s=${submissionId}`,
     fotos_url: `${origin}/?fotos=${submissionId}`,
   });
@@ -81,6 +83,12 @@ export default async (request: Request): Promise<Response> => {
     return json({ ok: false }, 502);
   }
 };
+
+function alsGetalColli(entry: unknown): unknown {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+  const colli = Number((entry as { colli?: unknown }).colli);
+  return { ...entry, colli: Number.isInteger(colli) && colli > 0 ? colli : 1 };
+}
 
 function geldigeLabels(v: unknown): v is Label[] {
   return Array.isArray(v) && v.every(l => !!l && typeof l === 'object' && typeof (l as { name?: unknown }).name === 'string');

