@@ -10,17 +10,6 @@ const RECIPIENT_TYPE_LABEL: Record<string, string> = {
   Mestklanten: 'mestklant',
 }
 
-// Functie i.p.v. constante — zodat tests de env kunnen overschrijven
-function getWebhookUrl(): string | undefined {
-  return import.meta.env.VITE_WEBHOOK_URL;
-}
-
-
-export function isWebhookConfigured(): boolean {
-  const url = getWebhookUrl();
-  return !!url && url.length > 0;
-}
-
 export interface SubmitResult {
   /** Verzendtijdstip (ISO) — hetzelfde als in de payload en de print-link. */
   submittedAt: string;
@@ -56,13 +45,14 @@ export class SubmitError extends Error {
   }
 }
 
-async function postToMake(url: string, payload: SubmitPayload): Promise<void> {
-  const res = await fetch(url, {
+// De Make-URL staat alleen server-side; de browser post naar deze Netlify-functie.
+async function postToMake(payload: SubmitPayload): Promise<void> {
+  const res = await fetch("/.netlify/functions/naar-make", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Verzenden naar Make mislukt (HTTP ${res.status})`);
 }
 
 /** Haalt de order-ID's uit het antwoord van forward-webhook; nooit een fout. */
@@ -83,9 +73,6 @@ export async function submitToWebhook(
   senderCcEmail: string = '',
   options: SubmitOptions = {},
 ): Promise<SubmitResult> {
-  const url = getWebhookUrl();
-  if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
-
   // Servertijd, niet de klok van de werkplek — die kan verkeerd lopen en zou
   // een verkeerd tijdstip op het verzendlabel en in de payload zetten.
   const now = serverNow();
@@ -153,7 +140,7 @@ export async function submitToWebhook(
   // Ook als Make faalt wachten op forward-webhook: create-order kan de orders
   // dan al hebben gemaakt, en die ID's zijn nodig om het niet dubbel te doen.
   const [make, forwardRes] = await Promise.all([
-    postToMake(url, payload).then(() => null, (err: unknown) => err),
+    postToMake(payload).then(() => null, (err: unknown) => err),
     fetch("/.netlify/functions/forward-webhook", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -174,10 +161,8 @@ export async function submitToWebhook(
 
 /** Tweede poging na een SubmitError met `pending`: alleen Make, zelfde payload. */
 export async function resubmitToMake(pending: PendingSubmission): Promise<SubmitResult> {
-  const url = getWebhookUrl();
-  if (!url) throw new Error("VITE_WEBHOOK_URL is niet ingesteld in .env");
   try {
-    await postToMake(url, pending.payload);
+    await postToMake(pending.payload);
   } catch (err) {
     throw new SubmitError(err instanceof Error ? err.message : String(err), pending);
   }

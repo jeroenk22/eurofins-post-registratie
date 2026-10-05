@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo, SubmitState } from "./types";
 import { useStore } from "./useStore";
-import { submitToWebhook, resubmitToMake, isWebhookConfigured, SubmitError, type PendingSubmission } from "./webhookService";
+import { submitToWebhook, resubmitToMake, SubmitError, type PendingSubmission } from "./webhookService";
 import { validateForm } from "./validation";
 import { loadPending, savePending, clearPending, PENDING_HINT } from "./services/pendingSubmission";
 import { useRecipientData } from "./hooks/useRecipientData";
@@ -169,26 +169,6 @@ export default function App() {
     // De afzender (ook CC) blijft staan; een CC-adres moet dan ook zichtbaar blijven.
     setShowCc(store.senderCcEmail !== "");
   };
-
-  if (!isWebhookConfigured()) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-xl border border-amber-200 p-6 max-w-sm text-center shadow-sm">
-          <p className="text-2xl mb-3">⚠️</p>
-          <h2 className="font-bold text-gray-800 mb-2">
-            Webhook niet geconfigureerd
-          </h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            Maak een <code className="bg-gray-100 px-1 rounded">.env</code>{" "}
-            bestand aan met:
-          </p>
-          <pre className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-left text-gray-700">
-            VITE_WEBHOOK_URL=https://hook.eu2.make.com/...
-          </pre>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>

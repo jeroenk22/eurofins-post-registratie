@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isWebhookConfigured, submitToWebhook, resubmitToMake, SubmitError } from "../webhookService";
+import { submitToWebhook, resubmitToMake, SubmitError } from "../webhookService";
 import { decodePrintData } from "../services/printService";
 import type { PostEntry } from "../types";
 
@@ -25,20 +25,6 @@ const makeEntry = (overrides: Partial<PostEntry> = {}): PostEntry => ({
   ...overrides,
 });
 
-describe("isWebhookConfigured", () => {
-  afterEach(() => vi.unstubAllEnvs());
-
-  it("returns false when VITE_WEBHOOK_URL is empty", () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "");
-    expect(isWebhookConfigured()).toBe(false);
-  });
-
-  it("returns true when VITE_WEBHOOK_URL is set", () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
-    expect(isWebhookConfigured()).toBe(true);
-  });
-});
-
 describe("submitToWebhook", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
@@ -49,15 +35,7 @@ describe("submitToWebhook", () => {
     vi.unstubAllEnvs();
   });
 
-  it("throws when webhook URL is not configured", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "");
-    await expect(submitToWebhook([], "Sophie", "", "", "")).rejects.toThrow(
-      "VITE_WEBHOOK_URL is niet ingesteld",
-    );
-  });
-
   it("calls fetch with correct payload shape", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entries: PostEntry[] = [
       makeEntry({
         shelf: 2,
@@ -108,7 +86,6 @@ describe("submitToWebhook", () => {
   });
 
   it("strips IMTString prefix from photo base64 data", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({
       photos: [
         { id: "p1", name: "foto.jpg", data: "IMTString(477367): data:image/jpeg;base64,/9j/abc" },
@@ -122,7 +99,6 @@ describe("submitToWebhook", () => {
   });
 
   it("laat schone base64 data ongewijzigd", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({
       photos: [
         { id: "p1", name: "foto.jpg", data: "data:image/jpeg;base64,/9j/clean" },
@@ -136,7 +112,6 @@ describe("submitToWebhook", () => {
   });
 
   it("verwerkt speciale tekens zoals ë in velden correct", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({
       name: "Müller GmbH",
       adres: "Rue de l'Église 12",
@@ -155,7 +130,6 @@ describe("submitToWebhook", () => {
   });
 
   it("stuurt colli_omschrijvingen mee in de payload", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entries: PostEntry[] = [
       makeEntry({ colli: 2, colliOmschrijvingen: ["doos grond", "buis"] }),
       makeEntry({ id: "test-2", colli: 1, colliOmschrijvingen: [] }),
@@ -169,7 +143,6 @@ describe("submitToWebhook", () => {
   });
 
   it("formats overig shelf with description prefix", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ shelf: 'overig', shelfDescription: 'Ligt op kar naast de stelling' });
     await submitToWebhook([entry], "Sophie", "", "");
     const body = JSON.parse(
@@ -179,7 +152,6 @@ describe("submitToWebhook", () => {
   });
 
   it("maps empty phone/email/cc to null", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "Sophie", "", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -190,7 +162,6 @@ describe("submitToWebhook", () => {
   });
 
   it("stuurt cc_email mee in de payload", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "Sophie", "", "", "cc@example.com");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -199,7 +170,6 @@ describe("submitToWebhook", () => {
   });
 
   it("trimt whitespace van cc_email en mapt lege string naar null", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "Sophie", "", "", "  cc@example.com  ");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -208,7 +178,6 @@ describe("submitToWebhook", () => {
   });
 
   it("trims whitespace from sender fields", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "  Sophie  ", " 0612345678 ", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -218,7 +187,6 @@ describe("submitToWebhook", () => {
   });
 
   it("mapt mestklant-labels naar TMS-waarden in colli_omschrijvingen", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({
       recipientType: 'Mestklanten',
       colli: 3,
@@ -236,7 +204,6 @@ describe("submitToWebhook", () => {
   });
 
   it("raakt colli_omschrijvingen niet aan bij niet-mestklanten", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({
       recipientType: 'Monsternemers',
       colli: 1,
@@ -254,7 +221,6 @@ describe("submitToWebhook", () => {
     ['AP06', 'ap06'],
     ['Mestklanten', 'mestklant'],
   ])("mapt recipientType '%s' naar '%s' in recipient_type", async (raw, expected) => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ recipientType: raw as PostEntry['recipientType'] });
     await submitToWebhook([entry], "Sophie", "", "");
     const body = JSON.parse(
@@ -264,7 +230,6 @@ describe("submitToWebhook", () => {
   });
 
   it("stuurt recipient_type als null als recipientType niet ingesteld is", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ recipientType: undefined });
     await submitToWebhook([entry], "Sophie", "", "");
     const body = JSON.parse(
@@ -274,7 +239,6 @@ describe("submitToWebhook", () => {
   });
 
   it("stuurt adresgegevens mee per entry", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ adres: 'Kerkstraat 1a', postcode: '1234AB', plaats: 'Zevenbergen', land: 'Nederland' });
     await submitToWebhook([entry], "Sophie", "", "");
     const body = JSON.parse(
@@ -287,17 +251,15 @@ describe("submitToWebhook", () => {
   });
 
   it("roept forward-webhook proxy aan naast Make.com webhook", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "Sophie", "", "");
     const urls = vi.mocked(fetch).mock.calls.map(([url]) => url as string);
     expect(urls).toContain("/.netlify/functions/forward-webhook");
   });
 
   it("stuurt dezelfde payload naar Make.com en de forward-webhook proxy", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "Sophie", "", "");
     const calls = vi.mocked(fetch).mock.calls;
-    const makeBody = (calls.find(([url]) => (url as string).includes("make.com"))?.[1] as RequestInit)?.body;
+    const makeBody = (calls.find(([url]) => (url as string).includes("naar-make"))?.[1] as RequestInit)?.body;
     const proxyBody = (calls.find(([url]) => (url as string).includes("forward-webhook"))?.[1] as RequestInit)?.body;
     expect(makeBody).toBeDefined();
     expect(proxyBody).toBeDefined();
@@ -305,7 +267,6 @@ describe("submitToWebhook", () => {
   });
 
   it("stuurt adresgegevens als null bij lege velden, en land als Nederland", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const entry = makeEntry({ adres: '', postcode: '', plaats: '', land: '' });
     await submitToWebhook([entry], "Sophie", "", "");
     const body = JSON.parse(
@@ -319,7 +280,6 @@ describe("submitToWebhook", () => {
   });
 
   it("stuurt app_version mee in de payload", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     await submitToWebhook([makeEntry()], "Sophie", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -329,13 +289,11 @@ describe("submitToWebhook", () => {
   });
 
   it("gooit een fout bij een niet-ok HTTP-response van de hoofdwebhook", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "Internal Server Error" }));
     await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).rejects.toThrow("HTTP 500");
   });
 
   it("gooit geen fout als alleen de forward-webhook proxy mislukt", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: true })   // hoofdwebhook slaagt
       .mockRejectedValueOnce(new Error("proxy down")) // proxy faalt
@@ -347,7 +305,6 @@ describe("submitToWebhook", () => {
   });
 
   it("geeft het verzendtijdstip terug dat ook in de payload staat", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const { submittedAt: sentAt } = await submitToWebhook([makeEntry()], "Sophie", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -356,7 +313,6 @@ describe("submitToWebhook", () => {
   });
 
   it("zet het verzendtijdstip in de print-link zodat het op de labels komt", async () => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     const { submittedAt: sentAt } = await submitToWebhook([makeEntry()], "Sophie", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
@@ -368,7 +324,6 @@ describe("submitToWebhook", () => {
 });
 
 describe("submitToWebhook — Mendrix order-ID's", () => {
-  beforeEach(() => vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test"));
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
@@ -429,7 +384,6 @@ describe("submitToWebhook — Mendrix order-ID's", () => {
 describe("submitToWebhook — tijdstip komt van de server, in Nederlandse tijd", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -472,7 +426,6 @@ describe("submitToWebhook — tijdstip komt van de server, in Nederlandse tijd",
 });
 
 describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging", () => {
-  beforeEach(() => vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test"));
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
@@ -480,7 +433,7 @@ describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging",
 
   /** fetch per URL: Make en forward-webhook lopen tegelijk, de volgorde ligt niet vast. */
   const stubFetch = (make: () => Promise<unknown>, forward: () => Promise<unknown>) =>
-    vi.stubGlobal("fetch", vi.fn((url: string) => (url.includes("make.com") ? make() : forward())));
+    vi.stubGlobal("fetch", vi.fn((url: string) => (url.includes("naar-make") ? make() : forward())));
   const metOrders = (ids: (string | null)[]) => () =>
     Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, status: 200, orderIds: ids }) });
   const makeFaalt = () => Promise.resolve({ ok: false, status: 500, statusText: "Internal Server Error" });
@@ -510,14 +463,14 @@ describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging",
   it("opnieuw proberen gaat alleen naar Make, met exact dezelfde payload", async () => {
     stubFetch(makeFaalt, metOrders(["1293793"]));
     const err = (await submitToWebhook([makeEntry()], "Sophie", "", "").catch((e: unknown) => e)) as SubmitError;
-    const eersteBody = (vi.mocked(fetch).mock.calls.find(([u]) => (u as string).includes("make.com"))![1] as RequestInit).body;
+    const eersteBody = (vi.mocked(fetch).mock.calls.find(([u]) => (u as string).includes("naar-make"))![1] as RequestInit).body;
 
     stubFetch(() => Promise.resolve({ ok: true }), metOrders(["9999999"]));
     const result = await resubmitToMake(err.pending!);
 
     const calls = vi.mocked(fetch).mock.calls;
     expect(calls).toHaveLength(1);
-    expect(calls[0][0]).toContain("make.com");
+    expect(calls[0][0]).toContain("naar-make");
     expect((calls[0][1] as RequestInit).body).toBe(eersteBody);
     expect(result).toEqual({ submittedAt: err.pending!.payload.submitted_at, orderIds: ["1293793"] });
   });
@@ -533,7 +486,6 @@ describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging",
 
 describe("submitToWebhook — mail per zending (desktop)", () => {
   beforeEach(() => {
-    vi.stubEnv("VITE_WEBHOOK_URL", "https://hook.eu2.make.com/test");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   });
   afterEach(() => {
