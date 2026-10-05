@@ -80,7 +80,11 @@ async function fotos(store: Store, code: string, zending: number | undefined): P
     if (!f || !Array.isArray(f.fotos) || isVerlopen(f.createdAt)) continue;
     zendingen.push({ nr, naam: f.naam, schap: f.schap, fotos: f.fotos });
   }
-  if (zendingen.length === 0) return verlopen();
+  if (zendingen.length === 0) {
+    // Geen foto's: bestaat de aanmelding zelf nog (labels), dan is dat geen verlopen link.
+    const l = await lees<OpgeslagenLabels>(store, labelsKey(code));
+    if (!l || isVerlopen(l.createdAt)) return verlopen();
+  }
   const antwoord: FotosAntwoord = { zendingen };
   return json(antwoord, 200);
 }

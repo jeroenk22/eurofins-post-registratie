@@ -10,6 +10,7 @@
  * Endpoint GET /.netlify/functions/aanmelding (beschermd door ip-guard):
  *   ?s=<code>&soort=labels               → 200 LabelsAntwoord
  *   ?s=<code>&soort=fotos[&zending=<nr>] → 200 FotosAntwoord (alleen die zending als nr gegeven)
+ *                                          Geen (geldige) foto's maar labels bestaan nog → 200 { zendingen: [] }
  *   onbekende of verlopen code           → 404 { error: 'verlopen' }
  *   ongeldige parameters                 → 400 { error: string }
  */

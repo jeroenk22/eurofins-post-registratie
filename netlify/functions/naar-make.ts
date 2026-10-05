@@ -12,7 +12,10 @@ import {
  * Eerst worden de labels en de foto's opgeslagen onder de aanmeldingscode (voor
  * de printlink en de fotolink in de mails). Lukt dat niet, dan gaat er niets
  * naar Make: er komt nooit een mail met een dode link. Make krijgt de payload
- * zonder het veld `labels`; de rest gaat ongewijzigd door.
+ * zonder het veld `labels`. `print_url` en `fotos_url` worden door de server
+ * opnieuw opgebouwd uit de origin van het verzoek en de submission_id: wat de
+ * browser meestuurt wordt genegeerd (geen formule- of linkinjectie via Make,
+ * Sheets, mail of Slack). De rest gaat ongewijzigd door.
  */
 export default async (request: Request): Promise<Response> => {
   if (request.method !== 'POST') {
@@ -50,12 +53,14 @@ export default async (request: Request): Promise<Response> => {
     return json({ ok: false, error: 'opslaan mislukt' }, 500);
   }
 
-  // Zonder `labels` gaat de originele tekst door; anders alles behalve `labels`.
-  let doorgestuurd = body;
-  if ('labels' in payload) {
-    const { labels: _labels, ...rest } = payload;
-    doorgestuurd = JSON.stringify(rest);
-  }
+  // Alles behalve `labels`; de links bouwt de server zelf (de browser-waarden worden genegeerd).
+  const origin = new URL(request.url).origin;
+  const { labels: _labels, ...rest } = payload;
+  const doorgestuurd = JSON.stringify({
+    ...rest,
+    print_url: `${origin}/?s=${submissionId}`,
+    fotos_url: `${origin}/?fotos=${submissionId}`,
+  });
 
   // Optioneel: met een API-sleutel op de Make-webhook kan alleen deze functie hem aanroepen. Nooit loggen.
   const apiKey = process.env.MAKE_WEBHOOK_KEY;
