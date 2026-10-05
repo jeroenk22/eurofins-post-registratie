@@ -16,6 +16,8 @@ export interface SentItem {
   orderId: string | null
   /** Labelgegevens, inclusief het order-ID voor de QR-code. */
   label: PrintEntry
+  /** Aanmeldingscode: onder deze code staan labels en foto's op de server. */
+  submissionId?: string
   /** Extra's voor het detailvenster. Ontbreekt bij zendingen van vóór dit veld. */
   details?: SentDetails
 }

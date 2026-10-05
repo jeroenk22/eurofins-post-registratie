@@ -9,6 +9,8 @@ import Header from "./components/Header";
 import PostCard from "./components/PostCard";
 import SuccessScreen from "./components/SuccessScreen";
 import PrintLinkScreen from "./components/PrintLinkScreen";
+import PrintLinkLoader from "./components/PrintLinkLoader";
+import FotoPagina from "./components/FotoPagina";
 import SectionDivider from "./components/SectionDivider";
 import SenderFields from "./components/SenderFields";
 import DesktopView from "./components/DesktopView";
@@ -36,12 +38,22 @@ function getSessionId(): string {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
 
+  // Fotopagina: ?fotos=<code>[&zending=n]
+  const fotosCode = params.get("fotos");
+  if (fotosCode) {
+    const nr = Number(params.get("zending"));
+    return <FotoPagina code={fotosCode} zending={Number.isInteger(nr) && nr > 0 ? nr : undefined} />;
+  }
+
   // Print-link mode
   const printDataParam = params.get("printData");
   if (printDataParam) {
     const printEntries = decodePrintData(printDataParam);
     if (printEntries) return <PrintLinkScreen entries={printEntries} submissionId={params.get("s")} />;
   }
+  // Nieuwe links: alleen de code; de labels staan op de server.
+  const printCode = params.get("s");
+  if (printCode) return <PrintLinkLoader code={printCode} />;
 
   const store = useStore();
   // Desktop: per zending verzenden (DesktopView). Telefoon: het formulier zoals altijd.

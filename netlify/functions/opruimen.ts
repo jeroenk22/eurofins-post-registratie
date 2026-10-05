@@ -1,4 +1,5 @@
 import { getStore } from '@netlify/blobs'
+import { AANMELDINGEN_STORE, AANMELDING_BEWAARTERMIJN_MS } from '../aanmelding-opslag'
 
 // Bewaartermijnen (AVG). De gebruiker heeft deze op 02-10-2026 gekozen.
 /** Telefoonsessies (namen en foto's): 2 dagen na de laatste wijziging. */
@@ -15,6 +16,7 @@ interface BlobStore {
 export interface OpruimStores {
   sessies: BlobStore
   orderIds: BlobStore
+  aanmeldingen?: BlobStore
 }
 
 /** Tijdstip waarop de bewaartermijn begint; `null` als er geen bruikbaar tijdstip is. */
@@ -23,6 +25,7 @@ type LeesTijdstip = (data: Record<string, unknown>) => number | null
 const positief = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
 
 const sessieTijdstip: LeesTijdstip = (d) => (positief(d.updatedAt) ? d.updatedAt : positief(d.createdAt) ? d.createdAt : null)
+const aanmeldingTijdstip: LeesTijdstip = (d) => (positief(d.createdAt) ? d.createdAt : null)
 const orderIdTijdstip: LeesTijdstip = (d) => (positief(d.createdAt) ? d.createdAt : null)
 
 async function ruimStoreOp(store: BlobStore, now: number, termijnMs: number, tijdstip: LeesTijdstip): Promise<number> {
@@ -53,8 +56,8 @@ async function ruimStoreOp(store: BlobStore, now: number, termijnMs: number, tij
 }
 
 /** Verwijdert verlopen sessies en order-ID's. Geeft het aantal verwijderde items per store terug. */
-export async function opruimen(now: number, stores: OpruimStores): Promise<{ sessies: number; orderIds: number }> {
-  const result = { sessies: 0, orderIds: 0 }
+export async function opruimen(now: number, stores: OpruimStores): Promise<{ sessies: number; orderIds: number; aanmeldingen: number }> {
+  const result = { sessies: 0, orderIds: 0, aanmeldingen: 0 }
   try {
     result.sessies = await ruimStoreOp(stores.sessies, now, SESSIE_BEWAARTERMIJN_MS, sessieTijdstip)
   } catch (err) {
@@ -65,7 +68,14 @@ export async function opruimen(now: number, stores: OpruimStores): Promise<{ ses
   } catch (err) {
     console.error("opruimen: order-ID's mislukt:", err instanceof Error ? err.message : err)
   }
-  console.log(`opruimen: ${result.sessies} sessies en ${result.orderIds} order-ID's verwijderd`)
+  if (stores.aanmeldingen) {
+    try {
+      result.aanmeldingen = await ruimStoreOp(stores.aanmeldingen, now, AANMELDING_BEWAARTERMIJN_MS, aanmeldingTijdstip)
+    } catch (err) {
+      console.error('opruimen: aanmeldingen mislukt:', err instanceof Error ? err.message : err)
+    }
+  }
+  console.log(`opruimen: ${result.sessies} sessies, ${result.orderIds} order-ID's en ${result.aanmeldingen} aanmeldingen verwijderd`)
   return result
 }
 
@@ -73,6 +83,7 @@ export default async (): Promise<Response> => {
   const result = await opruimen(Date.now(), {
     sessies: getStore('mobile-sessions'),
     orderIds: getStore('order-ids'),
+    aanmeldingen: getStore(AANMELDINGEN_STORE),
   })
   return new Response(JSON.stringify(result), { status: 200 })
 }

@@ -7,6 +7,8 @@
  * Alle tekst van de gebruiker gaat door esc(): de mail bevat nooit HTML van buiten.
  */
 
+import { CODE_PATTERN } from './aanmelding-opslag'
+
 export interface DagoverzichtItem {
   sentAt: string
   orderId: string | null
@@ -15,6 +17,9 @@ export interface DagoverzichtItem {
   colli: number
   colliOmschrijvingen: string[]
   spoed: boolean
+  /** Alleen een geldige aanmeldingscode; samen met fotoCount > 0 geeft dit een fotolink. */
+  submissionId?: string
+  fotoCount?: number
 }
 
 export interface DagoverzichtInput {
@@ -48,6 +53,13 @@ const langeDatum = (d: Date) =>
   d.toLocaleDateString('nl-NL', { ...tz, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 const korteDatum = (d: Date) => d.toLocaleDateString('nl-NL', { ...tz, day: '2-digit', month: '2-digit', year: 'numeric' })
 
+/** Alleen een geldige code met foto's geeft een link; elders is er niets om naar te linken. */
+function fotoLink(item: DagoverzichtItem, base: string): string {
+  if (!item.submissionId || !CODE_PATTERN.test(item.submissionId) || !((item.fotoCount ?? 0) > 0)) return ''
+  const url = `${base}/?fotos=${item.submissionId}&zending=1`
+  return `<div style="font-size:13px;margin-top:6px;"><a href="${esc(url)}" target="_blank" style="color:${BLAUW};text-decoration:underline;">&#128247; Foto's</a></div>`
+}
+
 export function dagoverzichtSubject(items: DagoverzichtItem[], now: Date): string {
   const n = items.length
   return `Dagoverzicht post ${korteDatum(now)} – ${n} ${n === 1 ? 'zending' : 'zendingen'}`
@@ -66,7 +78,7 @@ function badge(tekst: string, kleur: string, achtergrond: string): string {
   return `<span style="display:inline-block;${FONT}font-size:12px;font-weight:bold;color:${kleur};background:${achtergrond};border-radius:999px;padding:4px 10px;white-space:nowrap;">${tekst}</span>`
 }
 
-function zending(item: DagoverzichtItem): string {
+function zending(item: DagoverzichtItem, base: string): string {
   const omschrijvingen = item.colliOmschrijvingen.slice(0, item.colli).filter(Boolean)
   const details = [item.route, `${item.colli} ${item.colli === 1 ? 'collo' : 'colli'}`].filter(Boolean).map(esc).join(' &middot; ')
   const order = item.orderId
@@ -82,6 +94,7 @@ function zending(item: DagoverzichtItem): string {
           <div style="font-size:15px;font-weight:bold;color:#111827;">${esc(item.name)}</div>
           <div style="font-size:13px;color:${GRIJS};margin-top:3px;">${details}</div>
           ${omschrijvingen.length ? `<div style="font-size:13px;color:#374151;margin-top:6px;">${omschrijvingen.map(esc).join(' &middot; ')}</div>` : ''}
+          ${fotoLink(item, base)}
         </td>
         <td valign="top" align="right" style="padding:14px 14px 14px 0;">${order}${spoed}</td>
       </tr>
@@ -145,7 +158,7 @@ export function dagoverzichtHtml({ senderName, items, printUrl }: DagoverzichtIn
     </td></tr>
 
     <tr><td style="padding:18px 24px 10px;${FONT}font-size:13px;font-weight:bold;color:${GRIJS};text-transform:uppercase;letter-spacing:.6px;">Verzonden zendingen</td></tr>
-    ${oudsteEerst.map(zending).join('\n')}
+    ${oudsteEerst.map(i => zending(i, base)).join('\n')}
 
     ${printUrl ? printKnop(printUrl, colli) : ''}
 

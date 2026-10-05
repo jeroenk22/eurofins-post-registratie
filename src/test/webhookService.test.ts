@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { submitToWebhook, resubmitToMake, SubmitError } from "../webhookService";
-import { decodePrintData } from "../services/printService";
 import type { PostEntry } from "../types";
 
 // De payload gebruikt de servertijd, niet de klok van de werkplek.
@@ -72,7 +71,9 @@ describe("submitToWebhook", () => {
     expect(body.cc_email).toBeNull();
     expect(body.sender_phone).toBeNull();
     expect(typeof body.print_url).toBe("string");
-    expect(body.print_url).toContain("printData=");
+    expect(body.print_url).not.toContain("printData");
+    expect(body.print_url).toBe(`http://localhost:3000/?s=${body.submission_id}`);
+    expect(body.fotos_url).toBe(`http://localhost:3000/?fotos=${body.submission_id}`);
     expect(body.entries[0].print_url).toBeUndefined();
     expect(body.entries[1].print_url).toBeUndefined();
 
@@ -256,14 +257,16 @@ describe("submitToWebhook", () => {
     expect(urls).toContain("/.netlify/functions/forward-webhook");
   });
 
-  it("stuurt dezelfde payload naar Make.com en de forward-webhook proxy", async () => {
+  it("stuurt dezelfde payload naar Make.com en de forward-webhook proxy, op de labels na", async () => {
     await submitToWebhook([makeEntry()], "Sophie", "", "");
     const calls = vi.mocked(fetch).mock.calls;
     const makeBody = (calls.find(([url]) => (url as string).includes("naar-make"))?.[1] as RequestInit)?.body;
     const proxyBody = (calls.find(([url]) => (url as string).includes("forward-webhook"))?.[1] as RequestInit)?.body;
     expect(makeBody).toBeDefined();
     expect(proxyBody).toBeDefined();
-    expect(proxyBody).toBe(makeBody);
+    const { labels, ...zonderLabels } = JSON.parse(makeBody as string);
+    expect(labels).toHaveLength(1);
+    expect(JSON.parse(proxyBody as string)).toEqual(zonderLabels);
   });
 
   it("stuurt adresgegevens als null bij lege velden, en land als Nederland", async () => {
@@ -301,6 +304,7 @@ describe("submitToWebhook", () => {
     await expect(submitToWebhook([makeEntry()], "Sophie", "", "")).resolves.toEqual({
       submittedAt: expect.any(String),
       orderIds: [],
+      submissionId: expect.any(String),
     });
   });
 
@@ -312,14 +316,12 @@ describe("submitToWebhook", () => {
     expect(sentAt).toBe(body.submitted_at);
   });
 
-  it("zet het verzendtijdstip in de print-link zodat het op de labels komt", async () => {
+  it("zet het verzendtijdstip in de labels naar naar-make zodat het op de labels komt", async () => {
     const { submittedAt: sentAt } = await submitToWebhook([makeEntry()], "Sophie", "", "");
     const body = JSON.parse(
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string,
     );
-    const encoded = new URL(body.print_url).searchParams.get("printData")!;
-    const printEntries = decodePrintData(encoded)!;
-    expect(printEntries[0].orderedAt).toBe(sentAt);
+    expect(body.labels[0].orderedAt).toBe(sentAt);
   });
 });
 
@@ -361,15 +363,27 @@ describe("submitToWebhook — Mendrix order-ID's", () => {
     const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
     expect(body.submission_id).toMatch(/^[A-Za-z0-9_-]{16}$/);
     expect(new URL(body.print_url).searchParams.get("s")).toBe(body.submission_id);
-    // De labelgegevens in de link blijven gewoon leesbaar
-    expect(decodePrintData(new URL(body.print_url).searchParams.get("printData")!)).toHaveLength(1);
+    // Geen labelgegevens meer in de link
+    expect(new URL(body.print_url).searchParams.get("printData")).toBeNull();
   });
 
-  it("stuurt dezelfde payload (met code) naar Make en naar forward-webhook", async () => {
+  it("geeft de aanmeldingscode terug in het resultaat", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+    const { submissionId } = await submitToWebhook([makeEntry()], "Sophie", "", "");
+    const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+    expect(submissionId).toBe(body.submission_id);
+  });
+
+  it("stuurt labels alleen naar naar-make; forward-webhook krijgt dezelfde payload zonder labels", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
     await submitToWebhook([makeEntry()], "Sophie", "", "");
-    const [make, forward] = vi.mocked(fetch).mock.calls.map((c) => (c[1] as RequestInit).body);
-    expect(forward).toBe(make);
+    const calls = vi.mocked(fetch).mock.calls;
+    const make = JSON.parse((calls.find(([u]) => (u as string).includes("naar-make"))![1] as RequestInit).body as string);
+    const forward = JSON.parse((calls.find(([u]) => (u as string).includes("forward-webhook"))![1] as RequestInit).body as string);
+    expect(make.labels).toEqual([expect.objectContaining({ name: "Acme B.V.", route: "Route 3", colli: 2 })]);
+    expect("labels" in forward).toBe(false);
+    const { labels: _labels, ...zonderLabels } = make;
+    expect(forward).toEqual(zonderLabels);
   });
 
   it("maakt van onverwachte waarden null", async () => {
@@ -406,8 +420,7 @@ describe("submitToWebhook — tijdstip komt van de server, in Nederlandse tijd",
     expect(body.datetime_nl).toContain("13:14");
     expect(body.datetime_nl).not.toContain("13:23");
 
-    const encoded = new URL(body.print_url).searchParams.get("printData")!;
-    expect(decodePrintData(encoded)![0].orderedAt).toBe("2026-08-31T11:14:00.000Z");
+    expect(body.labels[0].orderedAt).toBe("2026-08-31T11:14:00.000Z");
 
     vi.useRealTimers();
   });
@@ -446,6 +459,8 @@ describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging",
     const pending = (err as SubmitError).pending!;
     expect(pending.orderIds).toEqual(["1293793"]);
     expect(pending.payload.entries[0].recipient).toBe("Acme B.V.");
+    // De labels blijven bij de pending, zodat een nieuwe poging ze opnieuw opslaat
+    expect(pending.payload.labels).toEqual([expect.objectContaining({ name: "Acme B.V." })]);
   });
 
   it("ook als Make helemaal onbereikbaar is", async () => {
@@ -472,7 +487,8 @@ describe("submitToWebhook — geen tweede Mendrix-order na een mislukte poging",
     expect(calls).toHaveLength(1);
     expect(calls[0][0]).toContain("naar-make");
     expect((calls[0][1] as RequestInit).body).toBe(eersteBody);
-    expect(result).toEqual({ submittedAt: err.pending!.payload.submitted_at, orderIds: ["1293793"] });
+    expect(result).toEqual({ submittedAt: err.pending!.payload.submitted_at, orderIds: ["1293793"], submissionId: err.pending!.payload.submission_id });
+    expect(JSON.parse((calls[0][1] as RequestInit).body as string).labels).toHaveLength(1);
   });
 
   it("een mislukte nieuwe poging houdt de pending vast", async () => {

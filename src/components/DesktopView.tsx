@@ -77,7 +77,7 @@ export default function DesktopView({ store, recipients, photoAction }: DesktopV
     setSendingId(entry.id)
     setError(null)
     try {
-      const { submittedAt, orderIds } = retry
+      const { submittedAt, orderIds, submissionId } = retry
         ? await resubmitToMake(retry)
         : await submitToWebhook([entry], senderName, senderPhone, senderEmail, senderCcEmail, {
             mailVersturen: mailPerZending,
@@ -90,6 +90,7 @@ export default function DesktopView({ store, recipients, photoAction }: DesktopV
         id: `${submittedAt}_${entry.id}`,
         sentAt: submittedAt,
         orderId,
+        submissionId,
         label: toPrintEntry(entry, submittedAt, orderId),
         details: {
           schap: entry.shelf === 'overig' ? `Overig: ${entry.shelfDescription.trim()}` : `Schap ${entry.shelf}`,

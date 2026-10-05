@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+const blobs = vi.hoisted(() => ({ setJSON: vi.fn() }))
+vi.mock('@netlify/blobs', () => ({ getStore: () => ({ setJSON: blobs.setJSON }) }))
+
 import handler from '../../netlify/functions/dagoverzicht'
 import { dagoverzichtHtml, dagoverzichtSubject, esc } from '../../netlify/dagoverzicht-mail'
 
@@ -13,6 +16,7 @@ const post = (body: unknown) =>
 
 describe('dagoverzicht — functie', () => {
   beforeEach(() => {
+    blobs.setJSON.mockReset().mockResolvedValue(undefined)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
     vi.stubEnv('DAGOVERZICHT_WEBHOOK_URL', 'https://hook.eu2.make.com/dagoverzicht')
   })
@@ -106,8 +110,8 @@ describe('dagoverzicht — de mail', () => {
   })
 
   it('zet een printknop in de mail als er een printlink is', () => {
-    const html = dagoverzichtHtml({ senderName: '', items: [item(), item({ colli: 1 })], printUrl: 'https://site.nl/?printData=abc_-1' }, nu, 'https://site.nl')
-    expect(html).toContain('href="https://site.nl/?printData=abc_-1"')
+    const html = dagoverzichtHtml({ senderName: '', items: [item(), item({ colli: 1 })], printUrl: 'https://site.nl/?s=abc_-1' }, nu, 'https://site.nl')
+    expect(html).toContain('href="https://site.nl/?s=abc_-1"')
     expect(html).toContain('Alle labels printen (3)')
   })
 
@@ -118,6 +122,7 @@ describe('dagoverzicht — de mail', () => {
 
 describe('dagoverzicht — printlink in de mail', () => {
   beforeEach(() => {
+    blobs.setJSON.mockReset().mockResolvedValue(undefined)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
     vi.stubEnv('DAGOVERZICHT_WEBHOOK_URL', 'https://hook.eu2.make.com/dagoverzicht')
   })
@@ -125,9 +130,12 @@ describe('dagoverzicht — printlink in de mail', () => {
 
   const html = () => JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string).html as string
 
-  it('maakt van printData een link naar deze eigen site', async () => {
-    await post({ to: 'a@b.nl', items: [item()], printData: 'W3sibmFtZSI6IkEifV0' })
-    expect(html()).toContain('href="https://post-aanmelden.netlify.app/?printData=W3sibmFtZSI6IkEifV0"')
+  it('maakt van labels een link naar deze eigen site', async () => {
+    await post({ to: 'a@b.nl', items: [item()], labels: [{ name: 'A' }] })
+    const [key, opgeslagen] = blobs.setJSON.mock.calls[0]
+    expect(html()).toContain(`href="https://post-aanmelden.netlify.app/?s=${(key as string).split('/')[0]}"`)
+    expect(html()).not.toContain('printData')
+    expect(opgeslagen.labels).toEqual([{ name: 'A' }])
   })
 
   it('negeert printData met vreemde tekens: geen knop, wel een mail', async () => {
@@ -135,5 +143,58 @@ describe('dagoverzicht — printlink in de mail', () => {
     expect(res.status).toBe(200)
     expect(html()).not.toContain('Alle labels printen')
     expect(html()).not.toContain('<script>')
+    expect(blobs.setJSON).not.toHaveBeenCalled()
+  })
+
+  it('bewaart labels onder een nieuwe code en linkt naar ?s=', async () => {
+    const labels = [{ name: 'Jansen', adres: 'Straat 1' }]
+    await post({ to: 'a@b.nl', items: [item()], labels })
+    const [key, opgeslagen] = blobs.setJSON.mock.calls[0]
+    const code = (key as string).split('/')[0]
+    expect(code).toMatch(/^[A-Za-z0-9_-]{16}$/)
+    expect(opgeslagen.labels).toEqual(labels)
+    expect(typeof opgeslagen.createdAt).toBe('number')
+    expect(html()).toContain(`href="https://post-aanmelden.netlify.app/?s=${code}"`)
+    expect(html()).not.toContain('printData')
+    expect(html()).not.toContain('Straat 1')
+  })
+
+  it('legacy: een oude client met alleen printData krijgt ook een ?s=-link', async () => {
+    const printData = Buffer.from(JSON.stringify([{ name: 'Müller', colli: 1 }])).toString('base64url')
+    await post({ to: 'a@b.nl', items: [item()], printData })
+    const [key, opgeslagen] = blobs.setJSON.mock.calls[0]
+    expect(opgeslagen.labels).toEqual([{ name: 'Müller', colli: 1 }])
+    expect(html()).toContain(`?s=${(key as string).split('/')[0]}`)
+    expect(html()).not.toContain('?printData=')
+  })
+
+  it('mail zonder printknop als opslaan mislukt', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    blobs.setJSON.mockRejectedValue(new Error('stuk'))
+    const res = await post({ to: 'a@b.nl', items: [item()], labels: [{ name: 'A' }] })
+    expect(res.status).toBe(200)
+    expect(html()).not.toContain('Alle labels printen')
+    vi.restoreAllMocks()
+  })
+
+  it('geen printknop bij ongeldige labels', async () => {
+    await post({ to: 'a@b.nl', items: [item()], labels: [{ adres: 'zonder naam' }] })
+    expect(html()).not.toContain('Alle labels printen')
+    expect(blobs.setJSON).not.toHaveBeenCalled()
+  })
+
+  it('fotolink alleen bij een geldige code en fotoCount > 0', async () => {
+    const code = 'abcdEFGH1234_-xy'
+    await post({ to: 'a@b.nl', items: [
+      item({ name: 'Met', submissionId: code, fotoCount: 2 }),
+      item({ name: 'Nul', submissionId: 'abcdEFGH5678_-xy', fotoCount: 0 }),
+      item({ name: 'Slecht', submissionId: 'x"><script>', fotoCount: 1 }),
+      item({ name: 'Zonder' }),
+    ] })
+    const h = html()
+    expect(h).toContain(`href="https://post-aanmelden.netlify.app/?fotos=${code}&amp;zending=1"`)
+    expect(h.split('&#128247; Foto').length - 1).toBe(1)
+    expect(h).not.toContain('<script>')
+    expect(h).not.toContain('abcdEFGH5678_-xy')
   })
 })

@@ -1,3 +1,5 @@
+import type { Label } from "../netlify/aanmelding-opslag";
+
 export interface Photo {
   id: string;
   name: string;
@@ -31,6 +33,10 @@ export interface SubmitPayload {
   total_entries: number;
   entries: SubmitEntry[];
   print_url: string;
+  /** Link naar de fotopagina van deze aanmelding (alleen de code, geen Drive-map). */
+  fotos_url: string;
+  /** Alleen naar naar-make (bewaart ze onder submission_id); forward-webhook krijgt ze niet. */
+  labels?: Label[];
   /** Willekeurige code per aanmelding; daaronder bewaart forward-webhook de order-ID's. */
   submission_id: string;
   /** Alleen vanaf desktop; `false` = Make slaat de bevestigingsmail over. */
