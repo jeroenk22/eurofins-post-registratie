@@ -5,8 +5,8 @@ import type { AanmeldingFout } from '../services/aanmelding'
 /** Pagina in de stijl van de app voor linkpagina's (print en foto's). */
 export function LinkPagina({ children, breed = false }: { children: ReactNode; breed?: boolean }) {
   return (
-    <div className="min-h-screen min-h-dvh bg-gray-50">
-      <div className={`${breed ? 'max-w-4xl' : 'max-w-lg'} mx-auto min-h-screen min-h-dvh bg-white shadow-sm flex flex-col`}>
+    <div className="min-h-scherm bg-gray-50">
+      <div className={`${breed ? 'max-w-4xl' : 'max-w-lg'} mx-auto min-h-scherm bg-white shadow-sm flex flex-col`}>
         <Header />
         <div className="flex-1 px-4 pt-6 pb-10">{children}</div>
       </div>
