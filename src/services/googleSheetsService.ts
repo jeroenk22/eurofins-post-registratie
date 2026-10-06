@@ -35,7 +35,6 @@ interface MestklantRow {
 }
 
 const CACHE_KEY = 'recipient_data_cache'
-const CACHE_TTL_MS = 10 * 60 * 1000
 
 export function isGoogleSheetsConfigured(): boolean {
   return true // Configuratie wordt server-side afgehandeld via Netlify Function
@@ -147,17 +146,6 @@ export function saveRecipientsToCache(data: RecipientOption[]): void {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
   } catch {
     // localStorage kan niet beschikbaar zijn (bijv. in private modus)
-  }
-}
-
-export function isCacheStale(): boolean {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) return true
-    const cache: CacheEntry = JSON.parse(raw)
-    return Date.now() - cache.timestamp > CACHE_TTL_MS
-  } catch {
-    return true
   }
 }
 

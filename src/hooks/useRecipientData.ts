@@ -3,12 +3,11 @@ import {
   fetchAllRecipients,
   loadCachedRecipients,
   saveRecipientsToCache,
-  isCacheStale,
   isGoogleSheetsConfigured,
   type RecipientOption,
 } from '../services/googleSheetsService'
 
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000
+const REFRESH_INTERVAL_MS = 2 * 60 * 1000
 
 export interface UseRecipientDataResult {
   recipients: RecipientOption[]
@@ -18,6 +17,7 @@ export interface UseRecipientDataResult {
 }
 
 export function useRecipientData(): UseRecipientDataResult {
+  // De gecachte lijst is direct bruikbaar; de verse lijst komt er meteen achteraan
   const [recipients, setRecipients] = useState<RecipientOption[]>(
     () => loadCachedRecipients() ?? []
   )
@@ -39,12 +39,17 @@ export function useRecipientData(): UseRecipientDataResult {
     }
   }, [])
 
+  // Nieuwe adressen in de sheet moeten snel vindbaar zijn: ophalen bij openen
+  // van de app, bij terugkeren naar het tabblad en daarnaast elke 2 minuten.
   useEffect(() => {
-    if (isCacheStale()) {
-      refresh()
-    }
+    refresh()
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
     const interval = setInterval(refresh, REFRESH_INTERVAL_MS)
-    return () => clearInterval(interval)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [refresh])
 
   return { recipients, loading, error, refresh }

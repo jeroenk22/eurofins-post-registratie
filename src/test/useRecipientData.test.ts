@@ -27,7 +27,6 @@ vi.mock('../services/googleSheetsService', async (importOriginal) => {
     isGoogleSheetsConfigured: vi.fn(() => true),
     loadCachedRecipients: vi.fn(() => null),
     saveRecipientsToCache: vi.fn(),
-    isCacheStale: vi.fn(() => true),
   }
 })
 
@@ -35,7 +34,6 @@ import {
   fetchAllRecipients,
   isGoogleSheetsConfigured,
   loadCachedRecipients,
-  isCacheStale,
 } from '../services/googleSheetsService'
 
 describe('useRecipientData', () => {
@@ -45,7 +43,6 @@ describe('useRecipientData', () => {
 
   it('begint met gecachte data als die beschikbaar is', () => {
     vi.mocked(loadCachedRecipients).mockReturnValue(mockRecipients)
-    vi.mocked(isCacheStale).mockReturnValue(false)
 
     const { result } = renderHook(() => useRecipientData())
     expect(result.current.recipients).toEqual(mockRecipients)
@@ -58,31 +55,35 @@ describe('useRecipientData', () => {
     expect(result.current.recipients).toEqual([])
   })
 
-  it('fetcht vers als cache verlopen is', async () => {
-    vi.mocked(fetchAllRecipients).mockResolvedValue(mockRecipients)
-    vi.mocked(isCacheStale).mockReturnValue(true)
+  it('toont eerst de cache en haalt daarna direct vers op', async () => {
+    const vers = [{ ...mockRecipients[0], id: 'M-1', label: 'M002 - Nieuw adres' }]
+    vi.mocked(loadCachedRecipients).mockReturnValue(mockRecipients)
+    vi.mocked(fetchAllRecipients).mockResolvedValue(vers)
 
     const { result } = renderHook(() => useRecipientData())
+    expect(result.current.recipients).toEqual(mockRecipients)
 
     await waitFor(() => {
-      expect(result.current.recipients).toEqual(mockRecipients)
+      expect(result.current.recipients).toEqual(vers)
     })
     expect(fetchAllRecipients).toHaveBeenCalledOnce()
   })
 
-  it('fetcht niet als cache nog geldig is', async () => {
-    vi.mocked(isCacheStale).mockReturnValue(false)
-    vi.mocked(loadCachedRecipients).mockReturnValue(mockRecipients)
+  it('haalt opnieuw op bij terugkeren naar het tabblad', async () => {
+    vi.mocked(fetchAllRecipients).mockResolvedValue(mockRecipients)
 
     renderHook(() => useRecipientData())
-    await act(async () => {})
+    await waitFor(() => expect(fetchAllRecipients).toHaveBeenCalledTimes(1))
 
-    expect(fetchAllRecipients).not.toHaveBeenCalled()
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(fetchAllRecipients).toHaveBeenCalledTimes(2)
   })
 
   it('slaat fout op als fetch mislukt', async () => {
     vi.mocked(fetchAllRecipients).mockRejectedValue(new Error('Netwerk fout'))
-    vi.mocked(isCacheStale).mockReturnValue(true)
 
     const { result } = renderHook(() => useRecipientData())
 
@@ -93,7 +94,6 @@ describe('useRecipientData', () => {
 
   it('is niet geconfigureerd: doet geen fetch', async () => {
     vi.mocked(isGoogleSheetsConfigured).mockReturnValue(false)
-    vi.mocked(isCacheStale).mockReturnValue(true)
 
     renderHook(() => useRecipientData())
     await act(async () => {})
@@ -101,19 +101,17 @@ describe('useRecipientData', () => {
     expect(fetchAllRecipients).not.toHaveBeenCalled()
   })
 
-  it('zet een interval op van 10 minuten', () => {
+  it('zet een interval op van 2 minuten', () => {
     const spy = vi.spyOn(window, 'setInterval')
-    vi.mocked(isCacheStale).mockReturnValue(false)
 
     renderHook(() => useRecipientData())
 
-    expect(spy).toHaveBeenCalledWith(expect.any(Function), 10 * 60 * 1000)
+    expect(spy).toHaveBeenCalledWith(expect.any(Function), 2 * 60 * 1000)
     spy.mockRestore()
   })
 
   it('geeft loading: false na succesvolle fetch', async () => {
     vi.mocked(fetchAllRecipients).mockResolvedValue(mockRecipients)
-    vi.mocked(isCacheStale).mockReturnValue(true)
 
     const { result } = renderHook(() => useRecipientData())
 

@@ -6,7 +6,6 @@ import {
   filterRecipients,
   loadCachedRecipients,
   saveRecipientsToCache,
-  isCacheStale,
   type RecipientOption,
 } from '../services/googleSheetsService'
 
@@ -226,33 +225,9 @@ describe('LocalStorage caching', () => {
     expect(result![0].id).toBe('test-1')
   })
 
-  it('isCacheStale is true als cache leeg is', () => {
-    expect(isCacheStale()).toBe(true)
-  })
-
-  it('isCacheStale is false direct na opslaan', () => {
-    saveRecipientsToCache(sampleData)
-    expect(isCacheStale()).toBe(false)
-  })
-
-  it('isCacheStale is true na verlopen TTL', () => {
-    saveRecipientsToCache(sampleData)
-    // Zet timestamp terug in de tijd (11 minuten geleden)
-    const raw = localStorage.getItem('recipient_data_cache')!
-    const cache = JSON.parse(raw)
-    cache.timestamp = Date.now() - 11 * 60 * 1000
-    localStorage.setItem('recipient_data_cache', JSON.stringify(cache))
-    expect(isCacheStale()).toBe(true)
-  })
-
   it('loadCachedRecipients geeft null terug bij ongeldige JSON', () => {
     localStorage.setItem('recipient_data_cache', 'geen-geldige-json')
     expect(loadCachedRecipients()).toBeNull()
-  })
-
-  it('isCacheStale geeft true terug bij ongeldige JSON', () => {
-    localStorage.setItem('recipient_data_cache', 'geen-geldige-json')
-    expect(isCacheStale()).toBe(true)
   })
 })
 
