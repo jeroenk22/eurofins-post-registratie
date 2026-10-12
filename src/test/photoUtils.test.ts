@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { photoSoort, validateImageFiles } from '../photoUtils'
 
 // Mock browser APIs not available in jsdom
@@ -97,22 +97,42 @@ describe('validateImageFiles', () => {
 
 describe('photoSoort', () => {
   const file = (name: string, type: string) => new File([''], name, { type })
+  const FOTO_4_3 = [4000, 3000] as const
+
+  beforeEach(() => {
+    // Telefoon met een scherm van 1080 × 2340 echte pixels (zoals de Galaxy A26)
+    vi.spyOn(screen, 'width', 'get').mockReturnValue(384)
+    vi.spyOn(screen, 'height', 'get').mockReturnValue(832)
+    vi.stubGlobal('devicePixelRatio', 2.8125)
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
 
   it('herkent geplakte afbeeldingen en PNG-screenshots', () => {
-    expect(photoSoort(file('image.png', 'image/png'))).toBe('screenshot') // Ctrl+V op de desktop
-    expect(photoSoort(file('IMG_0042.PNG', 'image/png'))).toBe('screenshot') // iPhone
+    expect(photoSoort(file('image.png', 'image/png'), 1920, 1080)).toBe('screenshot') // Ctrl+V op de desktop
+    expect(photoSoort(file('IMG_0042.PNG', 'image/png'), 1170, 2532)).toBe('screenshot') // iPhone
   })
 
   it('herkent screenshots aan de naam, ook als JPG', () => {
-    expect(photoSoort(file('Screenshot_20261012_093000_Gmail.jpg', 'image/jpeg'))).toBe('screenshot') // Samsung
-    expect(photoSoort(file('Schermafbeelding 2026-10-12 093000.jpg', 'image/jpeg'))).toBe('screenshot')
-    expect(photoSoort(file('Schermopname (12).jpg', 'image/jpeg'))).toBe('screenshot')
-    expect(photoSoort(file('screen shot 1.jpeg', 'image/jpeg'))).toBe('screenshot')
+    expect(photoSoort(file('Screenshot_20261012_093000_Gmail.jpg', 'image/jpeg'), ...FOTO_4_3)).toBe('screenshot') // Samsung
+    expect(photoSoort(file('Schermafbeelding 2026-10-12 093000.jpg', 'image/jpeg'), ...FOTO_4_3)).toBe('screenshot')
+    expect(photoSoort(file('Schermopname (12).jpg', 'image/jpeg'), ...FOTO_4_3)).toBe('screenshot')
+    expect(photoSoort(file('screen shot 1.jpeg', 'image/jpeg'), ...FOTO_4_3)).toBe('screenshot')
+  })
+
+  it('herkent een JPG-screenshot met een nummer als naam aan de afmetingen', () => {
+    // Android-fotokiezer: geen "Screenshot" meer in de naam
+    expect(photoSoort(file('1000012345.jpg', 'image/jpeg'), 1080, 2340)).toBe('screenshot') // dit scherm
+    expect(photoSoort(file('1000012345.jpg', 'image/jpeg'), 2340, 1080)).toBe('screenshot') // liggend
+    expect(photoSoort(file('1000012346.jpg', 'image/jpeg'), 1170, 2532)).toBe('screenshot') // andere telefoon (bijv. via WhatsApp)
   })
 
   it("behandelt camerafoto's als foto", () => {
-    expect(photoSoort(file('20261012_093000.jpg', 'image/jpeg'))).toBe('foto') // Samsung-camera
-    expect(photoSoort(file('IMG_1234.jpeg', 'image/jpeg'))).toBe('foto') // iPhone
-    expect(photoSoort(file('image.jpg', 'image/jpeg'))).toBe('foto')
+    expect(photoSoort(file('20261012_093000.jpg', 'image/jpeg'), ...FOTO_4_3)).toBe('foto') // Samsung-camera
+    expect(photoSoort(file('IMG_1234.jpeg', 'image/jpeg'), 3024, 4032)).toBe('foto') // iPhone
+    expect(photoSoort(file('1000012347.jpg', 'image/jpeg'), 1920, 1080)).toBe('foto') // 16:9
+    expect(photoSoort(file('image.jpg', 'image/jpeg'), 3000, 3000)).toBe('foto') // vierkant
   })
 })

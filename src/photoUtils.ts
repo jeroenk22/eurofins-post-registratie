@@ -17,6 +17,7 @@ export function resizeAndEncode(file: File): Promise<Photo> {
     img.onload = () => {
       URL.revokeObjectURL(url)
       const canvas = document.createElement('canvas')
+      const soort = photoSoort(file, img.width, img.height)
       let { width: w, height: h } = img
       if (w > MAX_PX || h > MAX_PX) {
         if (w > h) { h = Math.round(h * MAX_PX / w); w = MAX_PX }
@@ -26,7 +27,7 @@ export function resizeAndEncode(file: File): Promise<Photo> {
       canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
       const data = canvas.toDataURL('image/jpeg', QUALITY)
       canvas.width = 0; canvas.height = 0 // geheugen direct vrijgeven
-      resolve({ id: genId(), name: file.name, data, soort: photoSoort(file) })
+      resolve({ id: genId(), name: file.name, data, soort })
     }
     img.src = url
   })
@@ -37,10 +38,28 @@ const SCREENSHOT_NAAM = /screen[ _-]?shot|schermafbeelding|schermopname|schermaf
 /**
  * Camera's maken nooit PNG; screenshots zijn dat op Windows, iPhone en de meeste
  * Android-toestellen wel (ook een geplakte afbeelding). Samsung slaat ze als JPG
- * op, maar met "Screenshot" in de naam.
+ * op, en de fotokiezer van Android geeft ze vaak een nummer als naam
+ * (1000012345.jpg). Dan verraden de afmetingen het: precies zo groot als het
+ * scherm, of langwerpig als een telefoonscherm (19,5:9 en langer). Camerafoto's
+ * zijn 4:3, 16:9 of vierkant.
  */
-export function photoSoort(file: File): PhotoSoort {
-  return file.type === 'image/png' || SCREENSHOT_NAAM.test(file.name) ? 'screenshot' : 'foto'
+export function photoSoort(file: File, width: number, height: number): PhotoSoort {
+  if (file.type === 'image/png' || SCREENSHOT_NAAM.test(file.name)) return 'screenshot'
+  const lang = Math.max(width, height)
+  const kort = Math.min(width, height)
+  if (kort > 0 && lang / kort >= TELEFOONSCHERM_VERHOUDING) return 'screenshot'
+  return isSchermformaat(lang, kort) ? 'screenshot' : 'foto'
+}
+
+const TELEFOONSCHERM_VERHOUDING = 2
+
+/** Zelfde afmetingen als het scherm van dit apparaat (in echte pixels, beide standen). */
+function isSchermformaat(lang: number, kort: number): boolean {
+  const dpr = window.devicePixelRatio || 1
+  const schermLang = Math.round(Math.max(screen.width, screen.height) * dpr)
+  const schermKort = Math.round(Math.min(screen.width, screen.height) * dpr)
+  // Afronding van devicePixelRatio kan een paar pixels schelen
+  return Math.abs(lang - schermLang) <= 4 && Math.abs(kort - schermKort) <= 4
 }
 
 /** Eén voor één: tien grote telefoonfoto's tegelijk decoderen kan de pagina laten vastlopen. */
