@@ -160,20 +160,20 @@ export default function MobileCameraPage({ sessionId }: Props) {
     setSubmitting(true)
     setSubmitError('')
     try {
-      await Promise.all(
-        entries.map(entry =>
-          fetch('/.netlify/functions/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: sessionId, entryId: entry.id, photos: photos[entry.id] ?? [] }),
-          }).then(async r => {
-            if (!r.ok) {
-              const body = await r.json().catch(() => ({}))
-              throw new Error(`Upload mislukt (${r.status}): ${body.error ?? 'onbekende fout'}`)
-            }
-          }),
-        ),
-      )
+      // Na elkaar, niet tegelijk: elke upload herschrijft de hele sessie, en Netlify
+      // Blobs houdt gelijktijdige schrijfacties niet tegen. Tegelijk verdwenen zo
+      // soms de foto's van een zending (op de preview 4 van de 10 keer).
+      for (const entry of entries) {
+        const r = await fetch('/.netlify/functions/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: sessionId, entryId: entry.id, photos: photos[entry.id] ?? [] }),
+        })
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}))
+          throw new Error(`Upload mislukt (${r.status}): ${body.error ?? 'onbekende fout'}`)
+        }
+      }
       sessionStorage.setItem(`submitted-${sessionId}`, '1')
       clearPhotos(sessionId)
       setSubmitted(true)

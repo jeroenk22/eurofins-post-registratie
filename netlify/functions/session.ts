@@ -32,9 +32,10 @@ const MAX_POGINGEN = 5
 
 /**
  * Lezen, aanpassen en terugschrijven, maar alleen als de sessie intussen niet
- * door een ander verzoek is gewijzigd (ETag). De telefoon uploadt de foto's van
- * alle zendingen tegelijk; zonder deze controle overschreef de ene upload de
- * andere en verdwenen de foto's van een zending (op de preview gezien).
+ * door een ander verzoek is gewijzigd (ETag); anders opnieuw. Let op: Netlify
+ * Blobs houdt écht gelijktijdige schrijfacties hiermee níet altijd tegen (getest:
+ * vaak slagen ze alle vier). Daarom uploadt de telefoon de zendingen na elkaar;
+ * dit vangt vooral een overlap met de desktop af.
  * `updatedAt` gaat ook in de metadata: dan kan een GET met `since` antwoorden
  * zonder de foto's te lezen.
  */
