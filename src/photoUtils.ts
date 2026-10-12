@@ -1,10 +1,18 @@
 import type { Photo, PhotoSoort } from './types'
 import { genId } from './useStore'
+import { heeftCameraExif } from './cameraExif'
 
 const MAX_PX = 1200
 const QUALITY = 0.82
 
-export function resizeAndEncode(file: File): Promise<Photo> {
+export async function resizeAndEncode(file: File): Promise<Photo> {
+  const [{ data, width, height }, cameraExif] = await Promise.all([verkleinNaarJpeg(file), heeftCameraExif(file)])
+  // Cameragegevens maken het zeker een foto, ook als de afmetingen op een screenshot lijken (panorama, 9:20)
+  return { id: genId(), name: file.name, data, soort: cameraExif ? 'foto' : photoSoort(file, width, height) }
+}
+
+/** Geeft ook de oorspronkelijke afmetingen terug, voor het herkennen van screenshots. */
+function verkleinNaarJpeg(file: File): Promise<{ data: string; width: number; height: number }> {
   return new Promise((resolve, reject) => {
     // Object-URL i.p.v. FileReader: een telefoonfoto van 10+ MB hoeft dan niet
     // eerst als base64-tekst in het geheugen (zwaar op bijv. een 50 MP-camera)
@@ -17,8 +25,8 @@ export function resizeAndEncode(file: File): Promise<Photo> {
     img.onload = () => {
       URL.revokeObjectURL(url)
       const canvas = document.createElement('canvas')
-      const soort = photoSoort(file, img.width, img.height)
-      let { width: w, height: h } = img
+      const { width, height } = img
+      let w = width, h = height
       if (w > MAX_PX || h > MAX_PX) {
         if (w > h) { h = Math.round(h * MAX_PX / w); w = MAX_PX }
         else       { w = Math.round(w * MAX_PX / h); h = MAX_PX }
@@ -27,7 +35,7 @@ export function resizeAndEncode(file: File): Promise<Photo> {
       canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
       const data = canvas.toDataURL('image/jpeg', QUALITY)
       canvas.width = 0; canvas.height = 0 // geheugen direct vrijgeven
-      resolve({ id: genId(), name: file.name, data, soort })
+      resolve({ data, width, height })
     }
     img.src = url
   })

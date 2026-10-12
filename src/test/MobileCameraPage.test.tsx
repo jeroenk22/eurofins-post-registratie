@@ -104,6 +104,22 @@ describe('MobileCameraPage', () => {
     expect(sessionStorage.getItem('camera-open-test-session')).toBeNull()
   })
 
+  it('wisselt een foto naar screenshot met een tik op het label, en bewaart dat', async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => mockSession } as Response)
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Kees Hin')
+    fireEvent.change(screen.getAllByText('Kies uit galerij')[0].closest('label')!.querySelector('input')!, {
+      target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
+    })
+
+    fireEvent.click(await screen.findByText('foto'))
+
+    expect(screen.getByText('screenshot')).toBeInTheDocument()
+    expect(vi.mocked(savePhotos)).toHaveBeenLastCalledWith('test-session', {
+      e1: [expect.objectContaining({ id: 'p1', soort: 'screenshot' })],
+    })
+  })
+
   it('toont foutmelding als sessie niet gevonden wordt (404)', async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false } as Response)
     render(<MobileCameraPage sessionId="onbekend" />)

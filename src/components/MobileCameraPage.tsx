@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { Photo } from '../types'
+import type { Photo, PhotoSoort } from '../types'
 import { processFiles } from '../photoUtils'
 import { loadPhotos, savePhotos, clearPhotos } from '../photoStorage'
-import ScreenshotBadge from './ScreenshotBadge'
+import SoortLabel from './SoortLabel'
 
 function LogoBar() {
   return (
@@ -149,6 +149,15 @@ export default function MobileCameraPage({ sessionId }: Props) {
 
   const removePhoto = (entryId: string, photoId: string) => {
     const updated = { ...photos, [entryId]: (photos[entryId] ?? []).filter(p => p.id !== photoId) }
+    setPhotos(updated)
+    void savePhotos(sessionId, updated)
+  }
+
+  const zetSoort = (entryId: string, photoId: string, soort: PhotoSoort) => {
+    const updated = {
+      ...photos,
+      [entryId]: (photos[entryId] ?? []).map(p => (p.id === photoId ? { ...p, soort } : p)),
+    }
     setPhotos(updated)
     void savePhotos(sessionId, updated)
   }
@@ -360,7 +369,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
                   {entryPhotos.map(p => (
                     <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                       <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
-                      <ScreenshotBadge photo={p} />
+                      <SoortLabel photo={p} onWissel={soort => zetSoort(entry.id, p.id, soort)} />
                       <button
                         type="button"
                         onClick={() => removePhoto(entry.id, p.id)}
