@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Photo } from '../types'
 
-interface SessionData {
-  photos: Record<string, Photo[]>
-  updatedAt: number
-}
+type SessionData =
+  | { ongewijzigd?: false; photos: Record<string, Photo[]>; updatedAt: number }
+  /** Niets veranderd sinds `since`: de server stuurt de foto's dan niet mee. */
+  | { ongewijzigd: true; updatedAt: number }
+
+/** Alleen een paar bytes per keer zolang er niets verandert (zie `since`), dus snel kan. */
+const POLL_MS = 1500
 
 export function useMobilePhotoSync(
   sessionId: string,
@@ -27,12 +30,18 @@ export function useMobilePhotoSync(
   useEffect(() => {
     if (!enabled) return
 
+    let bezig = false
     const poll = async () => {
+      // Tabblad niet in beeld: niet vragen. Bij terugkomen meteen (zie onVisible).
+      // En nooit twee tegelijk, ook niet als een antwoord langer dan POLL_MS duurt.
+      if (bezig || document.visibilityState === 'hidden') return
+      bezig = true
       try {
-        const r = await fetch(`/.netlify/functions/session?id=${encodeURIComponent(sessionId)}`)
+        const since = lastUpdatedRef.current > 0 ? `&since=${lastUpdatedRef.current}` : ''
+        const r = await fetch(`/.netlify/functions/session?id=${encodeURIComponent(sessionId)}${since}`)
         if (!r.ok) return
         const data: SessionData = await r.json()
-        if (data.updatedAt <= lastUpdatedRef.current) return
+        if (data.ongewijzigd || data.updatedAt <= lastUpdatedRef.current) return
         lastUpdatedRef.current = data.updatedAt
 
         const added: string[] = []
@@ -61,12 +70,19 @@ export function useMobilePhotoSync(
         }
       } catch {
         // silent fail
+      } finally {
+        bezig = false
       }
     }
 
-    const interval = setInterval(poll, 3000)
+    const onVisible = () => { if (document.visibilityState === 'visible') void poll() }
+    const interval = setInterval(poll, POLL_MS)
+    document.addEventListener('visibilitychange', onVisible)
     poll()
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [sessionId, enabled])
 
   return syncedEntryIds

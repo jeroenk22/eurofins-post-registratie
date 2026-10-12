@@ -114,4 +114,48 @@ describe('useMobilePhotoSync', () => {
     await act(() => vi.advanceTimersByTimeAsync(9_000))
     expect(vi.mocked(fetch).mock.calls.length).toBe(callsAfterMount)
   })
+
+  it('vraagt na de eerste keer alleen wat er sinds updatedAt veranderd is', async () => {
+    const photos = [{ id: 'p1', name: 'foto.jpg', data: 'data:image/jpeg;base64,abc' }]
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(makeSessionResponse({ e1: photos }, 1000))
+      .mockResolvedValue({ ok: true, json: async () => ({ ongewijzigd: true, updatedAt: 1000 }) } as Response)
+    const callback = vi.fn()
+    renderHook(() => useMobilePhotoSync('s1', callback, true))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(vi.mocked(fetch).mock.calls[0][0]).not.toContain('since=')
+
+    await act(() => vi.advanceTimersByTimeAsync(1_500))
+    expect(vi.mocked(fetch).mock.calls[1][0]).toContain('since=1000')
+    // "Niets veranderd" levert geen tweede callback op
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it('pollt elke 1,5 seconde', async () => {
+    vi.mocked(fetch).mockResolvedValue(makeSessionResponse({}, 0))
+    renderHook(() => useMobilePhotoSync('s1', vi.fn(), true))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    await act(() => vi.advanceTimersByTimeAsync(3_000))
+    expect(fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('pollt niet als het tabblad niet in beeld is, en meteen bij terugkomen', async () => {
+    vi.mocked(fetch).mockResolvedValue(makeSessionResponse({}, 0))
+    const zichtbaarheid = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    renderHook(() => useMobilePhotoSync('s1', vi.fn(), true))
+    await act(() => vi.advanceTimersByTimeAsync(10_000))
+    expect(fetch).not.toHaveBeenCalled()
+
+    zichtbaarheid.mockReturnValue('visible')
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    zichtbaarheid.mockRestore()
+  })
+
+  it('start geen nieuwe vraag zolang de vorige nog loopt', async () => {
+    vi.mocked(fetch).mockReturnValue(new Promise<Response>(() => {})) // antwoordt nooit
+    renderHook(() => useMobilePhotoSync('s1', vi.fn(), true))
+    await act(() => vi.advanceTimersByTimeAsync(10_000))
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
 })

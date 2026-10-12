@@ -168,6 +168,32 @@ describe('MobileCameraPage', () => {
     expect(await screen.findByText("Foto's geüpload!")).toBeInTheDocument()
   })
 
+  it('uploadt de zendingen na elkaar, niet tegelijk', async () => {
+    let eersteKlaar!: (r: Response) => void
+    vi.mocked(fetch).mockImplementation(async (_url, init) => {
+      if ((init as RequestInit)?.method !== 'POST') return { ok: true, json: async () => mockSessionWithDesktopPhotos } as Response
+      const posts = vi.mocked(fetch).mock.calls.filter(([, i]) => (i as RequestInit)?.method === 'POST').length
+      if (posts === 1) return new Promise<Response>(resolve => { eersteKlaar = resolve })
+      return { ok: true } as Response
+    })
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Kees Hin')
+    fireEvent.change(screen.getAllByText('Kies uit galerij')[1].closest('label')!.querySelector('input')!, {
+      target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
+    })
+    await screen.findByText('×')
+
+    fireEvent.click(screen.getByText("📤 Foto's uploaden"))
+    const aantalPosts = () => vi.mocked(fetch).mock.calls.filter(([, i]) => (i as RequestInit)?.method === 'POST').length
+    await waitFor(() => expect(aantalPosts()).toBe(1))
+    await new Promise(r => setTimeout(r, 20))
+    expect(aantalPosts()).toBe(1) // de tweede wacht op de eerste
+
+    eersteKlaar({ ok: true } as Response)
+    expect(await screen.findByText("Foto's geüpload!")).toBeInTheDocument()
+    expect(aantalPosts()).toBe(2)
+  })
+
   it('POST naar session endpoint per entry bij uploaden', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce({ ok: true, json: async () => mockSessionWithDesktopPhotos } as Response)
