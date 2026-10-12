@@ -1,6 +1,9 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { getSelectedFormat, printLabels } from '../services/printService'
 import type { SentItem } from '../services/sentToday'
+import { fetchFotos } from '../services/aanmelding'
+import type { Photo } from '../types'
+import PhotoLightbox from './PhotoLightbox'
 
 interface SentDetailModalProps {
   item: SentItem
@@ -27,6 +30,65 @@ function Rij({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+type FotoStatus = { status: 'laden' } | { status: 'klaar'; fotos: Photo[] } | { status: 'fout' }
+
+/**
+ * Foto's van een verzonden zending staan op de server onder de aanmeldingscode
+ * (zending 1: de desktop verstuurt per zending). Alleen ophalen als er foto's waren.
+ */
+function useVerzondenFotos(submissionId: string | undefined, aantal: number): FotoStatus | null {
+  const [state, setState] = useState<FotoStatus | null>(null)
+  useEffect(() => {
+    if (!submissionId || aantal === 0) return
+    let actief = true
+    setState({ status: 'laden' })
+    fetchFotos(submissionId, 1).then(
+      ({ zendingen }) => {
+        const fotos = (zendingen[0]?.fotos ?? []).map((f, i) => ({ id: String(i), name: f.naam, data: f.data }))
+        if (actief) setState({ status: 'klaar', fotos })
+      },
+      () => { if (actief) setState({ status: 'fout' }) },
+    )
+    return () => { actief = false }
+  }, [submissionId, aantal])
+  return state
+}
+
+function Fotos({ aantal, state, onOpen }: { aantal: number; state: FotoStatus | null; onOpen: (index: number) => void }) {
+  if (aantal === 0) return <>Geen</>
+  // Oudere zendingen zonder aanmeldingscode: alleen het aantal
+  if (!state) return <>{aantal}</>
+  if (state.status === 'fout') return <>{aantal} <span className="text-gray-400">(konden niet geladen worden)</span></>
+  if (state.status === 'klaar' && state.fotos.length === 0) {
+    return <>{aantal} <span className="text-gray-400">(niet meer beschikbaar)</span></>
+  }
+  const raster = 'grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5'
+  if (state.status === 'laden') {
+    return (
+      <div className={raster} aria-label="Foto's laden">
+        {Array.from({ length: aantal }, (_, i) => (
+          <div key={i} className="aspect-square rounded-lg bg-gray-100 animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className={raster}>
+      {state.fotos.map((f, i) => (
+        <button
+          key={f.id}
+          type="button"
+          onClick={() => onOpen(i)}
+          aria-label={`Foto ${i + 1} groot bekijken`}
+          className="aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-zoom-in"
+        >
+          <img src={f.data} alt={f.name} className="w-full h-full object-cover" />
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function Blok({ titel, children }: { titel: string; children: ReactNode }) {
   return (
     <section className="pt-3 mt-3 border-t border-gray-100 first:border-t-0 first:mt-0 first:pt-0">
@@ -43,13 +105,19 @@ export default function SentDetailModal({ item, onClose }: SentDetailModalProps)
   const d = item.details
   const omschrijvingen = Array.from({ length: l.colli }, (_, i) => l.colliOmschrijvingen[i]?.trim() ?? '')
   const adres = [l.adres, [l.postcode, l.plaats].filter(Boolean).join(' '), l.land].filter(s => s?.trim())
+  const fotoState = useVerzondenFotos(item.submissionId, d?.photoCount ?? 0)
+  const [groot, setGroot] = useState<number | null>(null)
 
   useEffect(() => {
     sluitRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+  }, [])
+
+  useEffect(() => {
+    // Staat er een foto groot open, dan sluit Escape alleen die (de lightbox doet dat zelf)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && groot === null) onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, groot])
 
   return (
     <div
@@ -125,7 +193,7 @@ export default function SentDetailModal({ item, onClose }: SentDetailModalProps)
               </Rij>
             )}
             <Rij label="Prioriteit">{l.spoed ? <span className="font-bold text-ef-orange">Spoed</span> : 'Normaal'}</Rij>
-            {d && <Rij label="Foto's">{d.photoCount === 0 ? 'Geen' : d.photoCount}</Rij>}
+            {d && <Rij label="Foto's"><Fotos aantal={d.photoCount} state={fotoState} onOpen={setGroot} /></Rij>}
           </Blok>
 
           {d && (
@@ -138,6 +206,15 @@ export default function SentDetailModal({ item, onClose }: SentDetailModalProps)
             </Blok>
           )}
         </div>
+
+        {groot !== null && fotoState?.status === 'klaar' && (
+          <PhotoLightbox
+            photos={fotoState.fotos}
+            index={groot}
+            onIndexChange={setGroot}
+            onClose={() => setGroot(null)}
+          />
+        )}
 
         <footer className="shrink-0 flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
           <button
