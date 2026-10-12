@@ -6,26 +6,37 @@ const QUALITY = 0.82
 
 export function resizeAndEncode(file: File): Promise<Photo> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Kon bestand niet lezen'))
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onerror = () => reject(new Error('Kon afbeelding niet laden'))
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        let { width: w, height: h } = img
-        if (w > MAX_PX || h > MAX_PX) {
-          if (w > h) { h = Math.round(h * MAX_PX / w); w = MAX_PX }
-          else       { w = Math.round(w * MAX_PX / h); h = MAX_PX }
-        }
-        canvas.width = w; canvas.height = h
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
-        resolve({ id: genId(), name: file.name, data: canvas.toDataURL('image/jpeg', QUALITY) })
-      }
-      img.src = e.target!.result as string
+    // Object-URL i.p.v. FileReader: een telefoonfoto van 10+ MB hoeft dan niet
+    // eerst als base64-tekst in het geheugen (zwaar op bijv. een 50 MP-camera)
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Kon afbeelding niet laden'))
     }
-    reader.readAsDataURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const canvas = document.createElement('canvas')
+      let { width: w, height: h } = img
+      if (w > MAX_PX || h > MAX_PX) {
+        if (w > h) { h = Math.round(h * MAX_PX / w); w = MAX_PX }
+        else       { w = Math.round(w * MAX_PX / h); h = MAX_PX }
+      }
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      const data = canvas.toDataURL('image/jpeg', QUALITY)
+      canvas.width = 0; canvas.height = 0 // geheugen direct vrijgeven
+      resolve({ id: genId(), name: file.name, data })
+    }
+    img.src = url
   })
+}
+
+/** Eén voor één: tien grote telefoonfoto's tegelijk decoderen kan de pagina laten vastlopen. */
+async function resizeAllSequentially(files: File[]): Promise<Photo[]> {
+  const photos: Photo[] = []
+  for (const file of files) photos.push(await resizeAndEncode(file))
+  return photos
 }
 
 export function validateImageFiles(files: File[]): void {
@@ -38,5 +49,5 @@ export function validateImageFiles(files: File[]): void {
 export async function processFiles(files: FileList): Promise<Photo[]> {
   const fileArray = Array.from(files)
   validateImageFiles(fileArray)
-  return Promise.all(fileArray.map(resizeAndEncode))
+  return resizeAllSequentially(fileArray)
 }

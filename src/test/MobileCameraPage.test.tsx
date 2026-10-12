@@ -57,6 +57,53 @@ describe('MobileCameraPage', () => {
     expect(screen.getByText('Wim Scholten')).toBeInTheDocument()
   })
 
+  it('biedt per zending een camera- en een galerijknop', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => mockSession,
+    } as Response)
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Kees Hin')
+
+    const camera = screen.getAllByText('Foto maken')[0].closest('label')!.querySelector('input')!
+    const galerij = screen.getAllByText('Kies uit galerij')[0].closest('label')!.querySelector('input')!
+    // Met `capture` opent de telefoon direct de camera; zonder kies je bestaande foto's
+    expect(camera).toHaveAttribute('capture', 'environment')
+    expect(galerij).not.toHaveAttribute('capture')
+    expect(galerij).toHaveAttribute('multiple')
+  })
+
+  it('meldt een verloren camerafoto als de pagina herlaadde terwijl de camera open was', async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => mockSession } as Response)
+    // Zoals achtergelaten door de vorige (door Android afgesloten) pagina
+    sessionStorage.setItem('camera-open-test-session', 'e2')
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Wim Scholten')
+
+    expect(screen.getByText(/pagina opnieuw geladen terwijl de camera openstond/)).toBeInTheDocument()
+    expect(sessionStorage.getItem('camera-open-test-session')).toBeNull()
+
+    fireEvent.change(screen.getAllByText('Kies uit galerij')[1].closest('label')!.querySelector('input')!, {
+      target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
+    })
+    await screen.findByText('×')
+    expect(screen.queryByText(/pagina opnieuw geladen/)).not.toBeInTheDocument()
+  })
+
+  it('onthoudt dat de camera open staat zolang je weg bent', async () => {
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => mockSession } as Response)
+    render(<MobileCameraPage sessionId="test-session" />)
+    await screen.findByText('Wim Scholten')
+
+    expect(screen.queryByText(/pagina opnieuw geladen/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getAllByText('Foto maken')[1].closest('label')!.querySelector('input')!)
+    expect(sessionStorage.getItem('camera-open-test-session')).toBe('e2')
+
+    // Terug in de browser zonder herladen (bijv. geannuleerd): vlag weg
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(sessionStorage.getItem('camera-open-test-session')).toBeNull()
+  })
+
   it('toont foutmelding als sessie niet gevonden wordt (404)', async () => {
     vi.mocked(fetch).mockResolvedValue({ ok: false } as Response)
     render(<MobileCameraPage sessionId="onbekend" />)
@@ -95,7 +142,7 @@ describe('MobileCameraPage', () => {
     await screen.findByText('Kees Hin')
 
     // e1 heeft desktopPhotoCount=2 (optioneel), e2 heeft 0 → moet foto krijgen
-    const inputs = screen.getAllByText('Foto\'s toevoegen (meerdere mogelijk)')
+    const inputs = screen.getAllByText('Kies uit galerij')
     fireEvent.change(inputs[1].closest('label')!.querySelector('input')!, {
       target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
     })
@@ -114,7 +161,7 @@ describe('MobileCameraPage', () => {
     await screen.findByText('Kees Hin')
 
     // Voeg foto toe aan e2 (desktopPhotoCount=0)
-    const inputs = screen.getAllByText('Foto\'s toevoegen (meerdere mogelijk)')
+    const inputs = screen.getAllByText('Kies uit galerij')
     fireEvent.change(inputs[1].closest('label')!.querySelector('input')!, {
       target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
     })
@@ -193,7 +240,7 @@ describe('MobileCameraPage', () => {
 
     render(<MobileCameraPage sessionId="test-session" />)
     await screen.findByText('Wim Scholten')
-    const inputs = screen.getAllByText('Foto\'s toevoegen (meerdere mogelijk)')
+    const inputs = screen.getAllByText('Kies uit galerij')
     fireEvent.change(inputs[1].closest('label')!.querySelector('input')!, {
       target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
     })
