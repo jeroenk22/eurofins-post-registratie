@@ -84,6 +84,20 @@ describe("submitToWebhook", () => {
     expect(foto.spoed).toBe(true);
     expect(foto.filename).toBe("foto_1.jpg");
     expect(foto.base64).toBe("data:image/jpeg;base64,abc123");
+    // Zonder soort (foto's van vóór dit veld) geldt het als foto
+    expect(foto.soort).toBe("foto");
+  });
+
+  it("stuurt de soort per foto mee voor de bestandsnaam in Mendrix", async () => {
+    const entry = makeEntry({
+      photos: [
+        { id: "p1", name: "IMG_1.jpg", data: "data:image/jpeg;base64,a", soort: "foto" },
+        { id: "p2", name: "image.png", data: "data:image/jpeg;base64,b", soort: "screenshot" },
+      ],
+    });
+    await submitToWebhook([entry], "Sophie", "", "");
+    const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string);
+    expect(body.entries[0].photos.map((f: { soort: string }) => f.soort)).toEqual(["foto", "screenshot"]);
   });
 
   it("strips IMTString prefix from photo base64 data", async () => {

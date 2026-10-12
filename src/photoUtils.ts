@@ -1,4 +1,4 @@
-import type { Photo } from './types'
+import type { Photo, PhotoSoort } from './types'
 import { genId } from './useStore'
 
 const MAX_PX = 1200
@@ -26,10 +26,21 @@ export function resizeAndEncode(file: File): Promise<Photo> {
       canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
       const data = canvas.toDataURL('image/jpeg', QUALITY)
       canvas.width = 0; canvas.height = 0 // geheugen direct vrijgeven
-      resolve({ id: genId(), name: file.name, data })
+      resolve({ id: genId(), name: file.name, data, soort: photoSoort(file) })
     }
     img.src = url
   })
+}
+
+const SCREENSHOT_NAAM = /screen[ _-]?shot|schermafbeelding|schermopname|schermafdruk/i
+
+/**
+ * Camera's maken nooit PNG; screenshots zijn dat op Windows, iPhone en de meeste
+ * Android-toestellen wel (ook een geplakte afbeelding). Samsung slaat ze als JPG
+ * op, maar met "Screenshot" in de naam.
+ */
+export function photoSoort(file: File): PhotoSoort {
+  return file.type === 'image/png' || SCREENSHOT_NAAM.test(file.name) ? 'screenshot' : 'foto'
 }
 
 /** Eén voor één: tien grote telefoonfoto's tegelijk decoderen kan de pagina laten vastlopen. */

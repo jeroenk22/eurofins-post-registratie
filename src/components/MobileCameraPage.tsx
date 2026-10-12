@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Photo } from '../types'
 import { processFiles } from '../photoUtils'
 import { loadPhotos, savePhotos, clearPhotos } from '../photoStorage'
+import ScreenshotBadge from './ScreenshotBadge'
 
 function LogoBar() {
   return (
@@ -359,6 +360,7 @@ export default function MobileCameraPage({ sessionId }: Props) {
                   {entryPhotos.map(p => (
                     <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                       <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
+                      <ScreenshotBadge photo={p} />
                       <button
                         type="button"
                         onClick={() => removePhoto(entry.id, p.id)}

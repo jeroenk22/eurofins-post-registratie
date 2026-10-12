@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { validateImageFiles } from '../photoUtils'
+import { photoSoort, validateImageFiles } from '../photoUtils'
 
 // Mock browser APIs not available in jsdom
 const mockCanvas = {
@@ -92,5 +92,27 @@ describe('validateImageFiles', () => {
 
   it('does not throw for an empty array', () => {
     expect(() => validateImageFiles([])).not.toThrow()
+  })
+})
+
+describe('photoSoort', () => {
+  const file = (name: string, type: string) => new File([''], name, { type })
+
+  it('herkent geplakte afbeeldingen en PNG-screenshots', () => {
+    expect(photoSoort(file('image.png', 'image/png'))).toBe('screenshot') // Ctrl+V op de desktop
+    expect(photoSoort(file('IMG_0042.PNG', 'image/png'))).toBe('screenshot') // iPhone
+  })
+
+  it('herkent screenshots aan de naam, ook als JPG', () => {
+    expect(photoSoort(file('Screenshot_20261012_093000_Gmail.jpg', 'image/jpeg'))).toBe('screenshot') // Samsung
+    expect(photoSoort(file('Schermafbeelding 2026-10-12 093000.jpg', 'image/jpeg'))).toBe('screenshot')
+    expect(photoSoort(file('Schermopname (12).jpg', 'image/jpeg'))).toBe('screenshot')
+    expect(photoSoort(file('screen shot 1.jpeg', 'image/jpeg'))).toBe('screenshot')
+  })
+
+  it("behandelt camerafoto's als foto", () => {
+    expect(photoSoort(file('20261012_093000.jpg', 'image/jpeg'))).toBe('foto') // Samsung-camera
+    expect(photoSoort(file('IMG_1234.jpeg', 'image/jpeg'))).toBe('foto') // iPhone
+    expect(photoSoort(file('image.jpg', 'image/jpeg'))).toBe('foto')
   })
 })

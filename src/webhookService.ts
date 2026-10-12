@@ -105,6 +105,7 @@ export async function submitToWebhook(
         base64: p.data.replace(/^.*?(data:)/, '$1'),
         recipient: e.name.trim(),
         spoed: e.spoed,
+        soort: p.soort ?? 'foto',
       })),
     };
   });

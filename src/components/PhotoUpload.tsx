@@ -3,6 +3,7 @@ import type { Photo } from '../types'
 import { validateImageFiles, resizeAndEncode } from '../photoUtils'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import PhotoLightbox from './PhotoLightbox'
+import ScreenshotBadge from './ScreenshotBadge'
 
 interface PhotoUploadProps {
   photos: Photo[]
@@ -121,6 +122,7 @@ export default function PhotoUpload({ photos, onChange, invalid, action }: Photo
               ) : (
                 <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
               )}
+              <ScreenshotBadge photo={p} />
               <button
                 type="button"
                 onClick={() => remove(p.id)}
