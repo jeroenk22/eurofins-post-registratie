@@ -178,7 +178,7 @@ describe('MobileCameraPage', () => {
     })
     render(<MobileCameraPage sessionId="test-session" />)
     await screen.findByText('Kees Hin')
-    fireEvent.change(screen.getAllByText("Foto's toevoegen (meerdere mogelijk)")[1].closest('label')!.querySelector('input')!, {
+    fireEvent.change(screen.getAllByText('Kies uit galerij')[1].closest('label')!.querySelector('input')!, {
       target: { files: [new File(['x'], 'foto.jpg', { type: 'image/jpeg' })] },
     })
     await screen.findByText('×')
