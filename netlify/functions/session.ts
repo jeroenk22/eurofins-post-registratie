@@ -28,6 +28,11 @@ const HEADERS = {
   'Content-Type': 'application/json',
 }
 
+/** `updatedAt` ook als metadata: dan kan een GET met `since` antwoorden zonder de foto's te lezen. */
+function bewaar(store: ReturnType<typeof getStore>, id: string, session: SessionData): Promise<unknown> {
+  return store.set(id, JSON.stringify(session), { metadata: { updatedAt: session.updatedAt } })
+}
+
 function ongeldigeSessie(): Response {
   return new Response(JSON.stringify({ error: 'Ongeldige sessie' }), { status: 400, headers: HEADERS })
 }
@@ -40,6 +45,18 @@ export default async (request: Request): Promise<Response> => {
     if (request.method === 'GET') {
       const id = url.searchParams.get('id')
       if (!id || !SESSION_ID_PATTERN.test(id)) return ongeldigeSessie()
+      // De desktop vraagt elke paar seconden. Is er sinds `since` niets veranderd,
+      // dan alleen dat: de sessie zelf kan megabytes aan foto's bevatten.
+      const since = Number(url.searchParams.get('since'))
+      if (since > 0) {
+        const meta = await store.getMetadata(id)
+        if (!meta) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: HEADERS })
+        const updatedAt = meta.metadata.updatedAt
+        // Sessies van vóór deze metadata hebben geen updatedAt: dan gewoon alles sturen
+        if (typeof updatedAt === 'number' && updatedAt <= since) {
+          return new Response(JSON.stringify({ ongewijzigd: true, updatedAt }), { status: 200, headers: HEADERS })
+        }
+      }
       const raw = await store.get(id, { type: 'text' })
       if (!raw) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: HEADERS })
       return new Response(raw, { status: 200, headers: HEADERS })
@@ -63,7 +80,7 @@ export default async (request: Request): Promise<Response> => {
           : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
         existing.entries = body.entries
         existing.updatedAt = Date.now()
-        await store.set(body.id, JSON.stringify(existing))
+        await bewaar(store, body.id, existing)
         return new Response(JSON.stringify({ ok: true }), { status: 200, headers: HEADERS })
       }
 
@@ -75,7 +92,7 @@ export default async (request: Request): Promise<Response> => {
           : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
         session.photos[body.entryId] = body.photos
         session.updatedAt = Date.now()
-        await store.set(body.id, JSON.stringify(session))
+        await bewaar(store, body.id, session)
         return new Response(JSON.stringify({ ok: true }), { status: 200, headers: HEADERS })
       }
 
