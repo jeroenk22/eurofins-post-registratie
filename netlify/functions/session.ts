@@ -28,9 +28,36 @@ const HEADERS = {
   'Content-Type': 'application/json',
 }
 
-/** `updatedAt` ook als metadata: dan kan een GET met `since` antwoorden zonder de foto's te lezen. */
-function bewaar(store: ReturnType<typeof getStore>, id: string, session: SessionData): Promise<unknown> {
-  return store.set(id, JSON.stringify(session), { metadata: { updatedAt: session.updatedAt } })
+const MAX_POGINGEN = 5
+
+/**
+ * Lezen, aanpassen en terugschrijven, maar alleen als de sessie intussen niet
+ * door een ander verzoek is gewijzigd (ETag). De telefoon uploadt de foto's van
+ * alle zendingen tegelijk; zonder deze controle overschreef de ene upload de
+ * andere en verdwenen de foto's van een zending (op de preview gezien).
+ * `updatedAt` gaat ook in de metadata: dan kan een GET met `since` antwoorden
+ * zonder de foto's te lezen.
+ */
+async function wijzig(
+  store: ReturnType<typeof getStore>,
+  id: string,
+  aanpassen: (session: SessionData) => void,
+): Promise<void> {
+  for (let poging = 1; poging <= MAX_POGINGEN; poging++) {
+    const huidig = await store.getWithMetadata(id, { type: 'text' })
+    const session: SessionData = huidig
+      ? (JSON.parse(huidig.data) as SessionData)
+      : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
+    aanpassen(session)
+    session.updatedAt = Date.now()
+    const voorwaarde = huidig?.etag ? { onlyIfMatch: huidig.etag } : { onlyIfNew: true }
+    const { modified } = await store.set(id, JSON.stringify(session), {
+      ...voorwaarde,
+      metadata: { updatedAt: session.updatedAt },
+    })
+    if (modified) return
+  }
+  throw new Error('Sessie te vaak tegelijk gewijzigd')
 }
 
 function ongeldigeSessie(): Response {
@@ -77,25 +104,15 @@ export default async (request: Request): Promise<Response> => {
 
       // Upsert entries (preserves existing photos)
       if (body.entries !== undefined) {
-        const raw = await store.get(body.id, { type: 'text' })
-        const existing: SessionData = raw
-          ? (JSON.parse(raw) as SessionData)
-          : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
-        existing.entries = body.entries
-        existing.updatedAt = Date.now()
-        await bewaar(store, body.id, existing)
+        const entries = body.entries
+        await wijzig(store, body.id, session => { session.entries = entries })
         return new Response(JSON.stringify({ ok: true }), { status: 200, headers: HEADERS })
       }
 
       // Store photos for a specific entry (upsert: maakt sessie aan als die niet bestaat)
       if (body.entryId !== undefined && body.photos !== undefined) {
-        const raw = await store.get(body.id, { type: 'text' })
-        const session: SessionData = raw
-          ? (JSON.parse(raw) as SessionData)
-          : { entries: [], photos: {}, createdAt: Date.now(), updatedAt: 0 }
-        session.photos[body.entryId] = body.photos
-        session.updatedAt = Date.now()
-        await bewaar(store, body.id, session)
+        const { entryId, photos } = body
+        await wijzig(store, body.id, session => { session.photos[entryId] = photos })
         return new Response(JSON.stringify({ ok: true }), { status: 200, headers: HEADERS })
       }
 
