@@ -1,8 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react'
-import type { Photo } from '../types'
+import type { Photo, PhotoSoort } from '../types'
 import { validateImageFiles, resizeAndEncode } from '../photoUtils'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import PhotoLightbox from './PhotoLightbox'
+import SoortLabel from './SoortLabel'
 
 interface PhotoUploadProps {
   photos: Photo[]
@@ -46,6 +47,8 @@ export default function PhotoUpload({ photos, onChange, invalid, action }: Photo
   }
 
   const remove = (id: string) => onChange(prev => prev.filter(p => p.id !== id))
+  const zetSoort = (id: string, soort: PhotoSoort) =>
+    onChange(prev => prev.map(p => (p.id === id ? { ...p, soort } : p)))
 
   const borderClass = invalid ? 'border-red-400' : 'border-gray-200'
 
@@ -121,6 +124,7 @@ export default function PhotoUpload({ photos, onChange, invalid, action }: Photo
               ) : (
                 <img src={p.data} alt={p.name} className="w-full h-full object-cover" />
               )}
+              <SoortLabel photo={p} onWissel={soort => zetSoort(p.id, soort)} />
               <button
                 type="button"
                 onClick={() => remove(p.id)}

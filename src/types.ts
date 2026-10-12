@@ -1,9 +1,14 @@
 import type { Label } from "../netlify/aanmelding-opslag";
 
+/** Screenshots (bijv. van een bestelmail) krijgt de chauffeur in Mendrix Mobile niet te zien. */
+export type PhotoSoort = "foto" | "screenshot";
+
 export interface Photo {
   id: string;
   name: string;
   data: string;
+  /** Ontbreekt bij foto's van vóór dit veld: die gelden als foto. */
+  soort?: PhotoSoort;
 }
 
 export interface PostEntry {
@@ -59,6 +64,8 @@ export interface SubmitPhoto {
   base64: string;
   recipient: string;
   spoed: boolean;
+  /** create-order zet dit in de bestandsnaam in het Mendrix-dossier (postapp_foto_1.jpg / postapp_screenshot_1.jpg). */
+  soort: PhotoSoort;
 }
 
 export type SubmitState = "idle" | "sending" | "success" | "error";

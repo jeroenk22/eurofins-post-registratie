@@ -277,3 +277,18 @@ describe('PhotoUpload — foto groot bekijken (alleen desktop)', () => {
     expect(screen.queryByRole('button', { name: /groot bekijken/ })).not.toBeInTheDocument()
   })
 })
+
+describe('PhotoUpload — soort-label', () => {
+  it('toont foto of screenshot en wisselt bij klikken', () => {
+    const onChange = vi.fn()
+    render(<PhotoUpload photos={[mockPhoto, { ...mockPhoto2, soort: 'screenshot' }]} onChange={onChange} />)
+
+    // Zonder soort (oudere foto's) geldt het als foto
+    fireEvent.click(screen.getByText('foto'))
+    fireEvent.click(screen.getByText('screenshot'))
+
+    const [eerste, tweede] = onChange.mock.calls.map(([fn]) => fn([mockPhoto, { ...mockPhoto2, soort: 'screenshot' }]))
+    expect(eerste.map((p: Photo) => p.soort)).toEqual(['screenshot', 'screenshot'])
+    expect(tweede.map((p: Photo) => p.soort)).toEqual([undefined, 'foto'])
+  })
+})
