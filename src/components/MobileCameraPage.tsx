@@ -27,6 +27,13 @@ interface Props {
 
 const ENTRIES_REFRESH_MS = 5000
 
+/**
+ * Staat gezet zolang de camera-app open is. Vinden we hem bij het laden van de
+ * pagina terug, dan heeft de telefoon de browser intussen afgesloten (Android
+ * doet dat bij weinig geheugen) en is de zojuist gemaakte foto nooit aangekomen.
+ */
+const cameraOpenKey = (sessionId: string) => `camera-open-${sessionId}`
+
 /** Actuele zendingen van de desktop; `null` als dat nu niet lukt. */
 async function fetchEntries(sessionId: string): Promise<MobileEntry[] | null> {
   try {
@@ -48,6 +55,19 @@ export default function MobileCameraPage({ sessionId }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(() => sessionStorage.getItem(`submitted-${sessionId}`) === '1')
   const [submitError, setSubmitError] = useState('')
+  const [processing, setProcessing] = useState<Record<string, boolean>>({})
+  // Zending waarvan de foto verloren ging doordat de pagina herlaadde terwijl de camera open was
+  const [cameraLostEntryId, setCameraLostEntryId] = useState(() => sessionStorage.getItem(cameraOpenKey(sessionId)))
+
+  // Terug uit de camera zonder herladen (ook bij annuleren): niets aan de hand
+  useEffect(() => {
+    sessionStorage.removeItem(cameraOpenKey(sessionId))
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') sessionStorage.removeItem(cameraOpenKey(sessionId))
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [sessionId])
 
   // Laad entries van de server
   useEffect(() => {
@@ -107,7 +127,10 @@ export default function MobileCameraPage({ sessionId }: Props) {
   }, [sessionId])
 
   const handleFiles = async (entryId: string, files: FileList) => {
+    sessionStorage.removeItem(cameraOpenKey(sessionId))
+    setCameraLostEntryId(null)
     setUploadErrors(prev => ({ ...prev, [entryId]: '' }))
+    setProcessing(prev => ({ ...prev, [entryId]: true }))
     try {
       const newPhotos = await processFiles(files)
       // Gebruik functionele updater vanwege de await hierboven (prev is altijd actueel)
@@ -118,6 +141,8 @@ export default function MobileCameraPage({ sessionId }: Props) {
       })
     } catch (e) {
       setUploadErrors(prev => ({ ...prev, [entryId]: e instanceof Error ? e.message : 'Ongeldig bestand.' }))
+    } finally {
+      setProcessing(prev => ({ ...prev, [entryId]: false }))
     }
   }
 
@@ -285,18 +310,45 @@ export default function MobileCameraPage({ sessionId }: Props) {
                 )}
               </div>
 
-              <label className="flex w-full border-2 border-dashed border-gray-200 rounded-lg p-3 items-center gap-2.5 cursor-pointer hover:border-ef-blue hover:bg-ef-blue-light transition-colors">
-                <span className="text-xl">📷</span>
-                <span className="text-xs text-gray-500">Foto's toevoegen (meerdere mogelijk)</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  capture="environment"
-                  className="hidden"
-                  onChange={e => e.target.files && handleFiles(entry.id, e.target.files)}
-                />
-              </label>
+              {/* Twee bronnen: met `capture` opent de camera direct, zonder kies je bestaande foto's */}
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col items-center justify-center gap-1 rounded-lg p-3 bg-ef-blue text-white cursor-pointer hover:bg-ef-blue/90 active:scale-[0.98] transition-all">
+                  <span className="text-2xl">📷</span>
+                  <span className="text-xs font-semibold">Foto maken</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onClick={() => sessionStorage.setItem(cameraOpenKey(sessionId), entry.id)}
+                    onChange={e => e.target.files && handleFiles(entry.id, e.target.files)}
+                  />
+                </label>
+                <label className="flex flex-col items-center justify-center gap-1 rounded-lg p-3 border-2 border-ef-blue text-ef-blue bg-white cursor-pointer hover:bg-ef-blue-light active:scale-[0.98] transition-all">
+                  <span className="text-2xl">🖼️</span>
+                  <span className="text-xs font-semibold">Kies uit galerij</span>
+                  <span className="text-[10px] text-gray-500">meerdere mogelijk</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={e => e.target.files && handleFiles(entry.id, e.target.files)}
+                  />
+                </label>
+              </div>
+
+              {cameraLostEntryId === entry.id && (
+                <p role="alert" className="mt-2 rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-xs text-amber-800">
+                  Je telefoon heeft de pagina opnieuw geladen terwijl de camera openstond, daardoor is de foto
+                  niet aangekomen. Maak de foto opnieuw. Gebeurt dit vaak? Maak de foto dan eerst met de
+                  camera-app en kies hem hier via <strong>Kies uit galerij</strong>.
+                </p>
+              )}
+
+              {processing[entry.id] && (
+                <p className="mt-2 text-xs text-gray-500">⏳ Foto verwerken…</p>
+              )}
 
               {uploadErrors[entry.id] && (
                 <p role="alert" className="mt-1.5 text-xs text-red-500">{uploadErrors[entry.id]}</p>
