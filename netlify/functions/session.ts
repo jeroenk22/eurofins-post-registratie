@@ -39,7 +39,10 @@ function ongeldigeSessie(): Response {
 
 export default async (request: Request): Promise<Response> => {
   try {
-    const store = getStore('mobile-sessions')
+    // Strong: standaard leest Blobs een gecachte versie, en dan zag de desktop nieuwe
+    // foto's pas seconden later (een nieuwe sessie soms pas na een halve minuut).
+    // Ook de POST-handlers lezen eerst; met een oude versie zouden ze nieuwere data overschrijven.
+    const store = getStore('mobile-sessions', { consistency: 'strong' })
     const url = new URL(request.url)
 
     if (request.method === 'GET') {

@@ -12,7 +12,8 @@ const store = {
     return b ? { metadata: b.metadata } : null
   }),
 }
-vi.mock('@netlify/blobs', () => ({ getStore: () => store }))
+const getStore = vi.fn((..._args: unknown[]) => store)
+vi.mock('@netlify/blobs', () => ({ getStore: (...args: unknown[]) => getStore(...args) }))
 
 import session from '../../netlify/functions/session'
 
@@ -49,6 +50,11 @@ describe('session-functie: GET met since', () => {
     blobs.set(ID, { data: JSON.stringify({ entries: [], photos: {}, createdAt: 1, updatedAt: 5 }), metadata: {} })
     const data = await (await session(new Request(url('&since=10')))).json()
     expect(data.updatedAt).toBe(5)
+  })
+
+  it('leest altijd de nieuwste versie (strong consistency), niet een gecachte', async () => {
+    await session(new Request(url()))
+    expect(getStore).toHaveBeenCalledWith('mobile-sessions', { consistency: 'strong' })
   })
 
   it('geeft 404 voor een onbekende sessie, ook met since', async () => {
