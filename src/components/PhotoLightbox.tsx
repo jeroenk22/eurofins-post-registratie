@@ -6,7 +6,8 @@ interface PhotoLightboxProps {
   index: number
   onIndexChange: (index: number) => void
   onClose: () => void
-  onRemove: (id: string) => void
+  /** Zonder: geen verwijderknop (bijv. bij een al verzonden zending). */
+  onRemove?: (id: string) => void
 }
 
 /**
@@ -50,13 +51,15 @@ export default function PhotoLightbox({ photos, index, onIndexChange, onClose, o
 
       <div onClick={e => e.stopPropagation()} className="mt-4 flex items-center gap-3 text-white text-sm">
         {meer && <span className="tabular-nums opacity-80">{index + 1} / {photos.length}</span>}
-        <button
-          type="button"
-          onClick={() => onRemove(photo.id)}
-          className="rounded-lg bg-white/15 hover:bg-red-500/80 px-3 py-1.5 text-xs font-semibold transition-colors"
-        >
-          🗑 Verwijder foto
-        </button>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(photo.id)}
+            className="rounded-lg bg-white/15 hover:bg-red-500/80 px-3 py-1.5 text-xs font-semibold transition-colors"
+          >
+            🗑 Verwijder foto
+          </button>
+        )}
       </div>
 
       {meer && (
